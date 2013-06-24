@@ -226,5 +226,5 @@ bool atom::has_covalent_bond(const atom& a) const
 
 void atom::output(boost::filesystem::ofstream& ofs, const array<float, 3>& c) const
 {
-	ofs << "ATOM  " << setw(5) << serial << ' ' << name << "              " << setw(8) << c[0] << setw(8) << c[1] << setw(8) << c[2] << "                " << "      " << ' ' << ad_strings[ad] << (ad_strings[ad].size() == 1 ? " " : "") << '\n';
+	ofs << "ATOM  " << setw(5) << serial << ' ' << name << setw(14) << "" << setw(8) << c[0] << setw(8) << c[1] << setw(8) << c[2] << setw(23) << "" << ad_strings[ad] << (ad_strings[ad].size() == 1 ? " " : "") << '\n';
 }
