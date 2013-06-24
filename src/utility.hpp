@@ -224,7 +224,7 @@ inline array<float, 4> vec3_to_qtn4(const array<float, 3>& rotation)
 }
 
 /// Returns the product of two quaternions.
-inline array<float, 4> qtn4_mul_qtn4(const array<float, 4>& a, const array<float, 4>& b)
+inline array<float, 4> operator*(const array<float, 4>& a, const array<float, 4>& b)
 {
 //	assert(normalized(a));
 //	assert(normalized(b));
@@ -279,7 +279,7 @@ inline array<float, 9> qtn4_to_mat3(const array<float, 4>& a)
 }
 
 /// Transforms a vector by a 3x3 matrix.
-inline array<float, 3> mat3_mul_vec3(const array<float, 9>& m, const array<float, 3>& v)
+inline array<float, 3> operator*(const array<float, 9>& m, const array<float, 3>& v)
 {
 	return make_array
 	(

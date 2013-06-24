@@ -297,7 +297,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 	orientations_m.front() = qtn4_to_mat3(orientations_q.front());
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		coordinates[i] = origins.front() + mat3_mul_vec3(orientations_m.front(), heavy_atoms[i].coord);
+		coordinates[i] = origins.front() + orientations_m.front() * heavy_atoms[i].coord;
 	}
 
 	// Apply torsions to BRANCH frames.
@@ -306,7 +306,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		const frame& f = frames[k];
 
 		// Update origin.
-		origins[k] = origins[f.parent] + mat3_mul_vec3(orientations_m[f.parent], f.parent_rotorY_to_current_rotorY);
+		origins[k] = origins[f.parent] + orientations_m[f.parent] * f.parent_rotorY_to_current_rotorY;
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active)
@@ -319,16 +319,16 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 
 		// Update orientation.
 		assert(f.parent_rotorX_to_current_rotorY.normalized());
-		axes[k] = mat3_mul_vec3(orientations_m[f.parent], f.parent_rotorX_to_current_rotorY);
+		axes[k] = orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY;
 		assert(axes[k].normalized());
-		orientations_q[k] = qtn4_mul_qtn4(vec4_to_qtn4(axes[k], conf[7 + t++]), orientations_q[f.parent]);
+		orientations_q[k] = vec4_to_qtn4(axes[k], conf[7 + t++]) * orientations_q[f.parent];
 		assert(normalized(orientations_q[k]));
 		orientations_m[k] = qtn4_to_mat3(orientations_q[k]);
 
 		// Update coordinates.
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			coordinates[i] = origins[k] + mat3_mul_vec3(orientations_m[k], heavy_atoms[i].coord);
+			coordinates[i] = origins[k] + orientations_m[k] * heavy_atoms[i].coord;
 		}
 	}
 
@@ -480,11 +480,11 @@ result ligand::compose_result(const float e, const vector<float>& conf) const
 	const frame& root = frames.front();
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		heavy_atoms[i] = origins.front() + mat3_mul_vec3(orientations_m.front(), this->heavy_atoms[i].coord);
+		heavy_atoms[i] = origins.front() + orientations_m.front() * this->heavy_atoms[i].coord;
 	}
 	for (size_t i = root.hybegin; i < root.hyend; ++i)
 	{
-		hydrogens[i]   = origins.front() + mat3_mul_vec3(orientations_m.front(), this->hydrogens[i].coord);
+		hydrogens[i]   = origins.front() + orientations_m.front() * this->hydrogens[i].coord;
 	}
 
 	// Calculate the coordinates of both heavy atoms and hydrogens of BRANCH frames.
@@ -493,20 +493,20 @@ result ligand::compose_result(const float e, const vector<float>& conf) const
 		const frame& f = frames[k];
 
 		// Update origin.
-		origins[k] = origins[f.parent] + mat3_mul_vec3(orientations_m[f.parent], f.parent_rotorY_to_current_rotorY);
+		origins[k] = origins[f.parent] + orientations_m[f.parent] * f.parent_rotorY_to_current_rotorY;
 
 		// Update orientation.
-		orientations_q[k] = qtn4_mul_qtn4(vec4_to_qtn4(mat3_mul_vec3(orientations_m[f.parent], f.parent_rotorX_to_current_rotorY), f.active ? conf[7 + t++] : 0), orientations_q[f.parent]);
+		orientations_q[k] = vec4_to_qtn4(orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY, f.active ? conf[7 + t++] : 0) * orientations_q[f.parent];
 		orientations_m[k] = qtn4_to_mat3(orientations_q[k]);
 
 		// Update coordinates.
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			heavy_atoms[i] = origins[k] + mat3_mul_vec3(orientations_m[k], this->heavy_atoms[i].coord);
+			heavy_atoms[i] = origins[k] + orientations_m[k] * this->heavy_atoms[i].coord;
 		}
 		for (size_t i = f.hybegin; i < f.hyend; ++i)
 		{
-			hydrogens[i]   = origins[k] + mat3_mul_vec3(orientations_m[k], this->hydrogens[i].coord);
+			hydrogens[i]   = origins[k] + orientations_m[k] * this->hydrogens[i].coord;
 		}
 	}
 
@@ -598,7 +598,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 				c2[2] = c1[2] + alpha * p[2];
 				const array<float, 4> c1orientation = { c1[3], c1[4], c1[5], c1[6] };
 				assert(normalized(c1orientation));
-				const array<float, 4> c2orientation = qtn4_mul_qtn4(vec3_to_qtn4(alpha * make_array(p[3], p[4], p[5])), c1orientation);
+				const array<float, 4> c2orientation = vec3_to_qtn4(alpha * make_array(p[3], p[4], p[5])) * c1orientation;
 				assert(normalized(c2orientation));
 				c2[3] = c2orientation[0];
 				c2[4] = c2orientation[1];
