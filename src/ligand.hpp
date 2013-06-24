@@ -2,7 +2,7 @@
 #ifndef IDOCK_LIGAND_HPP
 #define IDOCK_LIGAND_HPP
 
-#include <boost/filesystem/path.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include "atom.hpp"
 #include "scoring_function.hpp"
@@ -50,6 +50,9 @@ public:
 
 	/// Constructs an active frame, and relates it to its parent frame.
 	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t habegin, const size_t hybegin) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), habegin(habegin), hybegin(hybegin), active(true) {}
+
+	/// Outputs a BRANCH line in PDBQT format.
+	void output(boost::filesystem::ofstream& ofs) const;
 };
 
 /// Represents a ligand.

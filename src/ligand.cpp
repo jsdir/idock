@@ -1,9 +1,12 @@
 #include <iomanip>
 #include <random>
-#include <boost/filesystem/fstream.hpp>
-#include <boost/algorithm/string.hpp>
-#include "ligand.hpp"
 #include "utility.hpp"
+#include "ligand.hpp"
+
+void frame::output(boost::filesystem::ofstream& ofs) const
+{
+	ofs << "BRANCH"    << setw(4) << rotorXsrn << setw(4) << rotorYsrn << '\n';
+}
 
 ligand::ligand(const path& p) : num_active_torsions(0)
 {
