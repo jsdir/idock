@@ -122,14 +122,14 @@ int main(int argc, char* argv[])
 		}
 
 		// Validate size_x, size_y, size_z.
-		if (size[0] < receptor::Default_Partition_Granularity ||
-		    size[1] < receptor::Default_Partition_Granularity ||
-		    size[2] < receptor::Default_Partition_Granularity)
+		if (size[0] < receptor::partition_granularity ||
+		    size[1] < receptor::partition_granularity ||
+		    size[2] < receptor::partition_granularity)
 		{
 			cerr << "Search space must be "
-				 << receptor::Default_Partition_Granularity << "A x "
-				 << receptor::Default_Partition_Granularity << "A x "
-				 << receptor::Default_Partition_Granularity << "A or larger" << endl;
+				 << receptor::partition_granularity << "A x "
+				 << receptor::partition_granularity << "A x "
+				 << receptor::partition_granularity << "A or larger" << endl;
 			return 1;
 		}
 

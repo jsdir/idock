@@ -3,8 +3,8 @@
 #include "receptor.hpp"
 #include "utility.hpp"
 
-const float receptor::Default_Partition_Granularity = 3.0f;
-const float receptor::Default_Partition_Granularity_Inverse = 1.0f / Default_Partition_Granularity;
+const float receptor::partition_granularity = 3.0f;
+const float receptor::partition_granularity_inv = 1.0f / partition_granularity;
 
 receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float grid_granularity) : center(center), grid_granularity(grid_granularity), grid_granularity_inverse(1 / grid_granularity), grid_size(make_array(grid_granularity, grid_granularity, grid_granularity)), grid_size_inverse(make_array(grid_granularity_inverse, grid_granularity_inverse, grid_granularity_inverse)), grid_maps(scoring_function::n)
 {
@@ -21,7 +21,7 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 		corner1[i] = corner0[i] + size[i];
 
 		// Determine the number of partitions.
-		num_partitions[i] = static_cast<size_t>(size[i] * Default_Partition_Granularity_Inverse);
+		num_partitions[i] = static_cast<size_t>(size[i] * partition_granularity_inv);
 		partition_size[i] = size[i] / num_partitions[i];
 		partition_size_inverse[i] = 1.0f / partition_size[i];
 	}

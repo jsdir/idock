@@ -325,9 +325,9 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		}
 
 		// Update orientation.
-		assert(f.parent_rotorX_to_current_rotorY.normalized());
+		assert(normalized(f.parent_rotorX_to_current_rotorY));
 		axes[k] = orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY;
-		assert(axes[k].normalized());
+		assert(normalized(axes[k]));
 		orientations_q[k] = vec4_to_qtn4(axes[k], conf[7 + t++]) * orientations_q[f.parent];
 		assert(normalized(orientations_q[k]));
 		orientations_m[k] = qtn4_to_mat3(orientations_q[k]);
@@ -538,9 +538,9 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
 
 	// Randomize conformation c0.
-	c0[0] = rec.center[0] + uniform_11(rng) * rec.span[0];
-	c0[1] = rec.center[1] + uniform_11(rng) * rec.span[1];
-	c0[2] = rec.center[2] + uniform_11(rng) * rec.span[2];
+	c0[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
+	c0[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
+	c0[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
 	const array<float, 4> rnorientation = {uniform_11(rng), uniform_11(rng), uniform_11(rng), uniform_11(rng)};
 	const array<float, 4> c0orientation = normalize(rnorientation);
 	assert(normalized(c0orientation));
