@@ -19,7 +19,7 @@ public:
 	array3d<vector<size_t>> partitions; ///< Heavy atoms in partitions.
 
 	const array<float, 3> center; ///< Box center.
-	array<float, 3> span; ///< 3D sizes of box.
+	array<float, 3> size; ///< 3D sizes of box.
 	array<float, 3> corner0; ///< Box boundary corner with smallest values of all the 3 dimensions.
 	array<float, 3> corner1; ///< Box boundary corner with largest values of all the 3 dimensions.
 	const float grid_granularity; ///< 1D size of grids.
@@ -37,7 +37,7 @@ public:
 	/// @param center Box center.
 	/// @param span_ Intended 3D sizes of box. It will be expanded to the nearest multiple of grid_granularity.
 	/// @param grid_granularity 1D size of grids.
-	explicit receptor(const path& p, const array<float, 3>& center, const array<float, 3>& span_, const float grid_granularity);
+	explicit receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float grid_granularity);
 
 	/// Returns true if a coordinate is within current half-open-half-close box, i.e. [corner0, corner1).
 	bool within(const array<float, 3>& coordinate) const;

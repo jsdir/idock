@@ -6,23 +6,23 @@
 const float receptor::Default_Partition_Granularity = 3.0f;
 const float receptor::Default_Partition_Granularity_Inverse = 1.0f / Default_Partition_Granularity;
 
-receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& span_, const float grid_granularity) : center(center), grid_granularity(grid_granularity), grid_granularity_inverse(1 / grid_granularity), grid_size(make_array(grid_granularity, grid_granularity, grid_granularity)), grid_size_inverse(make_array(grid_granularity_inverse, grid_granularity_inverse, grid_granularity_inverse)), grid_maps(scoring_function::n)
+receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float grid_granularity) : center(center), grid_granularity(grid_granularity), grid_granularity_inverse(1 / grid_granularity), grid_size(make_array(grid_granularity, grid_granularity, grid_granularity)), grid_size_inverse(make_array(grid_granularity_inverse, grid_granularity_inverse, grid_granularity_inverse)), grid_maps(scoring_function::n)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
 	{
-		// Slightly expand the user-input span to the nearest multiple of granularity.
-		num_grids[i] = static_cast<size_t>(ceil(span_[i] * grid_size_inverse[i]));
-		span[i] = grid_size[i] * num_grids[i];
+		// Slightly expand the user-input size to the nearest multiple of granularity.
+		num_grids[i] = static_cast<size_t>(ceil(size_[i] * grid_size_inverse[i]));
+		size[i] = grid_size[i] * num_grids[i];
 		num_probes[i] = num_grids[i] + 1;
 
 		// Determine the two extreme corners.
-		corner0[i] = center[i]  - span[i] * 0.5f;
-		corner1[i] = corner0[i] + span[i];
+		corner0[i] = center[i]  - size[i] * 0.5f;
+		corner1[i] = corner0[i] + size[i];
 
 		// Determine the number of partitions.
-		num_partitions[i] = static_cast<size_t>(span[i] * Default_Partition_Granularity_Inverse);
-		partition_size[i] = span[i] / num_partitions[i];
+		num_partitions[i] = static_cast<size_t>(size[i] * Default_Partition_Granularity_Inverse);
+		partition_size[i] = size[i] / num_partitions[i];
 		partition_size_inverse[i] = 1.0f / partition_size[i];
 	}
 	partitions.resize(num_partitions);
