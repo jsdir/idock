@@ -58,7 +58,7 @@ public:
 	/// Returns true if the current atom is covalently bonded to a given atom.
 	bool has_covalent_bond(const atom& a) const;
 
-	/// Output the atom in pdbqt format.
+	/// Outputs an ATOM line in PDBQT format.
 	void output(boost::filesystem::ofstream& ofs, const array<float, 3>& c) const;
 };
 
