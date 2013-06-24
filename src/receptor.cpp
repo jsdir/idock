@@ -202,7 +202,7 @@ int receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_f
 	size_t offset = num_x_probes * num_y_probes * z;
 	vector<float> e(n);
 
-	// For each probe atom of the given X dimension value.
+	// For each probe atom coordinate of the given z dimension value.
 	for (size_t y = 0; y < num_y_probes; ++y)
 	{
 		for (size_t x = 0; x < num_x_probes; ++x)
