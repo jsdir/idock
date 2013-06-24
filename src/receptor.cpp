@@ -194,42 +194,48 @@ array<size_t, 3> receptor::partition_index(const array<float, 3>& coordinate) co
 
 int receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_function& sf)
 {
-	vector<float> e(xs.size());
-
-	// For each probe atom of the given X dimension value.
+	const size_t n = xs.size();
 	const size_t num_y_probes = num_probes[1];
 	const size_t num_x_probes = num_probes[0];
-	for (size_t y = 0; y < num_y_probes; ++y)
-	for (size_t x = 0; x < num_x_probes; ++x)
-	{
-		// Find the possibly interacting receptor atoms via partitions.
-		const array<size_t, 3> grid_index = { x, y, z };
-		const array<float, 3> probe_coords = grid_corner0(grid_index);
+	array<float, 3> probe_coord = corner0;
+	probe_coord[2] += grid_granularity * z;
+	size_t offset = num_x_probes * num_y_probes * z;
+	vector<float> e(n);
 
-		// Accumulate individual free energies for each atom types to populate.
-		fill(e.begin(), e.end(), 0.0f);
-		for (const auto p : partitions(partition_index(probe_coords)))
+	// For each probe atom of the given X dimension value.
+	for (size_t y = 0; y < num_y_probes; ++y)
+	{
+		for (size_t x = 0; x < num_x_probes; ++x)
 		{
-			const atom& a = atoms[p];
-			assert(!a.is_hydrogen());
-			const float r2 = distance_sqr(probe_coords, a.coord);
-			if (r2 <= scoring_function::cutoff_sqr)
+			// Accumulate individual free energies for each atom types to populate.
+			fill(e.begin(), e.end(), 0.0f);
+			for (const auto p : partitions(partition_index(probe_coord)))
 			{
-				const size_t t1 = a.xs;
-				for (size_t i = 0; i < xs.size(); ++i)
+				const atom& a = atoms[p];
+				assert(!a.is_hydrogen());
+				const float r2 = distance_sqr(probe_coord, a.coord);
+				if (r2 <= scoring_function::cutoff_sqr)
 				{
-					const size_t t2 = xs[i];
-					e[i] += sf.e[sf.o(mp(t1, t2), r2)];
+					const size_t t1 = a.xs;
+					for (size_t i = 0; i < n; ++i)
+					{
+						e[i] += sf.e[sf.o(mp(t1, xs[i]), r2)];
+					}
 				}
 			}
-		}
 
-		// Save accumulated free energies into grid maps.
-		for (size_t i = 0; i < xs.size(); ++i)
-		{
-			const size_t t = xs[i];
-			grid_maps[t](grid_index) = e[i];
+			// Save accumulated free energies into grid maps.
+			for (size_t i = 0; i < n; ++i)
+			{
+				grid_maps[xs[i]][offset] = e[i];
+			}
+
+			// Move to the next probe.
+			++offset;
+			probe_coord[0] += grid_granularity;
 		}
+		probe_coord[0] = corner0[0];
+		probe_coord[1] += grid_granularity;
 	}
 	return 0;
 }
