@@ -47,19 +47,17 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 				residue_start = atoms.size();
 			}
 
-			// Parse and validate AutoDock4 atom type.
-			const string ad_type_string = line.substr(77, isspace(line[78]) ? 1 : 2);
-			const size_t ad = parse_ad_type_string(ad_type_string);
-			if (ad == AD_TYPE_SIZE) continue;
+			// Parse the ATOM/HETATM line.
+			atom a(line);
+
+			// Skip unsupported atom types.
+			if (a.ad_unsupported()) continue;
 
 			// Skip non-polar hydrogens.
-			if (ad == AD_TYPE_H) continue;
-
-			// Parse the Cartesian coordinate.
-			atom a(stoul(line.substr(6, 5)), line.substr(12, 4), make_array(stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8))), ad);
+			if (a.is_nonpolar_hydrogen()) continue;
 
 			// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
-			if (ad == AD_TYPE_HD)
+			if (a.is_polar_hydrogen())
 			{
 				for (size_t i = atoms.size(); i > residue_start;)
 				{
