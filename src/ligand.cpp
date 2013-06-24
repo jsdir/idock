@@ -253,9 +253,13 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			for (size_t k2 = k1 + 1; k2 < num_frames; ++k2)
 			{
 				const frame& f2 = frames[k2];
+				const frame& f3 = frames[f2.parent];
 				for (size_t j = f2.habegin; j < f2.haend; ++j)
 				{
-					if (((k1 == f2.parent) && ((j == f2.rotorYidx) || (i == f2.rotorXidx))) || (find(neighbors.begin(), neighbors.end(), j) != neighbors.end())) continue;
+					if (k1 == f2.parent && (i == f2.rotorXidx || j == f2.rotorYidx)) continue;
+					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue;
+					if (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) continue;
+					if (find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) continue;
 					const size_t type_pair_index = mp(heavy_atoms[i].xs, heavy_atoms[j].xs);
 					interacting_pairs.push_back(interacting_pair(i, j, type_pair_index));
 				}
