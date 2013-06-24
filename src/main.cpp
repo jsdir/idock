@@ -29,7 +29,7 @@ inline bool operator<(const summary& a, const summary& b)
 int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
-	vec3 center, size;
+	array<float, 3> center, size;
 	size_t num_threads, seed, num_mc_tasks, num_generations, max_conformations;
 	float grid_granularity;
 

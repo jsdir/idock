@@ -6,7 +6,7 @@
 const float receptor::Default_Partition_Granularity = 3.0f;
 const float receptor::Default_Partition_Granularity_Inverse = 1.0f / Default_Partition_Granularity;
 
-receptor::receptor(const path& p, const vec3& center, const vec3& span_, const float grid_granularity) : center(center), grid_granularity(grid_granularity), grid_granularity_inverse(1 / grid_granularity), grid_size(vec3(grid_granularity, grid_granularity, grid_granularity)), grid_size_inverse(vec3(grid_granularity_inverse, grid_granularity_inverse, grid_granularity_inverse)), grid_maps(scoring_function::n)
+receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& span_, const float grid_granularity) : center(center), grid_granularity(grid_granularity), grid_granularity_inverse(1 / grid_granularity), grid_size(make_array(grid_granularity, grid_granularity, grid_granularity)), grid_size_inverse(make_array(grid_granularity_inverse, grid_granularity_inverse, grid_granularity_inverse)), grid_maps(scoring_function::n)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
@@ -56,7 +56,7 @@ receptor::receptor(const path& p, const vec3& center, const vec3& span_, const f
 			if (ad == AD_TYPE_H) continue;
 
 			// Parse the Cartesian coordinate.
-			atom a(stoul(line.substr(6, 5)), line.substr(12, 4), vec3(stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8))), ad);
+			atom a(stoul(line.substr(6, 5)), line.substr(12, 4), make_array(stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8))), ad);
 
 			// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
 			if (ad == AD_TYPE_HD)
@@ -115,8 +115,8 @@ receptor::receptor(const path& p, const vec3& center, const vec3& span_, const f
 		p.reserve(100);
 		const array<size_t, 3> corner0_index = {x  , y  , z  };
 		const array<size_t, 3> corner1_index = {x+1, y+1, z+1};
-		const vec3 corner0 = partition_corner0(corner0_index);
-		const vec3 corner1 = partition_corner0(corner1_index);
+		const array<float, 3> corner0 = partition_corner0(corner0_index);
+		const array<float, 3> corner1 = partition_corner0(corner1_index);
 		for (size_t i = 0; i < atoms.size(); ++i)
 		{
 			if (project_distance_sqr(corner0, corner1, atoms[i].coord) < scoring_function::cutoff_sqr)
@@ -127,7 +127,7 @@ receptor::receptor(const path& p, const vec3& center, const vec3& span_, const f
 	}
 }
 
-bool receptor::within(const vec3& coordinate) const
+bool receptor::within(const array<float, 3>& coordinate) const
 {
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
@@ -138,10 +138,10 @@ bool receptor::within(const vec3& coordinate) const
 	return true;
 }
 
-float receptor::project_distance_sqr(const vec3& corner0, const vec3& corner1, const vec3& coordinate) const
+float receptor::project_distance_sqr(const array<float, 3>& corner0, const array<float, 3>& corner1, const array<float, 3>& coordinate) const
 {
 	// Calculate the projection point of the given coordinate onto the surface of the given box.
-	vec3 projection = coordinate; // The loop may be unrolled by enabling compiler optimization.
+	array<float, 3> projection = coordinate; // The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
 	{
 		if (projection[i] < corner0[i]) projection[i] = corner0[i];
@@ -152,22 +152,22 @@ float receptor::project_distance_sqr(const vec3& corner0, const vec3& corner1, c
 	return distance_sqr(projection, coordinate);
 }
 
-float receptor::project_distance_sqr(const vec3& coordinate) const
+float receptor::project_distance_sqr(const array<float, 3>& coordinate) const
 {
 	return project_distance_sqr(corner0, corner1, coordinate);
 }
 
-vec3 receptor::grid_corner0(const array<size_t, 3>& index) const
+array<float, 3> receptor::grid_corner0(const array<size_t, 3>& index) const
 {
 	return corner0 + (grid_size * index);
 }
 
-vec3 receptor::partition_corner0(const array<size_t, 3>& index) const
+array<float, 3> receptor::partition_corner0(const array<size_t, 3>& index) const
 {
 	return corner0 + (partition_size * index);
 }
 
-array<size_t, 3> receptor::grid_index(const vec3& coordinate) const
+array<size_t, 3> receptor::grid_index(const array<float, 3>& coordinate) const
 {
 	array<size_t, 3> index;
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
@@ -180,7 +180,7 @@ array<size_t, 3> receptor::grid_index(const vec3& coordinate) const
 	return index;
 }
 
-array<size_t, 3> receptor::partition_index(const vec3& coordinate) const
+array<size_t, 3> receptor::partition_index(const array<float, 3>& coordinate) const
 {
 	array<size_t, 3> index;
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
@@ -206,7 +206,7 @@ int receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_f
 	{
 		// Find the possibly interacting receptor atoms via partitions.
 		const array<size_t, 3> grid_index = { x, y, z };
-		const vec3 probe_coords = grid_corner0(grid_index);
+		const array<float, 3> probe_coords = grid_corner0(grid_index);
 
 		// Accumulate individual free energies for each atom types to populate.
 		fill(e.begin(), e.end(), 0.0f);

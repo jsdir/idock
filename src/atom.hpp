@@ -3,7 +3,7 @@
 #define IDOCK_ATOM_HPP
 
 #include <string>
-#include "vec3.hpp"
+#include "utility.hpp"
 
 // AutoDock4 atom types.
 const size_t AD_TYPE_H    =  0;	///< Non-polar hydrogen, i.e. bonded to carbon.
@@ -265,12 +265,12 @@ class atom
 public:
 	size_t serial; ///< Serial number.
 	string name; ///< Atom name;
-	vec3 coord; ///< 3D coordinate.
+	array<float, 3> coord; ///< 3D coordinate.
 	size_t ad; ///< AutoDock4 atom type.
 	size_t xs; ///< XScore atom type.
 
 	/// Constructs an atom with 3D coordinate and AutoDock4 atom type.
-	explicit atom(const size_t serial, const string& name, const vec3& coord, const size_t ad) : serial(serial), name(name), coord(coord), ad(ad), xs(ad_to_xs[ad]) {}
+	explicit atom(const size_t serial, const string& name, const array<float, 3>& coord, const size_t ad) : serial(serial), name(name), coord(coord), ad(ad), xs(ad_to_xs[ad]) {}
 
 	/// Returns the covalent radius of current AutoDock4 atom type.
 	float covalent_radius() const

@@ -43,7 +43,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			// Parse the Cartesian coordinate.
 			string name = line.substr(12, 4);
 			boost::algorithm::trim(name);
-			atom a(stoul(line.substr(6, 5)), name, vec3(stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8))), ad);
+			atom a(stoul(line.substr(6, 5)), name, make_array(stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8))), ad);
 
 			if (a.is_hydrogen()) // Current atom is a hydrogen.
 			{
@@ -201,7 +201,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	for (size_t k = 0; k < num_frames; ++k)
 	{
 		const frame& f = frames[k];
-		const vec3 origin = heavy_atoms[f.rotorYidx].coord;
+		const array<float, 3> origin = heavy_atoms[f.rotorYidx].coord;
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
 			heavy_atoms[i].coord -= origin;
@@ -274,16 +274,16 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, float& f, vector<float>& g) const
 {
 	// Initialize frame-wide conformational variables.
-	vector<vec3> origins(num_frames); ///< Origin coordinate, which is rotorY.
-	vector<vec3> axes(num_frames); ///< Vector pointing from rotor Y to rotor X.
+	vector<array<float, 3>> origins(num_frames); ///< Origin coordinate, which is rotorY.
+	vector<array<float, 3>> axes(num_frames); ///< Vector pointing from rotor Y to rotor X.
 	vector<array<float, 4>> orientations_q(num_frames); ///< Orientation in the form of quaternion.
 	vector<array<float, 9>> orientations_m(num_frames); ///< Orientation in the form of 3x3 matrix.
-	vector<vec3> forces(num_frames, zero3); ///< Aggregated derivatives of heavy atoms.
-	vector<vec3> torques(num_frames, zero3); /// Torque of the force.
+	vector<array<float, 3>> forces(num_frames, zero3); ///< Aggregated derivatives of heavy atoms.
+	vector<array<float, 3>> torques(num_frames, zero3); /// Torque of the force.
 
 	// Initialize atom-wide conformational variables.
-	vector<vec3> coordinates(num_heavy_atoms); ///< Heavy atom coordinates.
-	vector<vec3> derivatives(num_heavy_atoms); ///< Heavy atom derivatives.
+	vector<array<float, 3>> coordinates(num_heavy_atoms); ///< Heavy atom coordinates.
+	vector<array<float, 3>> derivatives(num_heavy_atoms); ///< Heavy atom derivatives.
 
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
@@ -399,13 +399,13 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 	for (size_t i = 0; i < num_interacting_pairs; ++i)
 	{
 		const interacting_pair& p = interacting_pairs[i];
-		const vec3 r = coordinates[p.i2] - coordinates[p.i1];
+		const array<float, 3> r = coordinates[p.i2] - coordinates[p.i1];
 		const float r2 = norm_sqr(r);
 		if (r2 < scoring_function::cutoff_sqr)
 		{
 			const size_t o = sf.o(p.type_pair_index, r2);
 			e += sf.e[o];
-			const vec3 derivative = sf.d[o] * r;
+			const array<float, 3> derivative = sf.d[o] * r;
 			derivatives[p.i1] -= derivative;
 			derivatives[p.i2] += derivative;
 		}
@@ -461,11 +461,11 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 
 result ligand::compose_result(const float e, const vector<float>& conf) const
 {
-	vector<vec3> origins(num_frames);
+	vector<array<float, 3>> origins(num_frames);
 	vector<array<float, 4>> orientations_q(num_frames);
 	vector<array<float, 9>> orientations_m(num_frames);
-	vector<vec3> heavy_atoms(num_heavy_atoms);
-	vector<vec3> hydrogens(num_hydrogens);
+	vector<array<float, 3>> heavy_atoms(num_heavy_atoms);
+	vector<array<float, 3>> hydrogens(num_hydrogens);
 
 	origins.front()[0] = conf[0];
 	origins.front()[1] = conf[1];
@@ -510,7 +510,7 @@ result ligand::compose_result(const float e, const vector<float>& conf) const
 		}
 	}
 
-	return result(e, static_cast<vector<vec3>&&>(heavy_atoms), static_cast<vector<vec3>&&>(hydrogens));
+	return result(e, static_cast<vector<array<float, 3>>&&>(heavy_atoms), static_cast<vector<array<float, 3>>&&>(hydrogens));
 }
 
 int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
@@ -598,7 +598,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 				c2[2] = c1[2] + alpha * p[2];
 				const array<float, 4> c1orientation = { c1[3], c1[4], c1[5], c1[6] };
 				assert(normalized(c1orientation));
-				const array<float, 4> c2orientation = qtn4_mul_qtn4(vec3_to_qtn4(alpha * vec3(p[3], p[4], p[5])), c1orientation);
+				const array<float, 4> c2orientation = qtn4_mul_qtn4(vec3_to_qtn4(alpha * make_array(p[3], p[4], p[5])), c1orientation);
 				assert(normalized(c2orientation));
 				c2[3] = c2orientation[0];
 				c2[4] = c2orientation[1];
@@ -691,7 +691,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			const string& line = lines[j];
 			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
 			{
-				const vec3& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
+				const array<float, 3>& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
 					<< setw(8) << coordinate[1]

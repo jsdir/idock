@@ -16,13 +16,13 @@ class result
 {
 public:
 	float e; ///< Free energy.
-	vector<vec3> heavy_atoms; ///< Heavy atom coordinates.
-	vector<vec3> hydrogens; ///< Hydrogen atom coordinates.
+	vector<array<float, 3>> heavy_atoms; ///< Heavy atom coordinates.
+	vector<array<float, 3>> hydrogens; ///< Hydrogen atom coordinates.
 
 	result() {}
 
 	/// Constructs a result from free energy e, force f, heavy atom coordinates and hydrogen atom coordinates.
-	explicit result(const float e, vector<vec3>&& heavy_atoms_, vector<vec3>&& hydrogens_) : e(e), heavy_atoms(static_cast<vector<vec3>&&>(heavy_atoms_)), hydrogens(static_cast<vector<vec3>&&>(hydrogens_)) {}
+	explicit result(const float e, vector<array<float, 3>>&& heavy_atoms_, vector<array<float, 3>>&& hydrogens_) : e(e), heavy_atoms(static_cast<vector<array<float, 3>>&&>(heavy_atoms_)), hydrogens(static_cast<vector<array<float, 3>>&&>(hydrogens_)) {}
 
 	/// For sorting ptr_vector<result>.
 	bool operator<(const result& r) const
@@ -45,8 +45,8 @@ public:
 	size_t hybegin; ///< The inclusive beginning index to the hydrogen atoms of the current frame.
 	size_t hyend; ///< The exclusive ending index to the hydrogen atoms of the current frame.
 	bool active; ///< Indicates if the current frame is active.
-	vec3 parent_rotorY_to_current_rotorY; ///< Vector pointing from the origin of parent frame to the origin of current frame.
-	vec3 parent_rotorX_to_current_rotorY; ///< Normalized vector pointing from rotor X of parent frame to rotor Y of current frame.
+	array<float, 3> parent_rotorY_to_current_rotorY; ///< Vector pointing from the origin of parent frame to the origin of current frame.
+	array<float, 3> parent_rotorX_to_current_rotorY; ///< Normalized vector pointing from rotor X of parent frame to rotor Y of current frame.
 
 	/// Constructs an active frame, and relates it to its parent frame.
 	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t habegin, const size_t hybegin) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), habegin(habegin), hybegin(hybegin), active(true) {}
