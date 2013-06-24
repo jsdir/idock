@@ -26,7 +26,7 @@
     <ClCompile Include="src\thread_pool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\qtn4.cpp">
+    <ClCompile Include="src\atom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -47,12 +47,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\thread_pool.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\vec3.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\qtn4.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\utility.hpp">
