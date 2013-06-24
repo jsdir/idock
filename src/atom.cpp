@@ -196,6 +196,9 @@ bool atom::is_hetero() const
 /// For nitrogen and oxygen, revises the XScore atom type to make it a hydrogen bond donor.
 void atom::donorize()
 {
+	assert(xs == 2 || xs == 4 || xs == 6);
+	xs += 1;
+/*
 	switch (xs)
 	{
 		case 2 : xs = 3; break; // Nitrogen, hydrogen bond donor.
@@ -203,6 +206,7 @@ void atom::donorize()
 		case 6 : xs = 7; break; // Oxygen, both hydrogen bond donor and acceptor.
 		default: assert(false); break;
 	}
+*/
 }
 
 /// For carbon, revises the XScore atom type to make it non-hydrophobic.
