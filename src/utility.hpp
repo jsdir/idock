@@ -207,7 +207,7 @@ inline array<float, 4> vec3_to_qtn4(const array<float, 3>& rotation)
 	}
 	else
 	{
-		const float h = norm(rotation) * 0.5;
+		const float h = norm(rotation) * 0.5f;
 		const array<float, 3> axis = (0.5f / h) * rotation;
 //		assert(normalized(axis));
 		const float s = sin(h);
