@@ -121,6 +121,10 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 				}
 			}
 
+			// The current frame has the newly inserted BRANCH frame as one of its branches.
+			// It is unsafe to use f in place of frames[current] because frames could reserve a new memory block after calling push_back().
+			frames[current].branches.push_back(frames.size() - 1);
+
 			// Now the current frame is the newly inserted BRANCH frame.
 			current = frames.size() - 1;
 

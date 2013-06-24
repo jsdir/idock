@@ -47,6 +47,7 @@ public:
 	bool active; ///< Indicates if the current frame is active.
 	array<float, 3> parent_rotorY_to_current_rotorY; ///< Vector pointing from the origin of parent frame to the origin of current frame.
 	array<float, 3> parent_rotorX_to_current_rotorY; ///< Normalized vector pointing from rotor X of parent frame to rotor Y of current frame.
+	vector<size_t> branches; ///< Indexes to child branches.
 
 	/// Constructs an active frame, and relates it to its parent frame.
 	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t habegin, const size_t hybegin) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), habegin(habegin), hybegin(hybegin), active(true) {}
