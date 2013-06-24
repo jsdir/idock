@@ -3,7 +3,6 @@
 #define IDOCK_UTILITY_HPP
 
 #include <array>
-#include <vector>
 #include <cmath>
 using namespace std;
 
