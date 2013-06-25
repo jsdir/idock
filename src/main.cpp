@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
 			cout << "Creating " << setw(2) << xs.size() << " grid map" << (xs.size() == 1 ? ' ' : 's') << "        " << flush;
 			for (size_t z = 0; z < rec.num_probes[2]; ++z)
 			{
-				tp.push_back(packaged_task<int()>(bind(&receptor::populate, ref(rec), cref(xs), z, cref(sf))));
+				tp.push_back(packaged_task<int()>(bind(&receptor::populate, ref(rec), cref(sf), cref(xs), z)));
 			}
 			boost::timer::auto_cpu_timer t;
 			tp.sync(25);

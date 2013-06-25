@@ -192,7 +192,7 @@ array<size_t, 3> receptor::partition_index(const array<float, 3>& coordinate) co
 	return index;
 }
 
-int receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_function& sf)
+int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z)
 {
 	const size_t n = xs.size();
 	const size_t num_y_probes = num_probes[1];

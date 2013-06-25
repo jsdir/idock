@@ -61,7 +61,7 @@ public:
 	array<size_t, 3> partition_index(const array<float, 3>& coordinate) const;
 
 	/// Task for populating grid maps for certain atom types along Y and Z dimensions for an X dimension value.
-	int populate(const vector<size_t>& atom_types_to_populate, const size_t x, const scoring_function& sf);
+	int populate(const scoring_function& sf, const vector<size_t>& xs, const size_t x);
 };
 
 #endif
