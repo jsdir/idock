@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/timer/timer.hpp>
 #include "thread_pool.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
@@ -210,6 +211,7 @@ int main(int argc, char* argv[])
 			{
 				tp.push_back(packaged_task<int()>(bind(&receptor::populate, ref(rec), cref(xs), z, cref(sf))));
 			}
+			boost::timer::auto_cpu_timer t;
 			tp.sync(25);
 			cout << '\r' << setw(55) << '\r';
 		}
@@ -223,7 +225,9 @@ int main(int argc, char* argv[])
 		{
 			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), ref(results[i]), cref(sf), cref(rec), rng(), num_generations)));
 		}
+		boost::timer::auto_cpu_timer t;
 		tp.sync(25);
+		t.stop();
 		cout << " | " << flush;
 
 		results.sort();
@@ -255,6 +259,7 @@ int main(int argc, char* argv[])
 			}
 		}
 		cout << setw(4) << representatives.size() << endl;
+		t.report();
 
 		// Write models to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
