@@ -28,17 +28,17 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 	partitions.resize(num_partitions);
 
 	// Parse the receptor line by line.
-	atoms.reserve(2000); // A receptor typically consists of <= 2,000 atoms without bound.
-	string residue = "XXXX"; // Current residue sequence, used to track residue change, initialized to a dummy value.
+	atoms.reserve(2000); // A receptor typically consists of <= 2,000 atoms within bound.
+	string residue = "XXXX"; // Current residue sequence located at 1-based [23, 26], used to track residue change, initialized to a dummy value.
 	size_t residue_start; // The starting atom of the current residue.
 	string line;
-	for (boost::filesystem::ifstream in(p); getline(in, line);)
+	for (boost::filesystem::ifstream ifs(p); getline(ifs, line);)
 	{
 		const string record = line.substr(0, 6);
 		if (record == "ATOM  " || record == "HETATM")
 		{
-			// Parse the residue sequence located at 1-based [23, 26].
-			if ((line[25] != residue[3]) || (line[24] != residue[2]) || (line[23] != residue[1]) || (line[22] != residue[0])) // This line is the start of a new residue.
+			// If this line is the start of a new residue, mark the starting index within the atoms vector.
+			if (line[25] != residue[3] || line[24] != residue[2] || line[23] != residue[1] || line[22] != residue[0])
 			{
 				residue[3] = line[25];
 				residue[2] = line[24];
@@ -113,7 +113,7 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 	for (size_t x = 0; x < num_partitions[0]; ++x)
 	{
 		vector<size_t>& p = partitions(x, y, z);
-		p.reserve(100);
+		p.reserve(200);
 		const array<size_t, 3> corner0_index = {x  , y  , z  };
 		const array<size_t, 3> corner1_index = {x+1, y+1, z+1};
 		const array<float, 3> corner0 = partition_corner0(corner0_index);
