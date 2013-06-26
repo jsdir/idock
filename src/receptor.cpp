@@ -217,7 +217,7 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 				const atom& a = atoms[p];
 				assert(!a.is_hydrogen());
 				const float r2 = distance_sqr(probe_coord, a.coord);
-				if (r2 <= scoring_function::cutoff_sqr)
+				if (r2 < scoring_function::cutoff_sqr)
 				{
 					const size_t t1 = a.xs;
 					for (size_t i = 0; i < n; ++i)
