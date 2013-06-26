@@ -28,7 +28,7 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 	partitions.resize(num_partitions);
 
 	// Parse the receptor line by line.
-	atoms.reserve(5000); // A receptor typically consists of <= 5,000 atoms.
+	atoms.reserve(2000); // A receptor typically consists of <= 2,000 atoms without bound.
 	string residue = "XXXX"; // Current residue sequence, used to track residue change, initialized to a dummy value.
 	size_t residue_start; // The starting atom of the current residue.
 	string line;
