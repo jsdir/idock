@@ -37,6 +37,7 @@
     <ClCompile Include="src\scoring_function.cpp" />
     <ClCompile Include="src\receptor.cpp" />
     <ClCompile Include="src\thread_pool.cpp" />
+    <ClCompile Include="src\utility.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
