@@ -16,7 +16,6 @@ public:
 	static const float partition_granularity_inv; ///< 1 / partition_granularity.
 
 	vector<atom> atoms; ///< Receptor atoms.
-	array3d<vector<size_t>> partitions; ///< Heavy atoms in partitions.
 
 	const array<float, 3> center; ///< Box center.
 	array<float, 3> size; ///< 3D sizes of box.

@@ -26,7 +26,6 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 		partition_size[i] = size[i] / num_partitions[i];
 		partition_size_inverse[i] = 1.0f / partition_size[i];
 	}
-	partitions.resize(num_partitions);
 
 	// Parse the receptor line by line.
 	atoms.reserve(2000); // A receptor typically consists of <= 2,000 atoms within bound.
@@ -107,26 +106,6 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 			residue = "XXXX";
 		}
 	}
-
-	// Allocate each nearby receptor atom to its corresponding partition.
-	for (size_t z = 0; z < num_partitions[2]; ++z)
-	for (size_t y = 0; y < num_partitions[1]; ++y)
-	for (size_t x = 0; x < num_partitions[0]; ++x)
-	{
-		vector<size_t>& p = partitions(x, y, z);
-		p.reserve(200);
-		const array<size_t, 3> corner0_index = {x  , y  , z  };
-		const array<size_t, 3> corner1_index = {x+1, y+1, z+1};
-		const array<float, 3> corner0 = partition_corner0(corner0_index);
-		const array<float, 3> corner1 = partition_corner0(corner1_index);
-		for (size_t i = 0; i < atoms.size(); ++i)
-		{
-			if (project_distance_sqr(corner0, corner1, atoms[i].coord) < scoring_function::cutoff_sqr)
-			{
-				p.push_back(i);
-			}
-		}
-	}
 }
 
 bool receptor::within(const array<float, 3>& coordinate) const
@@ -164,11 +143,6 @@ array<float, 3> receptor::grid_corner0(const array<size_t, 3>& index) const
 	return corner0 + (grid_size * index);
 }
 
-array<float, 3> receptor::partition_corner0(const array<size_t, 3>& index) const
-{
-	return corner0 + (partition_size * index);
-}
-
 array<size_t, 3> receptor::grid_index(const array<float, 3>& coordinate) const
 {
 	array<size_t, 3> index;
@@ -178,20 +152,6 @@ array<size_t, 3> receptor::grid_index(const array<float, 3>& coordinate) const
 		// Boundary checking is not necessary because the given coordinate is a ligand atom,
 		// which has been restricted within the half-open-half-close box [corner0, corner1).
 		//if (index[i] == num_grids[i]) index[i] = num_grids[i] - 1;
-	}
-	return index;
-}
-
-array<size_t, 3> receptor::partition_index(const array<float, 3>& coordinate) const
-{
-	array<size_t, 3> index;
-	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
-	{
-		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * partition_size_inverse[i]);
-		// The following condition occurs if and only if coordinate[i] is exactly at the right boundary of the box.
-		// In such case, merge it into the last partition.
-		// Boundary checking is necessary because the given coordinate is a probe atom.
-		if (index[i] == num_partitions[i]) index[i] = num_partitions[i] - 1;
 	}
 	return index;
 }
