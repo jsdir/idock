@@ -1,3 +1,4 @@
+#include <iostream>
 #include <boost/filesystem/fstream.hpp>
 #include "scoring_function.hpp"
 #include "receptor.hpp"
@@ -200,45 +201,49 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 	const size_t n = xs.size();
 	const size_t num_y_probes = num_probes[1];
 	const size_t num_x_probes = num_probes[0];
-	array<float, 3> probe_coord = corner0;
-	probe_coord[2] += grid_granularity * z;
-	size_t offset = num_x_probes * num_y_probes * z;
-	vector<float> e(n);
+	const float z_coord = corner0[2] + grid_granularity * z;
+	const size_t z_offset = num_x_probes * num_y_probes * z;
 
-	// For each probe atom coordinate of the given z dimension value.
-	for (size_t y = 0; y < num_y_probes; ++y)
+	for (const auto& a : atoms)
 	{
-		for (size_t x = 0; x < num_x_probes; ++x)
+		assert(!a.is_hydrogen());
+		const float dz = z_coord - a.coord[2];
+		const float dz_sqr = dz * dz;
+		const float dydx_sqr_ub = scoring_function::cutoff_sqr - dz_sqr;
+		if (dydx_sqr_ub <= 0) continue;
+		const float dydx_ub = sqrt(dydx_sqr_ub);
+		const float y_lb = a.coord[1] - dydx_ub;
+		const float y_ub = a.coord[1] + dydx_ub;
+		const int y_begin = y_lb > corner0[1] ? static_cast<int>((y_lb - corner0[1]) * grid_granularity_inverse) : 0;
+		const int y_end = y_ub < corner1[1] ? static_cast<int>((y_ub - corner0[1]) * grid_granularity_inverse) : num_y_probes;
+		const size_t t1 = a.xs;
+		size_t zy_offset = z_offset + num_x_probes * y_begin;
+		float dy = corner0[1] + grid_granularity * y_begin - a.coord[1];
+		for (int y = y_begin; y < y_end; ++y, zy_offset += num_x_probes, dy += grid_granularity)
 		{
-			// Accumulate individual free energies for each atom types to populate.
-			fill(e.begin(), e.end(), 0.0f);
-			for (const auto p : partitions(partition_index(probe_coord)))
+			const float dy_sqr = dy * dy;
+			const float dx_sqr_ub = dydx_sqr_ub - dy_sqr;
+			if (dx_sqr_ub <= 0) continue;
+			const float dx_ub = sqrt(dx_sqr_ub);
+			const float x_lb = a.coord[0] - dx_ub;
+			const float x_ub = a.coord[0] + dx_ub;
+			const int x_begin = x_lb > corner0[0] ? static_cast<int>((x_lb - corner0[0]) * grid_granularity_inverse) : 0;
+			const int x_end = x_ub < corner1[0] ? static_cast<int>((x_ub - corner0[0]) * grid_granularity_inverse) : num_x_probes;
+			const float dzdy_sqr = dz_sqr + dy_sqr;
+			size_t zyx_offset = zy_offset + x_begin;
+			float dx = corner0[0] + grid_granularity * x_begin - a.coord[0];
+			for (int x = x_begin; x < x_end; ++x, ++zyx_offset, dx += grid_granularity)
 			{
-				const atom& a = atoms[p];
-				assert(!a.is_hydrogen());
-				const float r2 = distance_sqr(probe_coord, a.coord);
-				if (r2 < scoring_function::cutoff_sqr)
+				const float dx_sqr = dx * dx;
+				const float r2 = dzdy_sqr + dx_sqr;
+				if (r2 >= scoring_function::cutoff_sqr) continue;
+				for (size_t i = 0; i < n; ++i)
 				{
-					const size_t t1 = a.xs;
-					for (size_t i = 0; i < n; ++i)
-					{
-						e[i] += sf.e[sf.o(mp(t1, xs[i]), r2)];
-					}
+					const size_t t2 = xs[i];
+					grid_maps[t2][zyx_offset] += sf.e[sf.o(mp(t1, t2), r2)];
 				}
 			}
-
-			// Save accumulated free energies into grid maps.
-			for (size_t i = 0; i < n; ++i)
-			{
-				grid_maps[xs[i]][offset] = e[i];
-			}
-
-			// Move to the next probe.
-			++offset;
-			probe_coord[0] += grid_granularity;
 		}
-		probe_coord[0] = corner0[0];
-		probe_coord[1] += grid_granularity;
 	}
 	return 0;
 }
