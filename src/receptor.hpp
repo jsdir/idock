@@ -21,8 +21,8 @@ public:
 	array<float, 3> size; ///< 3D sizes of box.
 	array<float, 3> corner0; ///< Box boundary corner with smallest values of all the 3 dimensions.
 	array<float, 3> corner1; ///< Box boundary corner with largest values of all the 3 dimensions.
-	const float grid_granularity; ///< 1D size of grids.
-	const float grid_granularity_inverse; ///< 1 / grid_granularity.
+	const float granularity; ///< 1D size of grids.
+	const float granularity_inverse; ///< 1 / granularity.
 	const array<float, 3> grid_size; ///< 3D sizes of grids.
 	const array<float, 3> grid_size_inverse; ///< (1, 1, 1) / grid_size.
 	array<size_t, 3> num_grids; ///< Number of grids.
@@ -34,9 +34,9 @@ public:
 
 	/// Constructs a receptor by parsing a receptor file in pdbqt format.
 	/// @param center Box center.
-	/// @param span_ Intended 3D sizes of box. It will be expanded to the nearest multiple of grid_granularity.
-	/// @param grid_granularity 1D size of grids.
-	explicit receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float grid_granularity);
+	/// @param span_ Intended 3D sizes of box. It will be expanded to the nearest multiple of granularity.
+	/// @param granularity 1D size of grids.
+	explicit receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float granularity);
 
 	/// Returns true if a coordinate is within current half-open-half-close box, i.e. [corner0, corner1).
 	bool within(const array<float, 3>& coordinate) const;

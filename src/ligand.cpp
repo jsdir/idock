@@ -391,9 +391,9 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		const float e100 = grid_map(x0 + 1, y0,     z0    );
 		const float e010 = grid_map(x0,     y0 + 1, z0    );
 		const float e001 = grid_map(x0,     y0,     z0 + 1);
-		derivatives[i][0] = (e100 - e000) * rec.grid_granularity_inverse;
-		derivatives[i][1] = (e010 - e000) * rec.grid_granularity_inverse;
-		derivatives[i][2] = (e001 - e000) * rec.grid_granularity_inverse;
+		derivatives[i][0] = (e100 - e000) * rec.granularity_inverse;
+		derivatives[i][1] = (e010 - e000) * rec.granularity_inverse;
+		derivatives[i][2] = (e001 - e000) * rec.granularity_inverse;
 
 		e += e000; // Aggregate the energy.
 	}

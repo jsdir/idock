@@ -7,7 +7,7 @@
 const float receptor::partition_granularity = 3.0f;
 const float receptor::partition_granularity_inv = 1.0f / partition_granularity;
 
-receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float grid_granularity) : center(center), grid_granularity(grid_granularity), grid_granularity_inverse(1 / grid_granularity), grid_size(make_array(grid_granularity, grid_granularity, grid_granularity)), grid_size_inverse(make_array(grid_granularity_inverse, grid_granularity_inverse, grid_granularity_inverse)), grid_maps(scoring_function::n)
+receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float granularity) : center(center), granularity(granularity), granularity_inverse(1 / granularity), grid_size(make_array(granularity, granularity, granularity)), grid_size_inverse(make_array(granularity_inverse, granularity_inverse, granularity_inverse)), grid_maps(scoring_function::n)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
@@ -161,7 +161,7 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 	const size_t n = xs.size();
 	const size_t num_y_probes = num_probes[1];
 	const size_t num_x_probes = num_probes[0];
-	const float z_coord = corner0[2] + grid_granularity * z;
+	const float z_coord = corner0[2] + granularity * z;
 	const size_t z_offset = num_x_probes * num_y_probes * z;
 
 	for (const auto& a : atoms)
@@ -174,12 +174,12 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 		const float dydx_ub = sqrt(dydx_sqr_ub);
 		const float y_lb = a.coord[1] - dydx_ub;
 		const float y_ub = a.coord[1] + dydx_ub;
-		const int y_begin = y_lb > corner0[1] ? static_cast<int>((y_lb - corner0[1]) * grid_granularity_inverse) : 0;
-		const int y_end = y_ub < corner1[1] ? static_cast<int>((y_ub - corner0[1]) * grid_granularity_inverse) : num_y_probes;
+		const int y_begin = y_lb > corner0[1] ? static_cast<int>((y_lb - corner0[1]) * granularity_inverse) : 0;
+		const int y_end = y_ub < corner1[1] ? static_cast<int>((y_ub - corner0[1]) * granularity_inverse) : num_y_probes;
 		const size_t t1 = a.xs;
 		size_t zy_offset = z_offset + num_x_probes * y_begin;
-		float dy = corner0[1] + grid_granularity * y_begin - a.coord[1];
-		for (int y = y_begin; y < y_end; ++y, zy_offset += num_x_probes, dy += grid_granularity)
+		float dy = corner0[1] + granularity * y_begin - a.coord[1];
+		for (int y = y_begin; y < y_end; ++y, zy_offset += num_x_probes, dy += granularity)
 		{
 			const float dy_sqr = dy * dy;
 			const float dx_sqr_ub = dydx_sqr_ub - dy_sqr;
@@ -187,12 +187,12 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 			const float dx_ub = sqrt(dx_sqr_ub);
 			const float x_lb = a.coord[0] - dx_ub;
 			const float x_ub = a.coord[0] + dx_ub;
-			const int x_begin = x_lb > corner0[0] ? static_cast<int>((x_lb - corner0[0]) * grid_granularity_inverse) : 0;
-			const int x_end = x_ub < corner1[0] ? static_cast<int>((x_ub - corner0[0]) * grid_granularity_inverse) : num_x_probes;
+			const int x_begin = x_lb > corner0[0] ? static_cast<int>((x_lb - corner0[0]) * granularity_inverse) : 0;
+			const int x_end = x_ub < corner1[0] ? static_cast<int>((x_ub - corner0[0]) * granularity_inverse) : num_x_probes;
 			const float dzdy_sqr = dz_sqr + dy_sqr;
 			size_t zyx_offset = zy_offset + x_begin;
-			float dx = corner0[0] + grid_granularity * x_begin - a.coord[0];
-			for (int x = x_begin; x < x_end; ++x, ++zyx_offset, dx += grid_granularity)
+			float dx = corner0[0] + granularity * x_begin - a.coord[0];
+			for (int x = x_begin; x < x_end; ++x, ++zyx_offset, dx += granularity)
 			{
 				const float dx_sqr = dx * dx;
 				const float r2 = dzdy_sqr + dx_sqr;

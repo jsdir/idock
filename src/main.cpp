@@ -32,7 +32,7 @@ int main(int argc, char* argv[])
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	array<float, 3> center, size;
 	size_t num_threads, seed, num_mc_tasks, num_generations, max_conformations;
-	float grid_granularity;
+	float granularity;
 
 	// Parse program options in a try/catch block.
 	try
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 		const size_t default_num_mc_tasks = 2048;
 		const size_t default_num_generations = 100;
 		const size_t default_max_conformations = 9;
-		const float default_grid_granularity = 0.15625f;
+		const float default_granularity = 0.15625f;
 
 		// Set up options description.
 		using namespace boost::program_options;
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
 			("generations", value<size_t>(&num_generations)->default_value(default_num_generations), "number of generations in BFGS")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
-			("granularity", value<float>(&grid_granularity)->default_value(default_grid_granularity), "density of probe atoms of grid maps")
+			("granularity", value<float>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
 			("help", "help information")
 			("version", "version information")
 			("config", value<path>(), "options can be loaded from a configuration file")
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
 	tp.sync();
 
 	cout << "Parsing receptor " << receptor_path << endl;
-	receptor rec(receptor_path, center, size, grid_granularity);
+	receptor rec(receptor_path, center, size, granularity);
 
 	cout << "Using random seed " << seed << endl;
 	mt19937_64 rng(seed);
