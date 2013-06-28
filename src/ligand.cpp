@@ -373,19 +373,11 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		const vector<float>& grid_map = rec.grid_maps[heavy_atoms[i].xs];
 		assert(grid_map.size());
 
-		// Find the index and fraction of the current coordinates.
+		// Find the index of the current coordinates.
 		const array<size_t, 3> index = rec.grid_index(coordinates[i]);
 
-		// Assert the validity of index.
-		assert(index[0] + 1 < rec.num_probes[0]);
-		assert(index[1] + 1 < rec.num_probes[1]);
-		assert(index[2] + 1 < rec.num_probes[2]);
-
-		// (x0, y0, z0) is the beginning corner of the partition.
-		const size_t x = index[0];
-		const size_t y = index[1];
-		const size_t z = index[2];
-		const size_t o000 = rec.num_probes[0] * (rec.num_probes[1] * z + y) + x;
+		// Calculate the offsets to grid map and lookup the values.
+		const size_t o000 = rec.num_probes[0] * (rec.num_probes[1] * index[2] + index[1]) + index[0];
 		const size_t o100 = o000 + 1;
 		const size_t o010 = o000 + rec.num_probes[0];
 		const size_t o001 = o000 + rec.num_probes[0] * rec.num_probes[1];

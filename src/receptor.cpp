@@ -127,6 +127,7 @@ array<size_t, 3> receptor::grid_index(const array<float, 3>& coordinate) const
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
 		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * granularity_inverse);
+		assert(index[i] + 1 < num_probes[i]);
 	}
 	return index;
 }
