@@ -3,14 +3,14 @@
 #include "receptor.hpp"
 #include "utility.hpp"
 
-receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float granularity) : center(center), granularity(granularity), granularity_inverse(1 / granularity), grid_size(make_array(granularity, granularity, granularity)), grid_size_inverse(make_array(granularity_inverse, granularity_inverse, granularity_inverse)), grid_maps(scoring_function::n)
+receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float granularity) : center(center), granularity(granularity), granularity_inverse(1.0f / granularity), grid_maps(scoring_function::n)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
 	{
 		// Slightly expand the user-input size to the nearest multiple of granularity.
-		num_grids[i] = static_cast<size_t>(ceil(size_[i] * grid_size_inverse[i]));
-		size[i] = grid_size[i] * num_grids[i];
+		num_grids[i] = static_cast<size_t>(ceil(size_[i] * granularity_inverse));
+		size[i] = granularity * num_grids[i];
 		num_probes[i] = num_grids[i] + 1;
 
 		// Determine the two extreme corners.
@@ -129,17 +129,12 @@ float receptor::project_distance_sqr(const array<float, 3>& coordinate) const
 	return project_distance_sqr(corner0, corner1, coordinate);
 }
 
-array<float, 3> receptor::grid_corner0(const array<size_t, 3>& index) const
-{
-	return corner0 + (grid_size * index);
-}
-
 array<size_t, 3> receptor::grid_index(const array<float, 3>& coordinate) const
 {
 	array<size_t, 3> index;
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
-		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * grid_size_inverse[i]);
+		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * granularity_inverse);
 		// Boundary checking is not necessary because the given coordinate is a ligand atom,
 		// which has been restricted within the half-open-half-close box [corner0, corner1).
 		//if (index[i] == num_grids[i]) index[i] = num_grids[i] - 1;

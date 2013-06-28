@@ -20,8 +20,6 @@ public:
 	array<float, 3> corner1; ///< Box boundary corner with largest values of all the 3 dimensions.
 	const float granularity; ///< 1D size of grids.
 	const float granularity_inverse; ///< 1 / granularity.
-	const array<float, 3> grid_size; ///< 3D sizes of grids.
-	const array<float, 3> grid_size_inverse; ///< (1, 1, 1) / grid_size.
 	array<size_t, 3> num_grids; ///< Number of grids.
 	array<size_t, 3> num_probes; ///< Number of probes.
 	vector<array3d<float>> grid_maps;
@@ -40,9 +38,6 @@ public:
 
 	/// Returns true if the distance between a coordinate and the surface of current box is within cutoff.
 	float project_distance_sqr(const array<float, 3>& coordinate) const;
-
-	/// Returns the coordinate of boundary corner0 of the grid at the given 3D index.
-	array<float, 3> grid_corner0(const array<size_t, 3>& index) const;
 
 	/// Returns the index of the half-open-half-close grid containing the given coordinate.
 	array<size_t, 3> grid_index(const array<float, 3>& coordinate) const;
