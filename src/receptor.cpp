@@ -82,7 +82,23 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 					}
 				}
 			}
-			if (project_distance_sqr(a.coord) < scoring_function::cutoff_sqr)
+
+			// Save the atom if and only if its distance to its projection point on the box is within cutoff.
+			float r2 = 0.0f;
+			for (size_t i = 0; i < 3; ++i)
+			{
+				if (a.coord[i] < corner0[i])
+				{
+					const float d = a.coord[i] - corner0[i];
+					r2 += d * d;
+				}
+				else if (a.coord[i] > corner1[i])
+				{
+					const float d = a.coord[i] - corner1[i];
+					r2 += d * d;
+				}
+			}
+			if (r2 < scoring_function::cutoff_sqr)
 			{
 				atoms.push_back(a);
 			}
@@ -103,20 +119,6 @@ bool receptor::within(const array<float, 3>& coordinate) const
 			return false;
 	}
 	return true;
-}
-
-float receptor::project_distance_sqr(const array<float, 3>& coordinate) const
-{
-	// Calculate the projection point of the given coordinate onto the surface of the given box.
-	array<float, 3> projection = coordinate; // The loop may be unrolled by enabling compiler optimization.
-	for (size_t i = 0; i < 3; ++i)
-	{
-		if (projection[i] < corner0[i]) projection[i] = corner0[i];
-		if (projection[i] > corner1[i]) projection[i] = corner1[i];
-	}
-
-	// Check if the distance between the projection and the given coordinate is within cutoff.
-	return distance_sqr(projection, coordinate);
 }
 
 array<size_t, 3> receptor::grid_index(const array<float, 3>& coordinate) const
