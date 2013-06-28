@@ -12,9 +12,6 @@ using namespace boost::filesystem;
 class receptor
 {
 public:
-	static const float partition_granularity; ///< Default size of partitions.
-	static const float partition_granularity_inv; ///< 1 / partition_granularity.
-
 	vector<atom> atoms; ///< Receptor atoms.
 
 	const array<float, 3> center; ///< Box center.

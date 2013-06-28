@@ -1,11 +1,7 @@
-#include <iostream>
 #include <boost/filesystem/fstream.hpp>
 #include "scoring_function.hpp"
 #include "receptor.hpp"
 #include "utility.hpp"
-
-const float receptor::partition_granularity = 3.0f;
-const float receptor::partition_granularity_inv = 1.0f / partition_granularity;
 
 receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float granularity) : center(center), granularity(granularity), granularity_inverse(1 / granularity), grid_size(make_array(granularity, granularity, granularity)), grid_size_inverse(make_array(granularity_inverse, granularity_inverse, granularity_inverse)), grid_maps(scoring_function::n)
 {

@@ -122,18 +122,6 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-		// Validate size_x, size_y, size_z.
-		if (size[0] < receptor::partition_granularity ||
-		    size[1] < receptor::partition_granularity ||
-		    size[2] < receptor::partition_granularity)
-		{
-			cerr << "Search space must be "
-				 << receptor::partition_granularity << "A x "
-				 << receptor::partition_granularity << "A x "
-				 << receptor::partition_granularity << "A or larger" << endl;
-			return 1;
-		}
-
 		// Validate output_folder.
 		if (exists(output_folder_path))
 		{
