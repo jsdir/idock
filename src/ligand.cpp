@@ -377,9 +377,9 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		const array<size_t, 3> index = rec.grid_index(coordinates[i]);
 
 		// Assert the validity of index.
-		assert(index[0] < rec.num_grids[0]);
-		assert(index[1] < rec.num_grids[1]);
-		assert(index[2] < rec.num_grids[2]);
+		assert(index[0] + 1 < rec.num_probes[0]);
+		assert(index[1] + 1 < rec.num_probes[1]);
+		assert(index[2] + 1 < rec.num_probes[2]);
 
 		// (x0, y0, z0) is the beginning corner of the partition.
 		const size_t x = index[0];

@@ -3,20 +3,14 @@
 #include "receptor.hpp"
 #include "utility.hpp"
 
-receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float granularity) : center(center), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes_product(1), grid_maps(scoring_function::n)
+receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity) : center(center), size(size), corner0(center - 0.5f * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes_product(1), grid_maps(scoring_function::n)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
 	{
-		// Slightly expand the user-input size to the nearest multiple of granularity.
-		num_grids[i] = static_cast<size_t>(ceil(size_[i] * granularity_inverse));
-		size[i] = granularity * num_grids[i];
-		num_probes[i] = num_grids[i] + 1;
+		// Reserve one more probe to calculate the derivative.
+		num_probes[i] = static_cast<size_t>(size[i] * granularity_inverse) + 1;
 		num_probes_product *= num_probes[i];
-
-		// Determine the two extreme corners.
-		corner0[i] = center[i]  - size[i] * 0.5f;
-		corner1[i] = corner0[i] + size[i];
 	}
 
 	// Parse the receptor line by line.
@@ -136,9 +130,6 @@ array<size_t, 3> receptor::grid_index(const array<float, 3>& coordinate) const
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
 		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * granularity_inverse);
-		// Boundary checking is not necessary because the given coordinate is a ligand atom,
-		// which has been restricted within the half-open-half-close box [corner0, corner1).
-		//if (index[i] == num_grids[i]) index[i] = num_grids[i] - 1;
 	}
 	return index;
 }
