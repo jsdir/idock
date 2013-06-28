@@ -32,9 +32,6 @@ public:
 	/// Returns true if a coordinate is within current half-open-half-close box, i.e. [corner0, corner1).
 	bool within(const array<float, 3>& coordinate) const;
 
-	/// Returns true if the distance between a coordinate and the surface of a box determined by boundary corner0 and corner1 is within cutoff.
-	float project_distance_sqr(const array<float, 3>& corner0, const array<float, 3>& corner1, const array<float, 3>& coordinate) const;
-
 	/// Returns true if the distance between a coordinate and the surface of current box is within cutoff.
 	float project_distance_sqr(const array<float, 3>& coordinate) const;
 

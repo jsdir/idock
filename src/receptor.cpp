@@ -105,7 +105,7 @@ bool receptor::within(const array<float, 3>& coordinate) const
 	return true;
 }
 
-float receptor::project_distance_sqr(const array<float, 3>& corner0, const array<float, 3>& corner1, const array<float, 3>& coordinate) const
+float receptor::project_distance_sqr(const array<float, 3>& coordinate) const
 {
 	// Calculate the projection point of the given coordinate onto the surface of the given box.
 	array<float, 3> projection = coordinate; // The loop may be unrolled by enabling compiler optimization.
@@ -117,11 +117,6 @@ float receptor::project_distance_sqr(const array<float, 3>& corner0, const array
 
 	// Check if the distance between the projection and the given coordinate is within cutoff.
 	return distance_sqr(projection, coordinate);
-}
-
-float receptor::project_distance_sqr(const array<float, 3>& coordinate) const
-{
-	return project_distance_sqr(corner0, corner1, coordinate);
 }
 
 array<size_t, 3> receptor::grid_index(const array<float, 3>& coordinate) const
