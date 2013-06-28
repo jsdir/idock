@@ -44,7 +44,7 @@ void operator-=(array<float, 3>& a, const array<float, 3>& b);
 array<float, 3> operator*(const float s, const array<float, 3>& a);
 
 /// Returns the cross product of two vectors.
-array<float, 3> cross_product(const array<float, 3>& a, const array<float, 3>& b);
+array<float, 3> operator*(const array<float, 3>& a, const array<float, 3>& b);
 
 /// Returns the square distance between two arrays.
 float distance_sqr(const array<float, 3>& a, const array<float, 3>& b);
