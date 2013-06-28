@@ -267,8 +267,8 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue;
 					if (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) continue;
 					if (find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) continue;
-					const size_t type_pair_index = mp(heavy_atoms[i].xs, heavy_atoms[j].xs);
-					interacting_pairs.push_back(interacting_pair(i, j, type_pair_index));
+					const size_t p_offset = scoring_function::nr * mp(heavy_atoms[i].xs, heavy_atoms[j].xs);
+					interacting_pairs.push_back(interacting_pair(i, j, p_offset));
 				}
 			}
 
@@ -412,7 +412,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		const float r2 = norm_sqr(r);
 		if (r2 < scoring_function::cutoff_sqr)
 		{
-			const size_t o = sf.nr * p.type_pair_index + static_cast<size_t>(sf.ns * r2);
+			const size_t o = p.p_offset + static_cast<size_t>(sf.ns * r2);
 			e += sf.e[o];
 			const array<float, 3> derivative = sf.d[o] * r;
 			derivatives[p.i1] -= derivative;

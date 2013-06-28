@@ -94,8 +94,8 @@ private:
 	public:
 		size_t i1; ///< Index of atom 1.
 		size_t i2; ///< Index of atom 2.
-		size_t type_pair_index; ///< Index to the XScore types of the two atoms for fast evaluating the scoring function.
-		interacting_pair(const size_t i1, const size_t i2, const size_t type_pair_index) : i1(i1), i2(i2), type_pair_index(type_pair_index) {}
+		size_t p_offset; ///< Type pair index to the scoring function.
+		interacting_pair(const size_t i1, const size_t i2, const size_t p_offset) : i1(i1), i2(i2), p_offset(p_offset) {}
 	};
 
 	vector<interacting_pair> interacting_pairs; ///< Non 1-4 interacting pairs.
