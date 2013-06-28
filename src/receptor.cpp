@@ -3,7 +3,7 @@
 #include "receptor.hpp"
 #include "utility.hpp"
 
-receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity) : center(center), size(size), corner0(center - 0.5f * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes_product(1), maps(scoring_function::n)
+receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity) : center(center), size(size), corner0(center - 0.5f * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes_product(1), p_offset(scoring_function::n), maps(scoring_function::n)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
@@ -152,7 +152,7 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 		const float y_ub = a.coord[1] + dydx_ub;
 		const int y_begin = y_lb > corner0[1] ? static_cast<int>((y_lb - corner0[1]) * granularity_inverse) : 0;
 		const int y_end = y_ub < corner1[1] ? static_cast<int>((y_ub - corner0[1]) * granularity_inverse) : num_y_probes;
-		const size_t t1 = a.xs;
+		const vector<size_t>& p = p_offset[a.xs];
 		size_t zy_offset = z_offset + num_x_probes * y_begin;
 		float dy = corner0[1] + granularity * y_begin - a.coord[1];
 		for (int y = y_begin; y < y_end; ++y, zy_offset += num_x_probes, dy += granularity)
@@ -175,8 +175,7 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 				if (r2 >= scoring_function::cutoff_sqr) continue;
 				for (size_t i = 0; i < n; ++i)
 				{
-					const size_t t2 = xs[i];
-					maps[t2][zyx_offset] += sf.e[sf.nr * mp(t1, t2) + static_cast<size_t>(sf.ns * r2)];
+					maps[xs[i]][zyx_offset] += sf.e[p[i] + static_cast<size_t>(sf.ns * r2)];
 				}
 			}
 		}

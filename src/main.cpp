@@ -195,6 +195,16 @@ int main(int argc, char* argv[])
 		if (xs.size())
 		{
 			cout << "Creating " << setw(2) << xs.size() << " grid map" << (xs.size() == 1 ? ' ' : 's') << "        " << flush;
+			for (size_t t1 = 0; t1 < sf.n; ++t1)
+			{
+				vector<size_t>& p = rec.p_offset[t1];
+				p.resize(xs.size());
+				for (size_t i = 0; i < xs.size(); ++i)
+				{
+					const size_t t2 = xs[i];
+					p[i] = sf.nr * mp(t1, t2);
+				}
+			}
 			for (size_t z = 0; z < rec.num_probes[2]; ++z)
 			{
 				tp.push_back(packaged_task<int()>(bind(&receptor::populate, ref(rec), cref(sf), cref(xs), z)));

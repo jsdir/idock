@@ -21,6 +21,7 @@ public:
 	const float granularity_inverse; ///< 1 / granularity.
 	array<size_t, 3> num_probes; ///< Number of probes.
 	size_t num_probes_product; ///< Product of num_probes[0,1,2]
+	vector<vector<size_t>> p_offset;
 	vector<vector<float>> maps;
 
 	/// Constructs a receptor by parsing a receptor file in pdbqt format.
