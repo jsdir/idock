@@ -104,17 +104,6 @@ array<float, 3> operator*(const float s, const array<float, 3>& a)
 	);
 }
 
-/// Returns pairwise multiplication of 2 given arrays.
-array<float, 3> operator*(const array<float, 3>& a, const array<size_t, 3>& b)
-{
-	return make_array
-	(
-		a[0] * b[0],
-		a[1] * b[1],
-		a[2] * b[2]
-	);
-}
-
 /// Returns the cross product of two vectors.
 array<float, 3> cross_product(const array<float, 3>& a, const array<float, 3>& b)
 {
