@@ -150,12 +150,12 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 		const float dydx_ub = sqrt(dydx_sqr_ub);
 		const float y_lb = a.coord[1] - dydx_ub;
 		const float y_ub = a.coord[1] + dydx_ub;
-		const int y_begin = y_lb > corner0[1] ? static_cast<int>((y_lb - corner0[1]) * granularity_inverse) : 0;
-		const int y_end = y_ub < corner1[1] ? static_cast<int>((y_ub - corner0[1]) * granularity_inverse) : num_y_probes;
+		const size_t y_beg = y_lb > corner0[1] ? (y_lb < corner1[1] ? static_cast<int>((y_lb - corner0[1]) * granularity_inverse) : num_y_probes) : 0;
+		const size_t y_end = y_ub > corner0[1] ? (y_ub < corner1[1] ? static_cast<int>((y_ub - corner0[1]) * granularity_inverse) + 1 : num_y_probes) : 0;
 		const vector<size_t>& p = p_offset[a.xs];
-		size_t zy_offset = z_offset + num_x_probes * y_begin;
-		float dy = corner0[1] + granularity * y_begin - a.coord[1];
-		for (int y = y_begin; y < y_end; ++y, zy_offset += num_x_probes, dy += granularity)
+		size_t zy_offset = z_offset + num_x_probes * y_beg;
+		float dy = corner0[1] + granularity * y_beg - a.coord[1];
+		for (size_t y = y_beg; y < y_end; ++y, zy_offset += num_x_probes, dy += granularity)
 		{
 			const float dy_sqr = dy * dy;
 			const float dx_sqr_ub = dydx_sqr_ub - dy_sqr;
@@ -163,12 +163,12 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 			const float dx_ub = sqrt(dx_sqr_ub);
 			const float x_lb = a.coord[0] - dx_ub;
 			const float x_ub = a.coord[0] + dx_ub;
-			const int x_begin = x_lb > corner0[0] ? static_cast<int>((x_lb - corner0[0]) * granularity_inverse) : 0;
-			const int x_end = x_ub < corner1[0] ? static_cast<int>((x_ub - corner0[0]) * granularity_inverse) : num_x_probes;
+			const size_t x_beg = x_lb > corner0[0] ? (x_lb < corner1[0] ? static_cast<int>((x_lb - corner0[0]) * granularity_inverse) : num_x_probes) : 0;
+			const size_t x_end = x_ub > corner0[0] ? (x_ub < corner1[0] ? static_cast<int>((x_ub - corner0[0]) * granularity_inverse) + 1 : num_x_probes) : 0;
 			const float dzdy_sqr = dz_sqr + dy_sqr;
-			size_t zyx_offset = zy_offset + x_begin;
-			float dx = corner0[0] + granularity * x_begin - a.coord[0];
-			for (int x = x_begin; x < x_end; ++x, ++zyx_offset, dx += granularity)
+			size_t zyx_offset = zy_offset + x_beg;
+			float dx = corner0[0] + granularity * x_beg - a.coord[0];
+			for (size_t x = x_beg; x < x_end; ++x, ++zyx_offset, dx += granularity)
 			{
 				const float dx_sqr = dx * dx;
 				const float r2 = dzdy_sqr + dx_sqr;
