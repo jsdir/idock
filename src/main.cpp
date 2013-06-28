@@ -186,10 +186,10 @@ int main(int argc, char* argv[])
 		for (size_t i = 0; i < lig.num_heavy_atoms; ++i)
 		{
 			const size_t t = lig.heavy_atoms[i].xs;
-			if (rec.grid_maps[t].empty() && find(xs.cbegin(), xs.cend(), t) == xs.cend())
+			if (rec.maps[t].empty() && find(xs.cbegin(), xs.cend(), t) == xs.cend())
 			{
 				xs.push_back(t);
-				rec.grid_maps[t].resize(rec.num_probes_product);
+				rec.maps[t].resize(rec.num_probes_product);
 			}
 		}
 		if (xs.size())

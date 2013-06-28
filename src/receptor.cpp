@@ -3,7 +3,7 @@
 #include "receptor.hpp"
 #include "utility.hpp"
 
-receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity) : center(center), size(size), corner0(center - 0.5f * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes_product(1), grid_maps(scoring_function::n)
+receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity) : center(center), size(size), corner0(center - 0.5f * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes_product(1), maps(scoring_function::n)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
@@ -121,7 +121,7 @@ bool receptor::within(const array<float, 3>& coordinate) const
 	return true;
 }
 
-array<size_t, 3> receptor::grid_index(const array<float, 3>& coordinate) const
+array<size_t, 3> receptor::coordinate_to_index(const array<float, 3>& coordinate) const
 {
 	array<size_t, 3> index;
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
@@ -176,7 +176,7 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 				for (size_t i = 0; i < n; ++i)
 				{
 					const size_t t2 = xs[i];
-					grid_maps[t2][zyx_offset] += sf.e[sf.nr * mp(t1, t2) + static_cast<size_t>(sf.ns * r2)];
+					maps[t2][zyx_offset] += sf.e[sf.nr * mp(t1, t2) + static_cast<size_t>(sf.ns * r2)];
 				}
 			}
 		}

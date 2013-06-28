@@ -370,21 +370,21 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		}
 
 		// Retrieve the grid map in need.
-		const vector<float>& grid_map = rec.grid_maps[heavy_atoms[i].xs];
-		assert(grid_map.size());
+		const vector<float>& map = rec.maps[heavy_atoms[i].xs];
+		assert(map.size());
 
 		// Find the index of the current coordinates.
-		const array<size_t, 3> index = rec.grid_index(coordinates[i]);
+		const array<size_t, 3> index = rec.coordinate_to_index(coordinates[i]);
 
 		// Calculate the offsets to grid map and lookup the values.
 		const size_t o000 = rec.num_probes[0] * (rec.num_probes[1] * index[2] + index[1]) + index[0];
 		const size_t o100 = o000 + 1;
 		const size_t o010 = o000 + rec.num_probes[0];
 		const size_t o001 = o000 + rec.num_probes[0] * rec.num_probes[1];
-		const float e000 = grid_map[o000];
-		const float e100 = grid_map[o100];
-		const float e010 = grid_map[o010];
-		const float e001 = grid_map[o001];
+		const float e000 = map[o000];
+		const float e100 = map[o100];
+		const float e010 = map[o010];
+		const float e001 = map[o001];
 		derivatives[i][0] = (e100 - e000) * rec.granularity_inverse;
 		derivatives[i][1] = (e010 - e000) * rec.granularity_inverse;
 		derivatives[i][2] = (e001 - e000) * rec.granularity_inverse;

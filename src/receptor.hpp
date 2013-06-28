@@ -21,7 +21,7 @@ public:
 	const float granularity_inverse; ///< 1 / granularity.
 	array<size_t, 3> num_probes; ///< Number of probes.
 	size_t num_probes_product; ///< Product of num_probes[0,1,2]
-	vector<vector<float>> grid_maps;
+	vector<vector<float>> maps;
 
 	/// Constructs a receptor by parsing a receptor file in pdbqt format.
 	/// @param center Box center.
@@ -33,7 +33,7 @@ public:
 	bool within(const array<float, 3>& coordinate) const;
 
 	/// Returns the index of the half-open-half-close grid containing the given coordinate.
-	array<size_t, 3> grid_index(const array<float, 3>& coordinate) const;
+	array<size_t, 3> coordinate_to_index(const array<float, 3>& coordinate) const;
 
 	/// Task for populating grid maps for certain atom types along X and Y dimensions for an Z dimension value.
 	int populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z);
