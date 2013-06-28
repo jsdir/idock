@@ -3,7 +3,7 @@
 #include "receptor.hpp"
 #include "utility.hpp"
 
-receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float granularity) : center(center), granularity(granularity), granularity_inverse(1.0f / granularity), grid_maps(scoring_function::n)
+receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float granularity) : center(center), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes_product(1), grid_maps(scoring_function::n)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
@@ -12,6 +12,7 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 		num_grids[i] = static_cast<size_t>(ceil(size_[i] * granularity_inverse));
 		size[i] = granularity * num_grids[i];
 		num_probes[i] = num_grids[i] + 1;
+		num_probes_product *= num_probes[i];
 
 		// Determine the two extreme corners.
 		corner0[i] = center[i]  - size[i] * 0.5f;

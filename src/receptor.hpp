@@ -4,7 +4,6 @@
 
 #include <boost/filesystem/path.hpp>
 #include "atom.hpp"
-#include "array3d.hpp"
 #include "scoring_function.hpp"
 using namespace boost::filesystem;
 
@@ -22,7 +21,8 @@ public:
 	const float granularity_inverse; ///< 1 / granularity.
 	array<size_t, 3> num_grids; ///< Number of grids.
 	array<size_t, 3> num_probes; ///< Number of probes.
-	vector<array3d<float>> grid_maps;
+	size_t num_probes_product; ///< Product of num_probes[0,1,2]
+	vector<vector<float>> grid_maps;
 
 	/// Constructs a receptor by parsing a receptor file in pdbqt format.
 	/// @param center Box center.

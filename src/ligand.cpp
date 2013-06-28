@@ -370,7 +370,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		}
 
 		// Retrieve the grid map in need.
-		const array3d<float>& grid_map = rec.grid_maps[heavy_atoms[i].xs];
+		const vector<float>& grid_map = rec.grid_maps[heavy_atoms[i].xs];
 		assert(grid_map.size());
 
 		// Find the index and fraction of the current coordinates.
@@ -382,15 +382,17 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		assert(index[2] < rec.num_grids[2]);
 
 		// (x0, y0, z0) is the beginning corner of the partition.
-		const size_t x0 = index[0];
-		const size_t y0 = index[1];
-		const size_t z0 = index[2];
-		const float e000 = grid_map(x0, y0, z0);
-
-		// The derivative of probe atoms can be precalculated at the cost of massive memory storage.
-		const float e100 = grid_map(x0 + 1, y0,     z0    );
-		const float e010 = grid_map(x0,     y0 + 1, z0    );
-		const float e001 = grid_map(x0,     y0,     z0 + 1);
+		const size_t x = index[0];
+		const size_t y = index[1];
+		const size_t z = index[2];
+		const size_t o000 = rec.num_probes[0] * (rec.num_probes[1] * z + y) + x;
+		const size_t o100 = o000 + 1;
+		const size_t o010 = o000 + rec.num_probes[0];
+		const size_t o001 = o000 + rec.num_probes[0] * rec.num_probes[1];
+		const float e000 = grid_map[o000];
+		const float e100 = grid_map[o100];
+		const float e010 = grid_map[o010];
+		const float e001 = grid_map[o001];
 		derivatives[i][0] = (e100 - e000) * rec.granularity_inverse;
 		derivatives[i][1] = (e010 - e000) * rec.granularity_inverse;
 		derivatives[i][2] = (e001 - e000) * rec.granularity_inverse;

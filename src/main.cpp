@@ -189,7 +189,7 @@ int main(int argc, char* argv[])
 			if (rec.grid_maps[t].empty() && find(xs.cbegin(), xs.cend(), t) == xs.cend())
 			{
 				xs.push_back(t);
-				rec.grid_maps[t].resize(rec.num_probes);
+				rec.grid_maps[t].resize(rec.num_probes_product);
 			}
 		}
 		if (xs.size())
