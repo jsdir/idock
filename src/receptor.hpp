@@ -27,9 +27,6 @@ public:
 	const array<float, 3> grid_size_inverse; ///< (1, 1, 1) / grid_size.
 	array<size_t, 3> num_grids; ///< Number of grids.
 	array<size_t, 3> num_probes; ///< Number of probes.
-	array<size_t, 3> num_partitions; ///< Number of partitions.
-	array<float, 3> partition_size; ///< 3D sizes of partitions.
-	array<float, 3> partition_size_inverse; ///< (1, 1, 1) / partition_size.
 	vector<array3d<float>> grid_maps;
 
 	/// Constructs a receptor by parsing a receptor file in pdbqt format.
@@ -50,14 +47,8 @@ public:
 	/// Returns the coordinate of boundary corner0 of the grid at the given 3D index.
 	array<float, 3> grid_corner0(const array<size_t, 3>& index) const;
 
-	/// Returns the coordinate of boundary corner0 of the partition at the given 3D index.
-	array<float, 3> partition_corner0(const array<size_t, 3>& index) const;
-
 	/// Returns the index of the half-open-half-close grid containing the given coordinate.
 	array<size_t, 3> grid_index(const array<float, 3>& coordinate) const;
-
-	/// Returns the index of the half-open-half-close partition containing the given coordinate.
-	array<size_t, 3> partition_index(const array<float, 3>& coordinate) const;
 
 	/// Task for populating grid maps for certain atom types along X and Y dimensions for an Z dimension value.
 	int populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z);

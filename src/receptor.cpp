@@ -20,11 +20,6 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 		// Determine the two extreme corners.
 		corner0[i] = center[i]  - size[i] * 0.5f;
 		corner1[i] = corner0[i] + size[i];
-
-		// Determine the number of partitions.
-		num_partitions[i] = static_cast<size_t>(size[i] * partition_granularity_inv);
-		partition_size[i] = size[i] / num_partitions[i];
-		partition_size_inverse[i] = 1.0f / partition_size[i];
 	}
 
 	// Parse the receptor line by line.
