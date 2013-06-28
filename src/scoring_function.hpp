@@ -20,9 +20,6 @@ public:
 	/// Constructs an empty scoring function.
 	scoring_function();
 
-	/// Returns the offset to e and d given the type pair index i and interatomic square distance r2.
-	size_t o(const size_t i, const float r2) const;
-
 	/// Precalculates the scoring function values of sample points for the type combination of t1 and t2.
 	int precalculate(const size_t t1, const size_t t2);
 

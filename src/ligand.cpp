@@ -412,7 +412,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		const float r2 = norm_sqr(r);
 		if (r2 < scoring_function::cutoff_sqr)
 		{
-			const size_t o = sf.o(p.type_pair_index, r2);
+			const size_t o = sf.nr * p.type_pair_index + static_cast<size_t>(sf.ns * r2);
 			e += sf.e[o];
 			const array<float, 3> derivative = sf.d[o] * r;
 			derivatives[p.i1] -= derivative;

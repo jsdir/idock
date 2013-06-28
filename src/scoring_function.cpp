@@ -1,6 +1,6 @@
 #include <cmath>
+#include <cassert>
 #include "scoring_function.hpp"
-#include "utility.hpp"
 
 const float scoring_function::cutoff_sqr = cutoff * cutoff;
 const array<float, scoring_function::n> scoring_function::vdw =
@@ -55,15 +55,10 @@ scoring_function::scoring_function() : e(ne), d(ne), rs(nr)
 	}
 }
 
-size_t scoring_function::o(const size_t i, const float r2) const
-{
-	return nr * i + static_cast<size_t>(ns * r2);
-}
-
 int scoring_function::precalculate(const size_t t1, const size_t t2)
 {
-//	assert(t1 <= t2);
-	const size_t offset = nr * mr(t1, t2);
+	assert(t1 <= t2);
+	const size_t offset = nr * ((t2*(t2+1)>>1) + t1);
 	const float s = vdw[t1] + vdw[t2];
 	const bool hydrophobic = is_hydrophobic(t1) && is_hydrophobic(t2);
 	const bool hbond = is_hbond(t1, t2);

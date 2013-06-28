@@ -187,7 +187,7 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 				for (size_t i = 0; i < n; ++i)
 				{
 					const size_t t2 = xs[i];
-					grid_maps[t2][zyx_offset] += sf.e[sf.o(mp(t1, t2), r2)];
+					grid_maps[t2][zyx_offset] += sf.e[sf.nr * mp(t1, t2) + static_cast<size_t>(sf.ns * r2)];
 				}
 			}
 		}
