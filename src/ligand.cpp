@@ -481,7 +481,7 @@ result ligand::compose_result(const float e, const vector<float>& x) const
 		{
 			const frame& b = frames[i];
 			o[i] = o[k] + m * b.parent_rotorY_to_current_rotorY;
-			q[i] = vec4_to_qtn4(m * b.parent_rotorX_to_current_rotorY, f.active ? x[7 + t++] : 0.0f) * q[k];
+			q[i] = vec4_to_qtn4(m * b.parent_rotorX_to_current_rotorY, b.active ? x[7 + t++] : 0.0f) * q[k];
 		}
 	}
 
