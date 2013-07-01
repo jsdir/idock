@@ -496,7 +496,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	const float e_upper_bound = 40.0f * num_heavy_atoms; // A conformation will be droped if its free energy is not better than e_upper_bound.
 
 	// Declare variable.
-	vector<float> c0(7 + num_active_torsions), c1(7 + num_active_torsions), c2(7 + num_active_torsions);
+	vector<float> x0(7 + num_active_torsions), x1(7 + num_active_torsions), x2(7 + num_active_torsions);
 	vector<float> g0(6 + num_active_torsions), g1(6 + num_active_torsions), g2(6 + num_active_torsions);
 	vector<float> p(6 + num_active_torsions), y(6 + num_active_torsions), mhy(6 + num_active_torsions);
 	vector<float> h(num_variables*(num_variables+1)>>1); // Symmetric triangular Hessian matrix.
@@ -505,32 +505,32 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
 
-	// Randomize conformation c0.
-	c0[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
-	c0[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
-	c0[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
+	// Randomize conformation x0.
+	x0[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
+	x0[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
+	x0[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
 	const array<float, 4> rnorientation = {uniform_11(rng), uniform_11(rng), uniform_11(rng), uniform_11(rng)};
-	const array<float, 4> c0orientation = normalize(rnorientation);
-	assert(normalized(c0orientation));
-	c0[3] = c0orientation[0];
-	c0[4] = c0orientation[1];
-	c0[5] = c0orientation[2];
-	c0[6] = c0orientation[3];
+	const array<float, 4> x0orientation = normalize(rnorientation);
+	assert(normalized(x0orientation));
+	x0[3] = x0orientation[0];
+	x0[4] = x0orientation[1];
+	x0[5] = x0orientation[2];
+	x0[6] = x0orientation[3];
 	for (i = 0; i < num_active_torsions; ++i)
 	{
-		c0[7 + i] = uniform_11(rng);
+		x0[7 + i] = uniform_11(rng);
 	}
-	evaluate(c0, sf, rec, e_upper_bound, e0, g0);
-	r = compose_result(e0, c0);
+	evaluate(x0, sf, rec, e_upper_bound, e0, g0);
+	r = compose_result(e0, x0);
 
 	for (g = 0; g < num_generations; ++g)
 	{
 		// Make a copy, so the previous conformation is retained.
-		c1 = c0;
-		c1[0] += uniform_11(rng);
-		c1[1] += uniform_11(rng);
-		c1[2] += uniform_11(rng);
-		evaluate(c1, sf, rec, e_upper_bound, e1, g1);
+		x1 = x0;
+		x1[0] += uniform_11(rng);
+		x1[1] += uniform_11(rng);
+		x1[2] += uniform_11(rng);
+		evaluate(x1, sf, rec, e_upper_bound, e1, g1);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
@@ -568,26 +568,26 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 			for (j = 0; j < num_alphas; ++j)
 			{
 				// Calculate c2 = c1 + ap.
-				c2[0] = c1[0] + alpha * p[0];
-				c2[1] = c1[1] + alpha * p[1];
-				c2[2] = c1[2] + alpha * p[2];
-				const array<float, 4> c1orientation = { c1[3], c1[4], c1[5], c1[6] };
-				assert(normalized(c1orientation));
-				const array<float, 4> c2orientation = vec3_to_qtn4(alpha * make_array(p[3], p[4], p[5])) * c1orientation;
-				assert(normalized(c2orientation));
-				c2[3] = c2orientation[0];
-				c2[4] = c2orientation[1];
-				c2[5] = c2orientation[2];
-				c2[6] = c2orientation[3];
+				x2[0] = x1[0] + alpha * p[0];
+				x2[1] = x1[1] + alpha * p[1];
+				x2[2] = x1[2] + alpha * p[2];
+				const array<float, 4> x1orientation = { x1[3], x1[4], x1[5], x1[6] };
+				assert(normalized(x1orientation));
+				const array<float, 4> x2orientation = vec3_to_qtn4(alpha * make_array(p[3], p[4], p[5])) * x1orientation;
+				assert(normalized(x2orientation));
+				x2[3] = x2orientation[0];
+				x2[4] = x2orientation[1];
+				x2[5] = x2orientation[2];
+				x2[6] = x2orientation[3];
 				for (i = 0; i < num_active_torsions; ++i)
 				{
-					c2[7 + i] = c1[7 + i] + alpha * p[6 + i];
+					x2[7 + i] = x1[7 + i] + alpha * p[6 + i];
 				}
 
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(c2, sf, rec, e1 + 0.0001f * alpha * pg1, e2, g2))
+				if (evaluate(x2, sf, rec, e1 + 0.0001f * alpha * pg1, e2, g2))
 				{
 					pg2 = 0;
 					for (i = 0; i < num_variables; ++i)
@@ -627,7 +627,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 			}
 
 			// Move to the next iteration.
-			c1 = c2;
+			x1 = x2;
 			e1 = e2;
 			g1 = g2;
 		}
@@ -635,8 +635,8 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 		// Accept c1 according to Metropolis criteria.
 		if (e1 < e0)
 		{
-			r = compose_result(e1, c1);
-			c0 = c1;
+			r = compose_result(e1, x1);
+			x0 = x1;
 			e0 = e1;
 		}
 	}
