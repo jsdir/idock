@@ -509,8 +509,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	x0[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
 	x0[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
 	x0[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
-	const array<float, 4> rnorientation = {uniform_11(rng), uniform_11(rng), uniform_11(rng), uniform_11(rng)};
-	const array<float, 4> x0orientation = normalize(rnorientation);
+	const array<float, 4> x0orientation = normalize(make_array(uniform_11(rng), uniform_11(rng), uniform_11(rng), uniform_11(rng)));
 	assert(normalized(x0orientation));
 	x0[3] = x0orientation[0];
 	x0[4] = x0orientation[1];
