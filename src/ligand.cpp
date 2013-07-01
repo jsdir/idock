@@ -288,8 +288,8 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 	vector<array<float, 3>> torques(num_frames, zero3); /// Torque of the force.
 
 	// Initialize atom-wide conformational variables.
-	vector<array<float, 3>> coordinates(num_heavy_atoms); ///< Heavy atom coordinates.
-	vector<array<float, 3>> derivatives(num_heavy_atoms); ///< Heavy atom derivatives.
+	vector<array<float, 3>> c(num_heavy_atoms); ///< Heavy atom coordinates.
+	vector<array<float, 3>> d(num_heavy_atoms); ///< Heavy atom derivatives.
 
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
@@ -308,7 +308,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		const array<float, 9> m = qtn4_to_mat3(q[k]);
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			coordinates[i] = o[k] + m * heavy_atoms[i].coord;
+			c[i] = o[k] + m * heavy_atoms[i].coord;
 		}
 		for (const size_t i : f.branches)
 		{
@@ -320,7 +320,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 			{
 				assert(b.habegin + 1 == b.haend);
 				assert(b.habegin == b.rotorYidx);
-//				coordinates[b.rotorYidx] = o[i];
+//				c[b.rotorYidx] = o[i];
 				continue;
 			}
 			assert(normalized(b.parent_rotorX_to_current_rotorY));
@@ -342,7 +342,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 	//			const frame& f2 = frames[k2];
 	//			for (size_t i2 = f2.habegin; i2 < f2.haend; ++i2)
 	//			{
-	//				if ((distance_sqr(coordinates[i1], coordinates[i2]) < sqr(heavy_atoms[i1].covalent_radius() + heavy_atoms[i2].covalent_radius())) && (!((k2 == f1.parent) && (i1 == f1.rotorYidx) && (i2 == f1.rotorXidx))))
+	//				if ((distance_sqr(c[i1], c[i2]) < sqr(heavy_atoms[i1].covalent_radius() + heavy_atoms[i2].covalent_radius())) && (!((k2 == f1.parent) && (i1 == f1.rotorYidx) && (i2 == f1.rotorXidx))))
 	//					return false;
 	//			}
 	//		}
@@ -352,12 +352,12 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 	e = 0;
 	for (size_t i = 0; i < num_heavy_atoms; ++i)
 	{
-		if (!rec.within(coordinates[i]))
+		if (!rec.within(c[i]))
 		{
 			e += 10;
-			derivatives[i][0] = 0;
-			derivatives[i][1] = 0;
-			derivatives[i][2] = 0;
+			d[i][0] = 0;
+			d[i][1] = 0;
+			d[i][2] = 0;
 			continue;
 		}
 
@@ -366,7 +366,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		assert(map.size());
 
 		// Find the index of the current coordinates.
-		const array<size_t, 3> index = rec.coordinate_to_index(coordinates[i]);
+		const array<size_t, 3> index = rec.coordinate_to_index(c[i]);
 
 		// Calculate the offsets to grid map and lookup the values.
 		const size_t o000 = rec.num_probes[0] * (rec.num_probes[1] * index[2] + index[1]) + index[0];
@@ -377,9 +377,9 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 		const float e100 = map[o100];
 		const float e010 = map[o010];
 		const float e001 = map[o001];
-		derivatives[i][0] = (e100 - e000) * rec.granularity_inverse;
-		derivatives[i][1] = (e010 - e000) * rec.granularity_inverse;
-		derivatives[i][2] = (e001 - e000) * rec.granularity_inverse;
+		d[i][0] = (e100 - e000) * rec.granularity_inverse;
+		d[i][1] = (e010 - e000) * rec.granularity_inverse;
+		d[i][2] = (e001 - e000) * rec.granularity_inverse;
 
 		e += e000; // Aggregate the energy.
 	}
@@ -392,15 +392,15 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 	for (size_t i = 0; i < num_interacting_pairs; ++i)
 	{
 		const interacting_pair& p = interacting_pairs[i];
-		const array<float, 3> r = coordinates[p.i2] - coordinates[p.i1];
+		const array<float, 3> r = c[p.i2] - c[p.i1];
 		const float r2 = norm_sqr(r);
 		if (r2 < scoring_function::cutoff_sqr)
 		{
 			const size_t o = p.p_offset + static_cast<size_t>(sf.ns * r2);
 			e += sf.e[o];
 			const array<float, 3> derivative = sf.d[o] * r;
-			derivatives[p.i1] -= derivative;
-			derivatives[p.i2] += derivative;
+			d[p.i1] -= derivative;
+			d[p.i2] += derivative;
 		}
 	}
 
@@ -419,8 +419,8 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 			// the negative total torque, and the negative torque projections, respectively,
 			// where the projections refer to the torque applied to the branch moved by the torsion,
 			// projected on its rotation axis.
-			forces[k]  += derivatives[i];
-			torques[k] += (coordinates[i] - o[k]) * derivatives[i];
+			forces[k]  += d[i];
+			torques[k] += (c[i] - o[k]) * d[i];
 		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
@@ -437,8 +437,8 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 	// Calculate and aggregate the force and torque of ROOT frame.
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		forces.front()  += derivatives[i];
-		torques.front() += (coordinates[i] - o.front()) * derivatives[i];
+		forces.front()  += d[i];
+		torques.front() += (c[i] - o.front()) * d[i];
 	}
 
 	// Save the aggregated force and torque to g.
