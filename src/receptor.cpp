@@ -173,9 +173,10 @@ int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, con
 				const float dx_sqr = dx * dx;
 				const float r2 = dzdy_sqr + dx_sqr;
 				if (r2 >= scoring_function::cutoff_sqr) continue;
+				const size_t r_offset = static_cast<size_t>(sf.ns * r2);
 				for (size_t i = 0; i < n; ++i)
 				{
-					maps[xs[i]][zyx_offset] += sf.e[p[i] + static_cast<size_t>(sf.ns * r2)];
+					maps[xs[i]][zyx_offset] += sf.e[p[i] + r_offset];
 				}
 			}
 		}
