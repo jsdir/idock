@@ -278,7 +278,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	}
 }
 
-bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, float& f, vector<float>& g) const
+bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, float& f, vector<float>& g) const
 {
 	// Initialize frame-wide conformational variables.
 	vector<array<float, 3>> o(num_frames); ///< Origin coordinate, which is rotorY.
@@ -293,13 +293,13 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
-	o.front()[0] = conf[0];
-	o.front()[1] = conf[1];
-	o.front()[2] = conf[2];
-	q.front()[0] = conf[3];
-	q.front()[1] = conf[4];
-	q.front()[2] = conf[5];
-	q.front()[3] = conf[6];
+	o.front()[0] = x[0];
+	o.front()[1] = x[1];
+	o.front()[2] = x[2];
+	q.front()[0] = x[3];
+	q.front()[1] = x[4];
+	q.front()[2] = x[5];
+	q.front()[3] = x[6];
 
 	// Apply torsions to frames.
 	for (size_t k = 0, t = 0; k < num_frames; ++k)
@@ -326,7 +326,7 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 			assert(normalized(b.parent_rotorX_to_current_rotorY));
 			a[i] = m * b.parent_rotorX_to_current_rotorY;
 			assert(normalized(a[i]));
-			q[i] = vec4_to_qtn4(a[i], conf[7 + t++]) * q[k];
+			q[i] = vec4_to_qtn4(a[i], x[7 + t++]) * q[k];
 			assert(normalized(q[i]));
 		}
 	}
@@ -452,20 +452,20 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 	return true;
 }
 
-result ligand::compose_result(const float e, const vector<float>& conf) const
+result ligand::compose_result(const float e, const vector<float>& x) const
 {
 	vector<array<float, 3>> o(num_frames);
 	vector<array<float, 4>> q(num_frames);
 	vector<array<float, 3>> heavy_atoms(num_heavy_atoms);
 	vector<array<float, 3>> hydrogens(num_hydrogens);
 
-	o.front()[0] = conf[0];
-	o.front()[1] = conf[1];
-	o.front()[2] = conf[2];
-	q.front()[0] = conf[3];
-	q.front()[1] = conf[4];
-	q.front()[2] = conf[5];
-	q.front()[3] = conf[6];
+	o.front()[0] = x[0];
+	o.front()[1] = x[1];
+	o.front()[2] = x[2];
+	q.front()[0] = x[3];
+	q.front()[1] = x[4];
+	q.front()[2] = x[5];
+	q.front()[3] = x[6];
 
 	// Calculate the coordinates of both heavy atoms and hydrogens of BRANCH frames.
 	for (size_t k = 0, t = 0; k < num_frames; ++k)
@@ -484,7 +484,7 @@ result ligand::compose_result(const float e, const vector<float>& conf) const
 		{
 			const frame& b = frames[i];
 			o[i] = o[k] + m * b.parent_rotorY_to_current_rotorY;
-			q[i] = vec4_to_qtn4(m * b.parent_rotorX_to_current_rotorY, f.active ? conf[7 + t++] : 0.0f) * q[k];
+			q[i] = vec4_to_qtn4(m * b.parent_rotorX_to_current_rotorY, f.active ? x[7 + t++] : 0.0f) * q[k];
 		}
 	}
 
