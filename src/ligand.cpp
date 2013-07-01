@@ -281,7 +281,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, vector<float>& g) const
 {
 	// Initialize frame-wide conformational variables.
-	vector<array<float, 3>> o(num_frames); ///< Origin coordinate, which is rotorY.
 	vector<array<float, 3>> a(num_frames); ///< Vector pointing from rotor Y to rotor X.
 	vector<array<float, 4>> q(num_frames); ///< Orientation in the form of quaternion.
 	vector<array<float, 3>> gf(num_frames, zero3); ///< Aggregated derivatives of heavy atoms.
@@ -293,9 +292,9 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
-	o.front()[0] = x[0];
-	o.front()[1] = x[1];
-	o.front()[2] = x[2];
+	c.front()[0] = x[0];
+	c.front()[1] = x[1];
+	c.front()[2] = x[2];
 	q.front()[0] = x[3];
 	q.front()[1] = x[4];
 	q.front()[2] = x[5];
@@ -308,19 +307,18 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 		const array<float, 9> m = qtn4_to_mat3(q[k]);
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			c[i] = o[k] + m * heavy_atoms[i].coord;
+			c[i] = c[f.rotorYidx] + m * heavy_atoms[i].coord;
 		}
 		for (const size_t i : f.branches)
 		{
 			const frame& b = frames[i];
-			o[i] = o[k] + m * b.parent_rotorY_to_current_rotorY;
+			c[b.rotorYidx] = c[f.rotorYidx] + m * b.parent_rotorY_to_current_rotorY;
 
 			// If the current BRANCH frame does not have an active torsion, skip it.
 			if (!b.active)
 			{
 				assert(b.habegin + 1 == b.haend);
 				assert(b.habegin == b.rotorYidx);
-//				c[b.rotorYidx] = o[i];
 				continue;
 			}
 			assert(normalized(b.parent_rotorX_to_current_rotorY));
@@ -407,7 +405,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
 	for (size_t k = num_frames, t = num_active_torsions; --k;)
 	{
-		const frame&  f = frames[k];
+		const frame& f = frames[k];
 
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
@@ -416,13 +414,13 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 			// the negative total torque, and the negative torque projections, respectively,
 			// where the projections refer to the torque applied to the branch moved by the torsion,
 			// projected on its rotation axis.
-			gf[k]  += d[i];
-			gt[k] += (c[i] - o[k]) * d[i];
+			gf[k] += d[i];
+			gt[k] += (c[i] - c[f.rotorYidx]) * d[i];
 		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		gf[f.parent]  += gf[k];
-		gt[f.parent] += gt[k] + (o[k] - o[f.parent]) * gf[k];
+		gf[f.parent] += gf[k];
+		gt[f.parent] += gt[k] + (c[f.rotorYidx] - c[frames[f.parent].rotorYidx]) * gf[k];
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
@@ -434,8 +432,8 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	// Calculate and aggregate the force and torque of ROOT frame.
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		gf.front()  += d[i];
-		gt.front() += (c[i] - o.front()) * d[i];
+		gf.front() += d[i];
+		gt.front() += (c[i] - c.front()) * d[i];
 	}
 
 	// Save the aggregated force and torque to g.
@@ -451,41 +449,36 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 
 result ligand::compose_result(const float e, const vector<float>& x) const
 {
-	vector<array<float, 3>> o(num_frames);
 	vector<array<float, 4>> q(num_frames);
-	vector<array<float, 3>> heavy_atoms(num_heavy_atoms);
-	vector<array<float, 3>> hydrogens(num_hydrogens);
-
-	o.front()[0] = x[0];
-	o.front()[1] = x[1];
-	o.front()[2] = x[2];
+	vector<array<float, 3>> c(num_heavy_atoms);
+	vector<array<float, 3>> h(num_hydrogens);
+	c.front()[0] = x[0];
+	c.front()[1] = x[1];
+	c.front()[2] = x[2];
 	q.front()[0] = x[3];
 	q.front()[1] = x[4];
 	q.front()[2] = x[5];
 	q.front()[3] = x[6];
-
-	// Calculate the coordinates of both heavy atoms and hydrogens of BRANCH frames.
 	for (size_t k = 0, t = 0; k < num_frames; ++k)
 	{
 		const frame& f = frames[k];
 		const array<float, 9> m = qtn4_to_mat3(q[k]);
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			heavy_atoms[i] = o[k] + m * this->heavy_atoms[i].coord;
+			c[i] = c[f.rotorYidx] + m * this->heavy_atoms[i].coord;
 		}
 		for (size_t i = f.hybegin; i < f.hyend; ++i)
 		{
-			hydrogens[i]   = o[k] + m * this->hydrogens[i].coord;
+			h[i] = c[f.rotorYidx] + m * this->hydrogens[i].coord;
 		}
 		for (const size_t i : f.branches)
 		{
 			const frame& b = frames[i];
-			o[i] = o[k] + m * b.parent_rotorY_to_current_rotorY;
+			c[b.rotorYidx] = c[f.rotorYidx] + m * b.parent_rotorY_to_current_rotorY;
 			q[i] = vec4_to_qtn4(m * b.parent_rotorX_to_current_rotorY, b.active ? x[7 + t++] : 0.0f) * q[k];
 		}
 	}
-
-	return result(e, static_cast<vector<array<float, 3>>&&>(heavy_atoms), static_cast<vector<array<float, 3>>&&>(hydrogens));
+	return result(e, static_cast<vector<array<float, 3>>&&>(c), static_cast<vector<array<float, 3>>&&>(h));
 }
 
 int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
