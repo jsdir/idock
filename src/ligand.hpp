@@ -68,6 +68,7 @@ public:
 	size_t num_frames; ///< Number of frames.
 	size_t num_torsions; ///< Number of torsions.
 	size_t num_active_torsions; ///< Number of active torsions.
+	size_t num_variables; ///< Number of variables to optimize.
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.
 	/// @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.

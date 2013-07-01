@@ -193,6 +193,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	frames.back().haend = num_heavy_atoms;
 	frames.back().hyend = num_hydrogens;
 	num_heavy_atoms_inverse = 1.0f / num_heavy_atoms;
+	num_variables = 6 + num_active_torsions;
 
 	// Determine num_frames, num_torsions, flexibility_penalty_factor.
 	num_frames = frames.size();
@@ -487,7 +488,6 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 {
 	// Define constants.
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
-	const size_t num_variables = 6 + num_active_torsions; // Number of variables to optimize.
 	const float e_upper_bound = 40.0f * num_heavy_atoms; // A conformation will be droped if its free energy is not better than e_upper_bound.
 
 	// Declare variable.
