@@ -278,7 +278,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	}
 }
 
-bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, float& f, vector<float>& g) const
+bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, vector<float>& g) const
 {
 	// Initialize frame-wide conformational variables.
 	vector<array<float, 3>> o(num_frames); ///< Origin coordinate, which is rotorY.
@@ -383,9 +383,6 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 
 		e += e000; // Aggregate the energy.
 	}
-
-	// Save inter-molecular free energy into f.
-	f = e;
 
 	// Calculate intra-ligand free energy.
 	const size_t num_interacting_pairs = interacting_pairs.size();
@@ -503,7 +500,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	vector<float> g0(6 + num_active_torsions), g1(6 + num_active_torsions), g2(6 + num_active_torsions);
 	vector<float> p(6 + num_active_torsions), y(6 + num_active_torsions), mhy(6 + num_active_torsions);
 	vector<float> h(num_variables*(num_variables+1)>>1); // Symmetric triangular Hessian matrix.
-	float e0, f0, e1, f1, e2, f2, alpha, pg1, pg2, yhy, yp, ryp, pco;
+	float e0, e1, e2, alpha, pg1, pg2, yhy, yp, ryp, pco;
 	size_t g, i, j;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
@@ -523,7 +520,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	{
 		c0[7 + i] = uniform_11(rng);
 	}
-	evaluate(c0, sf, rec, e_upper_bound, e0, f0, g0);
+	evaluate(c0, sf, rec, e_upper_bound, e0, g0);
 	r = compose_result(e0, c0);
 
 	for (g = 0; g < num_generations; ++g)
@@ -533,7 +530,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 		c1[0] += uniform_11(rng);
 		c1[1] += uniform_11(rng);
 		c1[2] += uniform_11(rng);
-		evaluate(c1, sf, rec, e_upper_bound, e1, f1, g1);
+		evaluate(c1, sf, rec, e_upper_bound, e1, g1);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
@@ -590,7 +587,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(c2, sf, rec, e1 + 0.0001f * alpha * pg1, e2, f2, g2))
+				if (evaluate(c2, sf, rec, e1 + 0.0001f * alpha * pg1, e2, g2))
 				{
 					pg2 = 0;
 					for (i = 0; i < num_variables; ++i)
@@ -632,7 +629,6 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 			// Move to the next iteration.
 			c1 = c2;
 			e1 = e2;
-			f1 = f2;
 			g1 = g2;
 		}
 

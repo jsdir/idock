@@ -74,7 +74,7 @@ public:
 	ligand(const path& p);
 
 	/// Evaluates free energy e, force f, and change g. Returns true if the conformation is accepted.
-	bool evaluate(const vector<float>& conf, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, float& f, vector<float>& g) const;
+	bool evaluate(const vector<float>& conf, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, vector<float>& g) const;
 
 	/// Composes a result from free energy, and conformation conf.
 	result compose_result(const float e, const vector<float>& conf) const;
