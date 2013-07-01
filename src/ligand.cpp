@@ -23,6 +23,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	size_t current = 0; // Index of current frame, initialized to ROOT frame.
 	frame* f = &frames.front(); // Pointer to the current frame.
 	f->rotorYidx = 0; // Assume the rotorY of ROOT frame is the first atom.
+	assert(f->rotorYidx == f->habegin);
 	string line;
 
 	// Parse the ligand line by line.
@@ -92,9 +93,10 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 				}
 
 				// Set rotorYidx if the serial number of current atom is rotorYsrn.
-				if (current && (a.serial == f->rotorYsrn)) // current > 0, i.e. BRANCH frame.
+				if (current > 0 && a.serial == f->rotorYsrn) // i.e. BRANCH frame.
 				{
 					f->rotorYidx = heavy_atoms.size();
+					assert(f->rotorYidx == f->habegin);
 				}
 
 				// Save the heavy atom.
@@ -305,7 +307,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	{
 		const frame& f = frames[k];
 		const array<float, 9> m = qtn4_to_mat3(q[k]);
-		for (size_t i = f.habegin; i < f.haend; ++i)
+		for (size_t i = f.habegin + 1; i < f.haend; ++i)
 		{
 			c[i] = c[f.rotorYidx] + m * heavy_atoms[i].coord;
 		}
@@ -463,7 +465,7 @@ result ligand::compose_result(const float e, const vector<float>& x) const
 	{
 		const frame& f = frames[k];
 		const array<float, 9> m = qtn4_to_mat3(q[k]);
-		for (size_t i = f.habegin; i < f.haend; ++i)
+		for (size_t i = f.habegin + 1; i < f.haend; ++i)
 		{
 			c[i] = c[f.rotorYidx] + m * this->heavy_atoms[i].coord;
 		}
