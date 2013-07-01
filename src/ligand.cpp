@@ -281,9 +281,9 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, float& f, vector<float>& g) const
 {
 	// Initialize frame-wide conformational variables.
-	vector<array<float, 3>> origins(num_frames); ///< Origin coordinate, which is rotorY.
-	vector<array<float, 3>> axes(num_frames); ///< Vector pointing from rotor Y to rotor X.
-	vector<array<float, 4>> orientations_q(num_frames); ///< Orientation in the form of quaternion.
+	vector<array<float, 3>> o(num_frames); ///< Origin coordinate, which is rotorY.
+	vector<array<float, 3>> a(num_frames); ///< Vector pointing from rotor Y to rotor X.
+	vector<array<float, 4>> q(num_frames); ///< Orientation in the form of quaternion.
 	vector<array<float, 3>> forces(num_frames, zero3); ///< Aggregated derivatives of heavy atoms.
 	vector<array<float, 3>> torques(num_frames, zero3); /// Torque of the force.
 
@@ -293,41 +293,41 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
-	origins.front()[0] = conf[0];
-	origins.front()[1] = conf[1];
-	origins.front()[2] = conf[2];
-	orientations_q.front()[0] = conf[3];
-	orientations_q.front()[1] = conf[4];
-	orientations_q.front()[2] = conf[5];
-	orientations_q.front()[3] = conf[6];
+	o.front()[0] = conf[0];
+	o.front()[1] = conf[1];
+	o.front()[2] = conf[2];
+	q.front()[0] = conf[3];
+	q.front()[1] = conf[4];
+	q.front()[2] = conf[5];
+	q.front()[3] = conf[6];
 
 	// Apply torsions to frames.
 	for (size_t k = 0, t = 0; k < num_frames; ++k)
 	{
 		const frame& f = frames[k];
-		const array<float, 9> m = qtn4_to_mat3(orientations_q[k]);
+		const array<float, 9> m = qtn4_to_mat3(q[k]);
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			coordinates[i] = origins[k] + m * heavy_atoms[i].coord;
+			coordinates[i] = o[k] + m * heavy_atoms[i].coord;
 		}
 		for (const size_t i : f.branches)
 		{
 			const frame& b = frames[i];
-			origins[i] = origins[k] + m * b.parent_rotorY_to_current_rotorY;
+			o[i] = o[k] + m * b.parent_rotorY_to_current_rotorY;
 
 			// If the current BRANCH frame does not have an active torsion, skip it.
 			if (!b.active)
 			{
 				assert(b.habegin + 1 == b.haend);
 				assert(b.habegin == b.rotorYidx);
-//				coordinates[b.rotorYidx] = origins[i];
+//				coordinates[b.rotorYidx] = o[i];
 				continue;
 			}
 			assert(normalized(b.parent_rotorX_to_current_rotorY));
-			axes[i] = m * b.parent_rotorX_to_current_rotorY;
-			assert(normalized(axes[i]));
-			orientations_q[i] = vec4_to_qtn4(axes[i], conf[7 + t++]) * orientations_q[k];
-			assert(normalized(orientations_q[i]));
+			a[i] = m * b.parent_rotorX_to_current_rotorY;
+			assert(normalized(a[i]));
+			q[i] = vec4_to_qtn4(a[i], conf[7 + t++]) * q[k];
+			assert(normalized(q[i]));
 		}
 	}
 
@@ -420,25 +420,25 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 			// where the projections refer to the torque applied to the branch moved by the torsion,
 			// projected on its rotation axis.
 			forces[k]  += derivatives[i];
-			torques[k] += (coordinates[i] - origins[k]) * derivatives[i];
+			torques[k] += (coordinates[i] - o[k]) * derivatives[i];
 		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
 		forces[f.parent]  += forces[k];
-		torques[f.parent] += torques[k] + (origins[k] - origins[f.parent]) * forces[k];
+		torques[f.parent] += torques[k] + (o[k] - o[f.parent]) * forces[k];
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
 
 		// Save the torsion.
-		g[6 + (--t)] = torques[k][0] * axes[k][0] + torques[k][1] * axes[k][1] + torques[k][2] * axes[k][2]; // dot product
+		g[6 + (--t)] = torques[k][0] * a[k][0] + torques[k][1] * a[k][1] + torques[k][2] * a[k][2]; // dot product
 	}
 
 	// Calculate and aggregate the force and torque of ROOT frame.
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
 		forces.front()  += derivatives[i];
-		torques.front() += (coordinates[i] - origins.front()) * derivatives[i];
+		torques.front() += (coordinates[i] - o.front()) * derivatives[i];
 	}
 
 	// Save the aggregated force and torque to g.
@@ -454,37 +454,37 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 
 result ligand::compose_result(const float e, const vector<float>& conf) const
 {
-	vector<array<float, 3>> origins(num_frames);
-	vector<array<float, 4>> orientations_q(num_frames);
+	vector<array<float, 3>> o(num_frames);
+	vector<array<float, 4>> q(num_frames);
 	vector<array<float, 3>> heavy_atoms(num_heavy_atoms);
 	vector<array<float, 3>> hydrogens(num_hydrogens);
 
-	origins.front()[0] = conf[0];
-	origins.front()[1] = conf[1];
-	origins.front()[2] = conf[2];
-	orientations_q.front()[0] = conf[3];
-	orientations_q.front()[1] = conf[4];
-	orientations_q.front()[2] = conf[5];
-	orientations_q.front()[3] = conf[6];
+	o.front()[0] = conf[0];
+	o.front()[1] = conf[1];
+	o.front()[2] = conf[2];
+	q.front()[0] = conf[3];
+	q.front()[1] = conf[4];
+	q.front()[2] = conf[5];
+	q.front()[3] = conf[6];
 
 	// Calculate the coordinates of both heavy atoms and hydrogens of BRANCH frames.
 	for (size_t k = 0, t = 0; k < num_frames; ++k)
 	{
 		const frame& f = frames[k];
-		const array<float, 9> m = qtn4_to_mat3(orientations_q[k]);
+		const array<float, 9> m = qtn4_to_mat3(q[k]);
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			heavy_atoms[i] = origins[k] + m * this->heavy_atoms[i].coord;
+			heavy_atoms[i] = o[k] + m * this->heavy_atoms[i].coord;
 		}
 		for (size_t i = f.hybegin; i < f.hyend; ++i)
 		{
-			hydrogens[i]   = origins[k] + m * this->hydrogens[i].coord;
+			hydrogens[i]   = o[k] + m * this->hydrogens[i].coord;
 		}
 		for (const size_t i : f.branches)
 		{
 			const frame& b = frames[i];
-			origins[i] = origins[k] + m * b.parent_rotorY_to_current_rotorY;
-			orientations_q[i] = vec4_to_qtn4(m * b.parent_rotorX_to_current_rotorY, f.active ? conf[7 + t++] : 0.0f) * orientations_q[k];
+			o[i] = o[k] + m * b.parent_rotorY_to_current_rotorY;
+			q[i] = vec4_to_qtn4(m * b.parent_rotorX_to_current_rotorY, f.active ? conf[7 + t++] : 0.0f) * q[k];
 		}
 	}
 
