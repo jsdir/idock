@@ -284,8 +284,8 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 	vector<array<float, 3>> o(num_frames); ///< Origin coordinate, which is rotorY.
 	vector<array<float, 3>> a(num_frames); ///< Vector pointing from rotor Y to rotor X.
 	vector<array<float, 4>> q(num_frames); ///< Orientation in the form of quaternion.
-	vector<array<float, 3>> forces(num_frames, zero3); ///< Aggregated derivatives of heavy atoms.
-	vector<array<float, 3>> torques(num_frames, zero3); /// Torque of the force.
+	vector<array<float, 3>> gf(num_frames, zero3); ///< Aggregated derivatives of heavy atoms.
+	vector<array<float, 3>> gt(num_frames, zero3); /// Torque of the force.
 
 	// Initialize atom-wide conformational variables.
 	vector<array<float, 3>> c(num_heavy_atoms); ///< Heavy atom coordinates.
@@ -419,35 +419,35 @@ bool ligand::evaluate(const vector<float>& conf, const scoring_function& sf, con
 			// the negative total torque, and the negative torque projections, respectively,
 			// where the projections refer to the torque applied to the branch moved by the torsion,
 			// projected on its rotation axis.
-			forces[k]  += d[i];
-			torques[k] += (c[i] - o[k]) * d[i];
+			gf[k]  += d[i];
+			gt[k] += (c[i] - o[k]) * d[i];
 		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		forces[f.parent]  += forces[k];
-		torques[f.parent] += torques[k] + (o[k] - o[f.parent]) * forces[k];
+		gf[f.parent]  += gf[k];
+		gt[f.parent] += gt[k] + (o[k] - o[f.parent]) * gf[k];
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
 
 		// Save the torsion.
-		g[6 + (--t)] = torques[k][0] * a[k][0] + torques[k][1] * a[k][1] + torques[k][2] * a[k][2]; // dot product
+		g[6 + (--t)] = gt[k][0] * a[k][0] + gt[k][1] * a[k][1] + gt[k][2] * a[k][2]; // dot product
 	}
 
 	// Calculate and aggregate the force and torque of ROOT frame.
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		forces.front()  += d[i];
-		torques.front() += (c[i] - o.front()) * d[i];
+		gf.front()  += d[i];
+		gt.front() += (c[i] - o.front()) * d[i];
 	}
 
 	// Save the aggregated force and torque to g.
-	g[0] = forces.front()[0];
-	g[1] = forces.front()[1];
-	g[2] = forces.front()[2];
-	g[3] = torques.front()[0];
-	g[4] = torques.front()[1];
-	g[5] = torques.front()[2];
+	g[0] = gf.front()[0];
+	g[1] = gf.front()[1];
+	g[2] = gf.front()[2];
+	g[3] = gt.front()[0];
+	g[4] = gt.front()[1];
+	g[5] = gt.front()[2];
 
 	return true;
 }
