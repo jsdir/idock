@@ -20,8 +20,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	bonds.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 	size_t current = 0; // Index of current frame, initialized to ROOT frame.
 	frame* f = &frames.front(); // Pointer to the current frame.
-	f->rotorYidx = 0; // Assume the rotorY of ROOT frame is the first atom.
-	assert(f->rotorYidx == f->beg);
 	string line;
 
 	// Parse the ligand line by line.
@@ -91,7 +89,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 				}
 
 				// Set rotorYidx if the serial number of current atom is rotorYsrn.
-				if (current > 0 && a.serial == f->rotorYsrn) // i.e. BRANCH frame.
+				if (a.serial == f->rotorYsrn)
 				{
 					f->rotorYidx = atoms.size();
 					assert(f->rotorYidx == f->beg);
@@ -160,7 +158,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 
 			// Calculate parent_rotorY_to_current_rotorY and parent_rotorX_to_current_rotorY.
 			const frame& p = frames[f->parent];
-			f->parent_rotorY_to_current_rotorY =  rotorY.coord - atoms[p.rotorYidx].coord;
+			f->parent_rotorY_to_current_rotorY = rotorY.coord - atoms[p.rotorYidx].coord;
 			f->parent_rotorX_to_current_rotorY = normalize(rotorY.coord - rotorX.coord);
 
 			// Now the parent of the following frame is the parent of current frame.
