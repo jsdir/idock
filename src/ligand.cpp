@@ -274,6 +274,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	for (size_t k = 0, t = 0; k < frames.size(); ++k)
 	{
 		const frame& f = frames[k];
+		if (!f.active) continue;
 		const array<float, 9> m = qtn4_to_mat3(q[k]);
 		for (size_t i = f.beg + 1; i < f.end; ++i)
 		{
