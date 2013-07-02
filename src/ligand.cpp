@@ -8,7 +8,7 @@ void frame::output(boost::filesystem::ofstream& ofs) const
 	ofs << "BRANCH"    << setw(4) << rotorXsrn << setw(4) << rotorYsrn << '\n';
 }
 
-ligand::ligand(const path& p) : num_active_torsions(0)
+ligand::ligand(const path& p) : nt(0)
 {
 	// Initialize necessary variables for constructing a ligand.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
@@ -143,7 +143,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			}
 			else
 			{
-				++num_active_torsions;
+				++nt;
 			}
 
 			// Set up bonds between rotorX and rotorY.
@@ -171,9 +171,9 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	assert(frames.size() >= 1);
-	assert(frames.size() - 1 >= num_active_torsions);
+	assert(frames.size() - 1 >= nt);
 	frames.back().end = atoms.size();
-	num_variables = 6 + num_active_torsions;
+	nv = 6 + nt;
 
 	// Update atoms[].coord relative to frame origin.
 	for (const frame& f : frames)
@@ -388,7 +388,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	if (e >= e_upper_bound) return false;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
-	for (size_t k = frames.size(), t = num_active_torsions; --k;)
+	for (size_t k = frames.size(), t = nt; --k;)
 	{
 		const frame& f = frames[k];
 
@@ -439,12 +439,12 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	const float e_upper_bound = 40.0f * atoms.size(); // A conformation will be droped if its free energy is not better than e_upper_bound.
 
 	// Declare variable.
-	vector<float> x0(7 + num_active_torsions), x1(7 + num_active_torsions), x2(7 + num_active_torsions);
+	vector<float> x0(nv + 1), x1(nv + 1), x2(nv + 1);
 	vector<array<float, 4>> q0(frames.size()), q1(frames.size()), q2(frames.size());
 	vector<array<float, 3>> c0(atoms.size()), c1(atoms.size()), c2(atoms.size());
-	vector<float> g0(6 + num_active_torsions), g1(6 + num_active_torsions), g2(6 + num_active_torsions);
-	vector<float> p(6 + num_active_torsions), y(6 + num_active_torsions), mhy(6 + num_active_torsions);
-	vector<float> h(num_variables*(num_variables+1)>>1); // Symmetric triangular Hessian matrix.
+	vector<float> g0(nv), g1(nv), g2(nv);
+	vector<float> p(nv), y(nv), mhy(nv);
+	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
 	float e0, e1, e2, alpha, pg1, pg2, yhy, yp, ryp, pco;
 	size_t g, i, j;
 	mt19937_64 rng(seed);
@@ -460,7 +460,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	x0[4] = x0orientation[1];
 	x0[5] = x0orientation[2];
 	x0[6] = x0orientation[3];
-	for (i = 0; i < num_active_torsions; ++i)
+	for (i = 0; i < nt; ++i)
 	{
 		x0[7 + i] = uniform_11(rng);
 	}
@@ -481,7 +481,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 		// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
 		// See N&R for a recipe to find this initializer.
 		fill(h.begin(), h.end(), 0.0f);
-		for (i = 0; i < num_variables; ++i)
+		for (i = 0; i < nv; ++i)
 			h[mr(i, i)] = 1.0f;
 
 		// Given the mutated conformation c1, use BFGS to find a local minimum.
@@ -492,17 +492,17 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 		while (true)
 		{
 			// Calculate p = -h*g, where p is for descent direction, h for Hessian, and g for gradient.
-			for (i = 0; i < num_variables; ++i)
+			for (i = 0; i < nv; ++i)
 			{
 				float sum = 0.0f;
-				for (j = 0; j < num_variables; ++j)
+				for (j = 0; j < nv; ++j)
 					sum += h[mp(i, j)] * g1[j];
 				p[i] = -sum;
 			}
 
 			// Calculate pg = p*g = -h*g^2 < 0
 			pg1 = 0;
-			for (i = 0; i < num_variables; ++i)
+			for (i = 0; i < nv; ++i)
 				pg1 += p[i] * g1[i];
 
 			// Perform a line search to find an appropriate alpha.
@@ -523,7 +523,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 				x2[4] = x2orientation[1];
 				x2[5] = x2orientation[2];
 				x2[6] = x2orientation[3];
-				for (i = 0; i < num_active_torsions; ++i)
+				for (i = 0; i < nt; ++i)
 				{
 					x2[7 + i] = x1[7 + i] + alpha * p[6 + i];
 				}
@@ -534,7 +534,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 				if (evaluate(x2, sf, rec, e1 + 0.0001f * alpha * pg1, q2, c2, e2, g2))
 				{
 					pg2 = 0;
-					for (i = 0; i < num_variables; ++i)
+					for (i = 0; i < nv; ++i)
 						pg2 += p[i] * g2[i];
 					if (pg2 >= 0.9f * pg1)
 						break; // An appropriate alpha is found.
@@ -547,25 +547,25 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 			if (j == num_alphas) break;
 
 			// Update Hessian matrix h.
-			for (i = 0; i < num_variables; ++i) // Calculate y = g2 - g1.
+			for (i = 0; i < nv; ++i) // Calculate y = g2 - g1.
 				y[i] = g2[i] - g1[i];
-			for (i = 0; i < num_variables; ++i) // Calculate mhy = -h * y.
+			for (i = 0; i < nv; ++i) // Calculate mhy = -h * y.
 			{
 				float sum = 0.0f;
-				for (j = 0; j < num_variables; ++j)
+				for (j = 0; j < nv; ++j)
 					sum += h[mp(i, j)] * y[j];
 				mhy[i] = -sum;
 			}
 			yhy = 0;
-			for (i = 0; i < num_variables; ++i) // Calculate yhy = -y * mhy = -y * (-hy).
+			for (i = 0; i < nv; ++i) // Calculate yhy = -y * mhy = -y * (-hy).
 				yhy -= y[i] * mhy[i];
 			yp = 0;
-			for (i = 0; i < num_variables; ++i) // Calculate yp = y * p.
+			for (i = 0; i < nv; ++i) // Calculate yp = y * p.
 				yp += y[i] * p[i];
 			ryp = 1 / yp;
 			pco = ryp * (ryp * yhy + alpha);
-			for (i = 0; i < num_variables; ++i)
-			for (j = i; j < num_variables; ++j) // includes i
+			for (i = 0; i < nv; ++i)
+			for (j = i; j < nv; ++j) // includes i
 			{
 				h[mr(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
 			}
