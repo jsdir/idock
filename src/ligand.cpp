@@ -620,7 +620,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 		for (size_t k = 0; k < num_frames; ++k)
 		{
 			const frame& f = frames[k];
-			const array<float, 9> m = qtn4_to_mat3(r.q[k]);
+			const array<float, 9> m = qtn4_to_mat3(f.active ? r.q[k] : r.q[f.parent]);
 			for (size_t i = f.beg; i < f.end; ++i)
 			{
 				const atom& a = atoms[i];
