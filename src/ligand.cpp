@@ -434,18 +434,15 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 
 int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
 {
-	// Define constants.
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * atoms.size(); // A conformation will be droped if its free energy is not better than e_upper_bound.
-
-	// Declare variable.
 	vector<float> x0(nv + 1), x1(nv + 1), x2(nv + 1);
 	vector<array<float, 4>> q0(frames.size()), q1(frames.size()), q2(frames.size());
 	vector<array<float, 3>> c0(atoms.size()), c1(atoms.size()), c2(atoms.size());
 	vector<float> g0(nv), g1(nv), g2(nv);
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
-	float e0, e1, e2, alpha, pg1, pg2, yhy, yp, ryp, pco;
+	float e0, e1, e2, alpha, pg1, pg2, yhy, yp, ryp, pco, qw, qx, qy, qz, qnorm_inv;
 	size_t g, i, j;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
@@ -454,12 +451,15 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	x0[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
 	x0[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
 	x0[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
-	const array<float, 4> x0orientation = normalize(make_array(uniform_11(rng), uniform_11(rng), uniform_11(rng), uniform_11(rng)));
-	assert(normalized(x0orientation));
-	x0[3] = x0orientation[0];
-	x0[4] = x0orientation[1];
-	x0[5] = x0orientation[2];
-	x0[6] = x0orientation[3];
+	qw = uniform_11(rng);
+	qx = uniform_11(rng);
+	qy = uniform_11(rng);
+	qz = uniform_11(rng);
+	qnorm_inv = 1.0f / sqrt(qw*qw+qx*qx+qy*qy+qz*qz);
+	x0[3] = qw * qnorm_inv;
+	x0[4] = qx * qnorm_inv;
+	x0[5] = qy * qnorm_inv;
+	x0[6] = qz * qnorm_inv;
 	for (i = 0; i < nt; ++i)
 	{
 		x0[7 + i] = uniform_11(rng);
