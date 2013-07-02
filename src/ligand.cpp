@@ -13,9 +13,8 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	// Initialize necessary variables for constructing a ligand.
 	lines.reserve(200); // A ligand typically consists of <= 200 lines.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
-	frames.push_back(frame(0, 0, 1, 0, 0, 0)); // ROOT is also treated as a frame. The parent and rotorX of ROOT frame are dummy.
-	heavy_atoms.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
-	hydrogens.reserve(50); // A ligand typically consists of <= 50 hydrogens.
+	frames.push_back(frame(0, 0, 1, 0, 0)); // ROOT is also treated as a frame. The parent and rotorX of ROOT frame are dummy.
+	atoms.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 
 	// Initialize helper variables for parsing.
 	vector<vector<size_t>> bonds; ///< Covalent bonds.
@@ -23,7 +22,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	size_t current = 0; // Index of current frame, initialized to ROOT frame.
 	frame* f = &frames.front(); // Pointer to the current frame.
 	f->rotorYidx = 0; // Assume the rotorY of ROOT frame is the first atom.
-	assert(f->rotorYidx == f->habegin);
+	assert(f->rotorYidx == f->beg);
 	string line;
 
 	// Parse the ligand line by line.
@@ -47,37 +46,40 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 
 			if (a.is_hydrogen()) // Current atom is a hydrogen.
 			{
-				// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
-				if (a.is_polar_hydrogen())
+				for (size_t i = atoms.size(); i > f->beg;)
 				{
-					for (size_t i = heavy_atoms.size(); i > f->habegin;)
+					atom& b = atoms[--i];
+					if (a.has_covalent_bond(b))
 					{
-						atom& b = heavy_atoms[--i];
-						if (!b.is_hetero()) continue; // Only a hetero atom can be a hydrogen bond donor.
-						if (a.has_covalent_bond(b))
+						// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
+						if (a.is_polar_hydrogen())
 						{
+							assert(b.is_hetero());
 							b.donorize();
-							break;
 						}
+						else
+						{
+							assert(!b.is_hetero());
+						}
+						// Save the hydrogen.
+						b.hydrogens.push_back(a);
+						break;
 					}
 				}
-
-				// Save the hydrogen.
-				hydrogens.push_back(a);
 			}
 			else // Current atom is a heavy atom.
 			{
 				// Find bonds between the current atom and the other atoms of the same frame.
-				assert(bonds.size() == heavy_atoms.size());
+				assert(bonds.size() == atoms.size());
 				bonds.push_back(vector<size_t>());
 				bonds.back().reserve(4); // An atom typically consists of <= 4 bonds.
-				for (size_t i = heavy_atoms.size(); i > f->habegin;)
+				for (size_t i = atoms.size(); i > f->beg;)
 				{
-					atom& b = heavy_atoms[--i];
+					atom& b = atoms[--i];
 					if (a.has_covalent_bond(b))
 					{
-						bonds[heavy_atoms.size()].push_back(i);
-						bonds[i].push_back(heavy_atoms.size());
+						bonds[atoms.size()].push_back(i);
+						bonds[i].push_back(atoms.size());
 
 						// If carbon atom b is bonded to hetero atom a, b is no longer a hydrophobic atom.
 						if (a.is_hetero() && !b.is_hetero())
@@ -95,12 +97,12 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 				// Set rotorYidx if the serial number of current atom is rotorYsrn.
 				if (current > 0 && a.serial == f->rotorYsrn) // i.e. BRANCH frame.
 				{
-					f->rotorYidx = heavy_atoms.size();
-					assert(f->rotorYidx == f->habegin);
+					f->rotorYidx = atoms.size();
+					assert(f->rotorYidx == f->beg);
 				}
 
 				// Save the heavy atom.
-				heavy_atoms.push_back(a);
+				atoms.push_back(a);
 			}
 		}
 		else if (record == "BRANCH")
@@ -113,12 +115,12 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			const size_t rotorYsrn = stoul(line.substr(10, 4));
 
 			// Find the corresponding heavy atom with x as its atom serial number in the current frame.
-			for (size_t i = f->habegin; true; ++i)
+			for (size_t i = f->beg; true; ++i)
 			{
-				if (heavy_atoms[i].serial == rotorXsrn)
+				if (atoms[i].serial == rotorXsrn)
 				{
 					// Insert a new frame whose parent is the current frame.
-					frames.push_back(frame(current, rotorXsrn, rotorYsrn, i, heavy_atoms.size(), hydrogens.size()));
+					frames.push_back(frame(current, rotorXsrn, rotorYsrn, i, atoms.size()));
 					break;
 				}
 			}
@@ -134,8 +136,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			f = &frames[current];
 
 			// The ending index of atoms of previous frame is the starting index of atoms of current frame.
-			frames[current - 1].haend = f->habegin;
-			frames[current - 1].hyend = f->hybegin;
+			frames[current - 1].end = f->beg;
 		}
 		else if (record == "ENDBRA")
 		{
@@ -144,11 +145,11 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 
 			// A frame may be empty, e.g. "BRANCH   4   9" is immediately followed by "ENDBRANCH   4   9".
 			// This emptiness is likely to be caused by invalid input structure, especially when all the atoms are located in the same plane.
-			if (f->habegin == heavy_atoms.size()) throw domain_error("Error parsing " + p.filename().string() + ": an empty BRANCH has been detected, indicating the input ligand structure is probably invalid.");
+			if (f->beg == atoms.size()) throw domain_error("Error parsing " + p.filename().string() + ": an empty BRANCH has been detected, indicating the input ligand structure is probably invalid.");
 
 			// If the current frame consists of rotor Y and a few hydrogens only, e.g. -OH and -NH2,
 			// the torsion of this frame will have no effect on scoring and is thus redundant.
-			if ((current == frames.size() - 1) && (f->habegin + 1 == heavy_atoms.size()))
+			if ((current == frames.size() - 1) && (f->beg + 1 == atoms.size()))
 			{
 				f->active = false;
 			}
@@ -162,14 +163,14 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			bonds[f->rotorXidx].push_back(f->rotorYidx);
 
 			// Dehydrophobicize rotorX and rotorY if necessary.
-			atom& rotorY = heavy_atoms[f->rotorYidx];
-			atom& rotorX = heavy_atoms[f->rotorXidx];
+			atom& rotorY = atoms[f->rotorYidx];
+			atom& rotorX = atoms[f->rotorXidx];
 			if ((rotorY.is_hetero()) && (!rotorX.is_hetero())) rotorX.dehydrophobicize();
 			if ((rotorX.is_hetero()) && (!rotorY.is_hetero())) rotorY.dehydrophobicize();
 
 			// Calculate parent_rotorY_to_current_rotorY and parent_rotorX_to_current_rotorY.
 			const frame& p = frames[f->parent];
-			f->parent_rotorY_to_current_rotorY =  rotorY.coord - heavy_atoms[p.rotorYidx].coord;
+			f->parent_rotorY_to_current_rotorY =  rotorY.coord - atoms[p.rotorYidx].coord;
 			f->parent_rotorX_to_current_rotorY = normalize(rotorY.coord - rotorX.coord);
 
 			// Now the parent of the following frame is the parent of current frame.
@@ -187,12 +188,10 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 
-	// Determine num_heavy_atoms, num_hydrogens, and num_heavy_atoms_inverse.
-	num_heavy_atoms = heavy_atoms.size();
-	num_hydrogens = hydrogens.size();
-	frames.back().haend = num_heavy_atoms;
-	frames.back().hyend = num_hydrogens;
-	num_heavy_atoms_inverse = 1.0f / num_heavy_atoms;
+	// Determine num_atoms, num_hydrogens, and num_atoms_inverse.
+	num_atoms = atoms.size();
+	frames.back().end = num_atoms;
+	num_atoms_inverse = 1.0f / num_atoms;
 	num_variables = 6 + num_active_torsions;
 
 	// Determine num_frames, num_torsions, flexibility_penalty_factor.
@@ -201,31 +200,31 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	num_torsions = num_frames - 1;
 	assert(num_torsions + 1 == num_frames);
 	assert(num_torsions >= num_active_torsions);
-	assert(num_heavy_atoms + num_hydrogens + (num_torsions << 1) + 3 == lines.size()); // ATOM/HETATM lines + BRANCH/ENDBRANCH lines + ROOT/ENDROOT/TORSDOF lines == lines.size()
 
-	// Update heavy_atoms[].coord and hydrogens[].coord relative to frame origin.
+	// Update atoms[].coord relative to frame origin.
 	for (size_t k = 0; k < num_frames; ++k)
 	{
 		const frame& f = frames[k];
-		const array<float, 3> origin = heavy_atoms[f.rotorYidx].coord;
-		for (size_t i = f.habegin; i < f.haend; ++i)
+		const array<float, 3> origin = atoms[f.rotorYidx].coord;
+		for (size_t i = f.beg; i < f.end; ++i)
 		{
-			heavy_atoms[i].coord -= origin;
-		}
-		for (size_t i = f.hybegin; i < f.hyend; ++i)
-		{
-			hydrogens[i].coord -= origin;
+			atom& a = atoms[i];
+			a.coord -= origin;
+			for (atom& h : a.hydrogens)
+			{
+				h.coord -= origin;
+			}
 		}
 	}
 
 	// Find intra-ligand interacting pairs that are not 1-4.
-	interacting_pairs.reserve(num_heavy_atoms * num_heavy_atoms);
+	interacting_pairs.reserve(num_atoms * num_atoms);
 	vector<size_t> neighbors;
 	neighbors.reserve(10); // An atom typically consists of <= 10 neighbors.
 	for (size_t k1 = 0; k1 < num_frames; ++k1)
 	{
 		const frame& f1 = frames[k1];
-		for (size_t i = f1.habegin; i < f1.haend; ++i)
+		for (size_t i = f1.beg; i < f1.end; ++i)
 		{
 			// Find neighbor atoms within 3 consecutive covalent bonds.
 			const vector<size_t>& i0_bonds = bonds[i];
@@ -264,13 +263,13 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			{
 				const frame& f2 = frames[k2];
 				const frame& f3 = frames[f2.parent];
-				for (size_t j = f2.habegin; j < f2.haend; ++j)
+				for (size_t j = f2.beg; j < f2.end; ++j)
 				{
 					if (k1 == f2.parent && (i == f2.rotorXidx || j == f2.rotorYidx)) continue;
 					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue;
 					if (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) continue;
 					if (find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) continue;
-					const size_t p_offset = scoring_function::nr * mp(heavy_atoms[i].xs, heavy_atoms[j].xs);
+					const size_t p_offset = scoring_function::nr * mp(atoms[i].xs, atoms[j].xs);
 					interacting_pairs.push_back(interacting_pair(i, j, p_offset));
 				}
 			}
@@ -286,7 +285,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	vector<array<float, 3>> a(num_frames); ///< Vector pointing from rotor Y to rotor X.
 	vector<array<float, 3>> gf(num_frames, zero3); ///< Aggregated derivatives of heavy atoms.
 	vector<array<float, 3>> gt(num_frames, zero3); /// Torque of the force.
-	vector<array<float, 3>> d(num_heavy_atoms); ///< Heavy atom derivatives.
+	vector<array<float, 3>> d(num_atoms); ///< Heavy atom derivatives.
 
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
@@ -303,9 +302,9 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	{
 		const frame& f = frames[k];
 		const array<float, 9> m = qtn4_to_mat3(q[k]);
-		for (size_t i = f.habegin + 1; i < f.haend; ++i)
+		for (size_t i = f.beg + 1; i < f.end; ++i)
 		{
-			c[i] = c[f.rotorYidx] + m * heavy_atoms[i].coord;
+			c[i] = c[f.rotorYidx] + m * atoms[i].coord;
 		}
 		for (const size_t i : f.branches)
 		{
@@ -315,8 +314,8 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 			// If the current BRANCH frame does not have an active torsion, skip it.
 			if (!b.active)
 			{
-				assert(b.habegin + 1 == b.haend);
-				assert(b.habegin == b.rotorYidx);
+				assert(b.beg + 1 == b.end);
+				assert(b.beg == b.rotorYidx);
 				continue;
 			}
 			assert(normalized(b.parent_rotorX_to_current_rotorY));
@@ -331,14 +330,14 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	//for (size_t k1 = num_frames - 1; k1 > 0; --k1)
 	//{
 	//	const frame& f1 = frames[k1];
-	//	for (size_t i1 = f1.habegin; i1 < f1.haend; ++i1)
+	//	for (size_t i1 = f1.beg; i1 < f1.end; ++i1)
 	//	{
 	//		for (size_t k2 = 0; k2 < k1; ++k2)
 	//		{
 	//			const frame& f2 = frames[k2];
-	//			for (size_t i2 = f2.habegin; i2 < f2.haend; ++i2)
+	//			for (size_t i2 = f2.beg; i2 < f2.end; ++i2)
 	//			{
-	//				if ((distance_sqr(c[i1], c[i2]) < sqr(heavy_atoms[i1].covalent_radius() + heavy_atoms[i2].covalent_radius())) && (!((k2 == f1.parent) && (i1 == f1.rotorYidx) && (i2 == f1.rotorXidx))))
+	//				if ((distance_sqr(c[i1], c[i2]) < sqr(atoms[i1].covalent_radius() + atoms[i2].covalent_radius())) && (!((k2 == f1.parent) && (i1 == f1.rotorYidx) && (i2 == f1.rotorXidx))))
 	//					return false;
 	//			}
 	//		}
@@ -346,7 +345,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	//}
 
 	e = 0;
-	for (size_t i = 0; i < num_heavy_atoms; ++i)
+	for (size_t i = 0; i < num_atoms; ++i)
 	{
 		if (!rec.within(c[i]))
 		{
@@ -358,7 +357,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 		}
 
 		// Retrieve the grid map in need.
-		const vector<float>& map = rec.maps[heavy_atoms[i].xs];
+		const vector<float>& map = rec.maps[atoms[i].xs];
 		assert(map.size());
 
 		// Find the index of the current coordinates.
@@ -405,7 +404,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	{
 		const frame& f = frames[k];
 
-		for (size_t i = f.habegin; i < f.haend; ++i)
+		for (size_t i = f.beg; i < f.end; ++i)
 		{
 			// The derivatives with respect to the position, orientation, and torsions
 			// would be the negative total force acting on the ligand,
@@ -428,7 +427,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	}
 
 	// Calculate and aggregate the force and torque of ROOT frame.
-	for (size_t i = root.habegin; i < root.haend; ++i)
+	for (size_t i = root.beg; i < root.end; ++i)
 	{
 		gf.front() += d[i];
 		gt.front() += (c[i] - c.front()) * d[i];
@@ -449,12 +448,12 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 {
 	// Define constants.
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
-	const float e_upper_bound = 40.0f * num_heavy_atoms; // A conformation will be droped if its free energy is not better than e_upper_bound.
+	const float e_upper_bound = 40.0f * num_atoms; // A conformation will be droped if its free energy is not better than e_upper_bound.
 
 	// Declare variable.
 	vector<float> x0(7 + num_active_torsions), x1(7 + num_active_torsions), x2(7 + num_active_torsions);
 	vector<array<float, 4>> q0(num_frames), q1(num_frames), q2(num_frames);
-	vector<array<float, 3>> c0(num_heavy_atoms), c1(num_heavy_atoms), c2(num_heavy_atoms);
+	vector<array<float, 3>> c0(num_atoms), c1(num_atoms), c2(num_atoms);
 	vector<float> g0(6 + num_active_torsions), g1(6 + num_active_torsions), g2(6 + num_active_torsions);
 	vector<float> p(6 + num_active_torsions), y(6 + num_active_torsions), mhy(6 + num_active_torsions);
 	vector<float> h(num_variables*(num_variables+1)>>1); // Symmetric triangular Hessian matrix.
@@ -617,18 +616,21 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 		const result& r = results[representatives[i]];
 		ofs << "MODEL     " << setw(4) << (i + 1) << '\n'
 			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n";
-		vector<array<float, 3>> h(num_hydrogens);
-		size_t t = 0;
+		vector<array<float, 3>> h;
 		for (size_t k = 0; k < num_frames; ++k)
 		{
 			const frame& f = frames[k];
 			const array<float, 9> m = qtn4_to_mat3(r.q[k]);
-			for (size_t i = f.hybegin; i < f.hyend; ++i)
+			for (size_t i = f.beg; i < f.end; ++i)
 			{
-				h[t++] = r.c[f.rotorYidx] + m * this->hydrogens[i].coord;
+				const atom& a = atoms[i];
+				if (a.hydrogens.empty()) continue;
+				for (const atom& hydrogen : a.hydrogens)
+				{
+					h.push_back(r.c[f.rotorYidx] + m * hydrogen.coord);
+				}
 			}
 		}
-		assert(t == num_hydrogens);
 		for (size_t j = 0, heavy_atom = 0, hydrogen = 0; j < num_lines; ++j)
 		{
 			const string& line = lines[j];

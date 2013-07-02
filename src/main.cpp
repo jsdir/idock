@@ -183,9 +183,9 @@ int main(int argc, char* argv[])
 
 		// Create grid maps on the fly if necessary.
 		vector<size_t> xs;
-		for (size_t i = 0; i < lig.num_heavy_atoms; ++i)
+		for (size_t i = 0; i < lig.num_atoms; ++i)
 		{
-			const size_t t = lig.heavy_atoms[i].xs;
+			const size_t t = lig.atoms[i].xs;
 			if (rec.maps[t].empty() && find(xs.cbegin(), xs.cend(), t) == xs.cend())
 			{
 				xs.push_back(t);
@@ -233,7 +233,7 @@ int main(int argc, char* argv[])
 		summaries.push_back(new summary(stem, results.front().e));
 
 		// Cluster results. Ligands with RMSD < 2.0 will be clustered into the same cluster.
-		const float required_square_error = 4.0f * lig.num_heavy_atoms;
+		const float required_square_error = 4.0f * lig.num_atoms;
 		for (size_t i = 0; i < num_mc_tasks && representatives.size() < representatives.capacity(); ++i)
 		{
 			const result& r = results[i];
@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
 			for (size_t j = 0; j < i; ++j)
 			{
 				float this_square_error = 0.0f;
-				for (size_t k = 0; k < lig.num_heavy_atoms; ++k)
+				for (size_t k = 0; k < lig.num_atoms; ++k)
 				{
 					this_square_error += distance_sqr(r.c[k], results[j].c[k]);
 				}

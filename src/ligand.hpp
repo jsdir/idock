@@ -39,17 +39,15 @@ public:
 	size_t rotorYsrn; ///< Serial atom number of the current frame atom which forms a rotatable bond with the rotorX atom of parent frame.
 	size_t rotorXidx; ///< Index pointing to the parent frame atom which forms a rotatable bond with the rotorY atom of current frame.
 	size_t rotorYidx; ///< Index pointing to the current frame atom which forms a rotatable bond with the rotorX atom of parent frame.
-	size_t habegin; ///< The inclusive beginning index to the heavy atoms of the current frame.
-	size_t haend; ///< The exclusive ending index to the heavy atoms of the current frame.
-	size_t hybegin; ///< The inclusive beginning index to the hydrogen atoms of the current frame.
-	size_t hyend; ///< The exclusive ending index to the hydrogen atoms of the current frame.
+	size_t beg; ///< The inclusive beginning index to the heavy atoms of the current frame.
+	size_t end; ///< The exclusive ending index to the heavy atoms of the current frame.
 	bool active; ///< Indicates if the current frame is active.
 	array<float, 3> parent_rotorY_to_current_rotorY; ///< Vector pointing from the origin of parent frame to the origin of current frame.
 	array<float, 3> parent_rotorX_to_current_rotorY; ///< Normalized vector pointing from rotor X of parent frame to rotor Y of current frame.
 	vector<size_t> branches; ///< Indexes to child branches.
 
 	/// Constructs an active frame, and relates it to its parent frame.
-	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t habegin, const size_t hybegin) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), habegin(habegin), hybegin(hybegin), active(true) {}
+	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t beg) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), beg(beg), active(true) {}
 
 	/// Outputs a BRANCH line in PDBQT format.
 	void output(boost::filesystem::ofstream& ofs) const;
@@ -61,10 +59,8 @@ class ligand
 public:
 	vector<string> lines; ///< Input PDBQT file lines.
 	vector<frame> frames; ///< ROOT and BRANCH frames.
-	vector<atom> heavy_atoms; ///< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
-	vector<atom> hydrogens; ///< Hydrogen atoms. Coordinates are relative to frame origin, which is the first atom by default.
-	size_t num_heavy_atoms; ///< Number of heavy atoms.
-	size_t num_hydrogens; ///< Number of hydrogens.
+	vector<atom> atoms; ///< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
+	size_t num_atoms; ///< Number of heavy atoms.
 	size_t num_frames; ///< Number of frames.
 	size_t num_torsions; ///< Number of torsions.
 	size_t num_active_torsions; ///< Number of active torsions.
@@ -84,7 +80,7 @@ public:
 	void write_models(const path& output_ligand_path, const ptr_vector<result>& results, const vector<size_t>& representatives) const;
 
 private:
-	float num_heavy_atoms_inverse; ///< 1 / num_heavy_atoms.
+	float num_atoms_inverse; ///< 1 / num_atoms.
 
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.
 	class interacting_pair

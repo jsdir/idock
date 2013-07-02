@@ -21,6 +21,7 @@ public:
 	size_t ad;
 	size_t xs;
 	size_t rf;
+	vector<atom> hydrogens;
 
 	// Constructs an atom from an ATOM/HETATM line in PDBQT format.
 	explicit atom(const string& line);
