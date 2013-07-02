@@ -110,28 +110,6 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 	}
 }
 
-bool receptor::within(const array<float, 3>& coordinate) const
-{
-	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
-	{
-		// Half-open-half-close box, i.e. [corner0, corner1)
-		if (coordinate[i] < corner0[i] || corner1[i] <= coordinate[i])
-			return false;
-	}
-	return true;
-}
-
-array<size_t, 3> receptor::coordinate_to_index(const array<float, 3>& coordinate) const
-{
-	array<size_t, 3> index;
-	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
-	{
-		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * granularity_inverse);
-		assert(index[i] + 1 < num_probes[i]);
-	}
-	return index;
-}
-
 int receptor::populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z)
 {
 	const size_t n = xs.size();

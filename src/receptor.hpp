@@ -30,12 +30,6 @@ public:
 	/// @param granularity 1D size of grids.
 	explicit receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size_, const float granularity);
 
-	/// Returns true if a coordinate is within current half-open-half-close box, i.e. [corner0, corner1).
-	bool within(const array<float, 3>& coordinate) const;
-
-	/// Returns the index of the half-open-half-close grid containing the given coordinate.
-	array<size_t, 3> coordinate_to_index(const array<float, 3>& coordinate) const;
-
 	/// Task for populating grid maps for certain atom types along X and Y dimensions for an Z dimension value.
 	int populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z);
 };

@@ -320,7 +320,17 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	e = 0;
 	for (size_t i = 0; i < atoms.size(); ++i)
 	{
-		if (!rec.within(c[i]))
+		bool within = true;
+		for (size_t j = 0; j < 3; ++j) // The loop may be unrolled by enabling compiler optimization.
+		{
+			// Half-open-half-close box, i.e. [corner0, corner1)
+			if (c[i][j] < rec.corner0[j] || rec.corner1[j] <= c[i][j])
+			{
+				within = false;
+				break;
+			}
+		}
+		if (!within)
 		{
 			e += 10;
 			d[i][0] = 0;
@@ -334,7 +344,12 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 		assert(map.size());
 
 		// Find the index of the current coordinates.
-		const array<size_t, 3> index = rec.coordinate_to_index(c[i]);
+		array<size_t, 3> index;
+		for (size_t j = 0; j < 3; ++j) // The loop may be unrolled by enabling compiler optimization.
+		{
+			index[j] = static_cast<size_t>((c[i][j] - rec.corner0[j]) * rec.granularity_inverse);
+			assert(index[j] + 1 < rec.num_probes[j]);
+		}
 
 		// Calculate the offsets to grid map and lookup the values.
 		const size_t o000 = rec.num_probes[0] * (rec.num_probes[1] * index[2] + index[1]) + index[0];
