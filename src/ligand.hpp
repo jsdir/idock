@@ -59,9 +59,6 @@ class ligand
 public:
 	vector<frame> frames; ///< ROOT and BRANCH frames.
 	vector<atom> atoms; ///< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
-	size_t num_atoms; ///< Number of heavy atoms.
-	size_t num_frames; ///< Number of frames.
-	size_t num_torsions; ///< Number of torsions.
 	size_t num_active_torsions; ///< Number of active torsions.
 	size_t num_variables; ///< Number of variables to optimize.
 
@@ -79,8 +76,6 @@ public:
 	void save(const path& output_ligand_path, const ptr_vector<result>& results, const vector<size_t>& representatives) const;
 
 private:
-	float num_atoms_inverse; ///< 1 / num_atoms.
-
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.
 	class interacting_pair
 	{

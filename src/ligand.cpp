@@ -172,24 +172,16 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	}
 	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
+	assert(frames.size() >= 1);
+	assert(frames.size() - 1 >= num_active_torsions);
 
-	// Determine num_atoms, num_hydrogens, and num_atoms_inverse.
-	num_atoms = atoms.size();
-	frames.back().end = num_atoms;
-	num_atoms_inverse = 1.0f / num_atoms;
+	// Determine frames.back().end and num_variables.
+	frames.back().end = atoms.size();
 	num_variables = 6 + num_active_torsions;
 
-	// Determine num_frames, num_torsions, flexibility_penalty_factor.
-	num_frames = frames.size();
-	assert(num_frames >= 1);
-	num_torsions = num_frames - 1;
-	assert(num_torsions + 1 == num_frames);
-	assert(num_torsions >= num_active_torsions);
-
 	// Update atoms[].coord relative to frame origin.
-	for (size_t k = 0; k < num_frames; ++k)
+	for (const frame& f : frames)
 	{
-		const frame& f = frames[k];
 		const array<float, 3> origin = atoms[f.rotorYidx].coord;
 		for (size_t i = f.beg; i < f.end; ++i)
 		{
@@ -203,10 +195,10 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	}
 
 	// Find intra-ligand interacting pairs that are not 1-4.
-	interacting_pairs.reserve(num_atoms * num_atoms);
+	interacting_pairs.reserve(atoms.size() * atoms.size());
 	vector<size_t> neighbors;
 	neighbors.reserve(10); // An atom typically consists of <= 10 neighbors.
-	for (size_t k1 = 0; k1 < num_frames; ++k1)
+	for (size_t k1 = 0; k1 < frames.size(); ++k1)
 	{
 		const frame& f1 = frames[k1];
 		for (size_t i = f1.beg; i < f1.end; ++i)
@@ -244,7 +236,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			}
 
 			// Determine if interacting pairs can be possibly formed.
-			for (size_t k2 = k1 + 1; k2 < num_frames; ++k2)
+			for (size_t k2 = k1 + 1; k2 < frames.size(); ++k2)
 			{
 				const frame& f2 = frames[k2];
 				const frame& f3 = frames[f2.parent];
@@ -267,10 +259,10 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 
 bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const receptor& rec, const float e_upper_bound, vector<array<float, 4>>& q, vector<array<float, 3>>& c, float& e, vector<float>& g) const
 {
-	vector<array<float, 3>> a(num_frames); ///< Vector pointing from rotor Y to rotor X.
-	vector<array<float, 3>> gf(num_frames, zero3); ///< Aggregated derivatives of heavy atoms.
-	vector<array<float, 3>> gt(num_frames, zero3); /// Torque of the force.
-	vector<array<float, 3>> d(num_atoms); ///< Heavy atom derivatives.
+	vector<array<float, 3>> a(frames.size()); ///< Vector pointing from rotor Y to rotor X.
+	vector<array<float, 3>> gf(frames.size(), zero3); ///< Aggregated derivatives of heavy atoms.
+	vector<array<float, 3>> gt(frames.size(), zero3); /// Torque of the force.
+	vector<array<float, 3>> d(atoms.size()); ///< Heavy atom derivatives.
 
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
@@ -283,7 +275,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	q.front()[3] = x[6];
 
 	// Apply torsions to frames.
-	for (size_t k = 0, t = 0; k < num_frames; ++k)
+	for (size_t k = 0, t = 0; k < frames.size(); ++k)
 	{
 		const frame& f = frames[k];
 		const array<float, 9> m = qtn4_to_mat3(q[k]);
@@ -312,7 +304,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	}
 
 	// Check steric clash between atoms of different frames except for (rotorX, rotorY) pair.
-	//for (size_t k1 = num_frames - 1; k1 > 0; --k1)
+	//for (size_t k1 = frames.size() - 1; k1 > 0; --k1)
 	//{
 	//	const frame& f1 = frames[k1];
 	//	for (size_t i1 = f1.beg; i1 < f1.end; ++i1)
@@ -330,7 +322,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	//}
 
 	e = 0;
-	for (size_t i = 0; i < num_atoms; ++i)
+	for (size_t i = 0; i < atoms.size(); ++i)
 	{
 		if (!rec.within(c[i]))
 		{
@@ -385,7 +377,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	if (e >= e_upper_bound) return false;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
-	for (size_t k = num_frames, t = num_active_torsions; --k;)
+	for (size_t k = frames.size(), t = num_active_torsions; --k;)
 	{
 		const frame& f = frames[k];
 
@@ -433,12 +425,12 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 {
 	// Define constants.
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
-	const float e_upper_bound = 40.0f * num_atoms; // A conformation will be droped if its free energy is not better than e_upper_bound.
+	const float e_upper_bound = 40.0f * atoms.size(); // A conformation will be droped if its free energy is not better than e_upper_bound.
 
 	// Declare variable.
 	vector<float> x0(7 + num_active_torsions), x1(7 + num_active_torsions), x2(7 + num_active_torsions);
-	vector<array<float, 4>> q0(num_frames), q1(num_frames), q2(num_frames);
-	vector<array<float, 3>> c0(num_atoms), c1(num_atoms), c2(num_atoms);
+	vector<array<float, 4>> q0(frames.size()), q1(frames.size()), q2(frames.size());
+	vector<array<float, 3>> c0(atoms.size()), c1(atoms.size()), c2(atoms.size());
 	vector<float> g0(6 + num_active_torsions), g1(6 + num_active_torsions), g2(6 + num_active_torsions);
 	vector<float> p(6 + num_active_torsions), y(6 + num_active_torsions), mhy(6 + num_active_torsions);
 	vector<float> h(num_variables*(num_variables+1)>>1); // Symmetric triangular Hessian matrix.
@@ -657,7 +649,7 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<result>& resu
 				}
 			}
 		}
-		ofs << "TORSDOF " << num_torsions << '\n'
+		ofs << "TORSDOF " << frames.size() - 1 << '\n'
 			<< "ENDMDL" << '\n';
 	}
 }
