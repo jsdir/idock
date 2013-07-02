@@ -135,9 +135,9 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			// This emptiness is likely to be caused by invalid input structure, especially when all the atoms are located in the same plane.
 			if (f->beg == atoms.size()) throw domain_error("Error parsing " + p.filename().string() + ": an empty BRANCH has been detected, indicating the input ligand structure is probably invalid.");
 
-			// If the current frame consists of rotor Y and a few hydrogens only, e.g. -OH and -NH2,
+			// If the current frame consists of rotor Y and a few hydrogens only, e.g. -OH, -NH2 or -CH3,
 			// the torsion of this frame will have no effect on scoring and is thus redundant.
-			if ((current == frames.size() - 1) && (f->beg + 1 == atoms.size()))
+			if (current + 1 == frames.size() && f->beg + 1 == atoms.size())
 			{
 				f->active = false;
 			}
@@ -153,8 +153,8 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			// Dehydrophobicize rotorX and rotorY if necessary.
 			atom& rotorY = atoms[f->rotorYidx];
 			atom& rotorX = atoms[f->rotorXidx];
-			if ((rotorY.is_hetero()) && (!rotorX.is_hetero())) rotorX.dehydrophobicize();
-			if ((rotorX.is_hetero()) && (!rotorY.is_hetero())) rotorY.dehydrophobicize();
+			if (rotorY.is_hetero() && !rotorX.is_hetero()) rotorX.dehydrophobicize();
+			if (rotorX.is_hetero() && !rotorY.is_hetero()) rotorY.dehydrophobicize();
 
 			// Calculate parent_rotorY_to_current_rotorY and parent_rotorX_to_current_rotorY.
 			const frame& p = frames[f->parent];
@@ -172,8 +172,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	assert(frames.size() >= 1);
 	assert(frames.size() - 1 >= num_active_torsions);
-
-	// Determine frames.back().end and num_variables.
 	frames.back().end = atoms.size();
 	num_variables = 6 + num_active_torsions;
 
