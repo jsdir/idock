@@ -150,7 +150,7 @@ float norm(const array<float, 4>& a)
 /// Returns true if the current quaternion is normalized.
 bool normalized(const array<float, 4>& a)
 {
-	return norm_sqr(a) - 1.0f < 1e-3f;
+	return fabs(norm_sqr(a) - 1.0f) < 1e-3f;
 }
 
 /// Returns a normalized quaternion of current quaternion.
