@@ -599,7 +599,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	return 0;
 }
 
-void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const vector<size_t>& representatives) const
+void ligand::save(const path& output_ligand_path, const ptr_vector<result>& results, const vector<size_t>& representatives) const
 {
 	assert(representatives.size());
 	assert(representatives.size() <= results.size());
@@ -611,46 +611,73 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 	boost::filesystem::ofstream ofs(output_ligand_path); // Dumping starts. Open the file stream as late as possible.
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
-	for (size_t i = 0; i < representatives.size(); ++i)
+	for (size_t k = 0; k < representatives.size(); ++k)
 	{
-		const result& r = results[representatives[i]];
-		ofs << "MODEL     " << setw(4) << (i + 1) << '\n'
-			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n";
-		vector<array<float, 3>> h;
-		for (size_t k = 0; k < num_frames; ++k)
+		const result& r = results[representatives[k]];
+		ofs << "MODEL     " << setw(4) << (k + 1) << '\n'
+			<< "REMARK     pKd:" << setw(7) << r.e << '\n';
+
+		// Dump the ROOT frame.
+		ofs << "ROOT\n";
 		{
-			const frame& f = frames[k];
-			const array<float, 9> m = qtn4_to_mat3(f.active ? r.q[k] : r.q[f.parent]);
+			const frame& f = frames.front();
+			const array<float, 9> m = qtn4_to_mat3(r.q.front());
 			for (size_t i = f.beg; i < f.end; ++i)
 			{
 				const atom& a = atoms[i];
+				a.output(ofs, r.c[i]);
 				if (a.hydrogens.empty()) continue;
-				for (const atom& hydrogen : a.hydrogens)
+				for (const atom& h : a.hydrogens)
 				{
-					h.push_back(r.c[f.rotorYidx] + m * hydrogen.coord);
+					h.output(ofs, r.c[f.rotorYidx] + m * h.coord);
 				}
 			}
 		}
-		for (size_t j = 0, heavy_atom = 0, hydrogen = 0; j < num_lines; ++j)
+		ofs << "ENDROOT\n";
+
+		// Dump the BRANCH frames.
+		vector<bool> dumped(frames.size()); // dump_branches[0] is dummy. The ROOT frame has been dumped.
+		vector<size_t> stack; // Stack to track the depth-first traversal sequence of frames in order to avoid recursion.
+		stack.reserve(frames.size() - 1); // The ROOT frame is excluded.
 		{
-			const string& line = lines[j];
-			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
+			const frame& f = frames.front();
+			for (auto i = f.branches.rbegin(); i < f.branches.rend(); ++i)
 			{
-				const array<float, 3>& coordinate = line[77] == 'H' ? h[hydrogen++] : r.c[heavy_atom++];
-				ofs << line.substr(0, 30)
-					<< setw(8) << coordinate[0]
-					<< setw(8) << coordinate[1]
-					<< setw(8) << coordinate[2]
-					<< line.substr(54, 16)
-					<< setw(6) << 0
-					<< line.substr(76);
+				stack.push_back(*i);
 			}
-			else // This line starts with "ROOT", "ENDROOT", "BRANCH", "ENDBRANCH", TORSDOF", which will not change during docking.
-			{
-				ofs << line;
-			}
-			ofs << '\n';
 		}
-		ofs << "ENDMDL\n";
+		while (!stack.empty())
+		{
+			const size_t fn = stack.back();
+			const frame& f = frames[fn];
+			if (dumped[fn]) // This BRANCH frame has been dumped.
+			{
+				ofs << "END";
+				f.output(ofs);
+				stack.pop_back();
+			}
+			else // This BRANCH frame has not been dumped.
+			{
+				f.output(ofs);
+				const array<float, 9> m = qtn4_to_mat3(f.active ? r.q[fn] : r.q[f.parent]);
+				for (size_t i = f.beg; i < f.end; ++i)
+				{
+					const atom& a = atoms[i];
+					a.output(ofs, r.c[i]);
+					if (a.hydrogens.empty()) continue;
+					for (const atom& h : a.hydrogens)
+					{
+						h.output(ofs, r.c[f.rotorYidx] + m * h.coord);
+					}
+				}
+				dumped[fn] = true;
+				for (auto i = f.branches.rbegin(); i < f.branches.rend(); ++i)
+				{
+					stack.push_back(*i);
+				}
+			}
+		}
+		ofs << "TORSDOF " << num_torsions << '\n'
+			<< "ENDMDL" << '\n';
 	}
 }

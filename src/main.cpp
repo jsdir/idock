@@ -261,7 +261,7 @@ int main(int argc, char* argv[])
 
 		// Write models to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		lig.write_models(output_ligand_path, results, representatives);
+		lig.save(output_ligand_path, results, representatives);
 		results.clear();
 	}
 

@@ -77,7 +77,7 @@ public:
 	int bfgs(result& r, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const;
 
 	/// Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	void write_models(const path& output_ligand_path, const ptr_vector<result>& results, const vector<size_t>& representatives) const;
+	void save(const path& output_ligand_path, const ptr_vector<result>& results, const vector<size_t>& representatives) const;
 
 private:
 	float num_atoms_inverse; ///< 1 / num_atoms.
