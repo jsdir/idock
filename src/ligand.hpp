@@ -57,7 +57,6 @@ public:
 class ligand
 {
 public:
-	vector<string> lines; ///< Input PDBQT file lines.
 	vector<frame> frames; ///< ROOT and BRANCH frames.
 	vector<atom> atoms; ///< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
 	size_t num_atoms; ///< Number of heavy atoms.

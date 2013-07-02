@@ -11,7 +11,6 @@ void frame::output(boost::filesystem::ofstream& ofs) const
 ligand::ligand(const path& p) : num_active_torsions(0)
 {
 	// Initialize necessary variables for constructing a ligand.
-	lines.reserve(200); // A ligand typically consists of <= 200 lines.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
 	frames.push_back(frame(0, 0, 1, 0, 0)); // ROOT is also treated as a frame. The parent and rotorX of ROOT frame are dummy.
 	atoms.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
@@ -34,9 +33,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			// Whenever an ATOM/HETATM line shows up, the current frame must be the last one.
 			assert(current == frames.size() - 1);
 			assert(f == &frames.back());
-
-			// This line will be dumped to the output ligand file.
-			lines.push_back(line);
 
 			// Parse the line.
 			atom a(line);
@@ -107,9 +103,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 		}
 		else if (record == "BRANCH")
 		{
-			// This line will be dumped to the output ligand file.
-			lines.push_back(line);
-
 			// Parse "BRANCH   X   Y". X and Y are right-justified and 4 characters wide.
 			const size_t rotorXsrn = stoul(line.substr( 6, 4));
 			const size_t rotorYsrn = stoul(line.substr(10, 4));
@@ -140,9 +133,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 		}
 		else if (record == "ENDBRA")
 		{
-			// This line will be dumped to the output ligand file.
-			lines.push_back(line);
-
 			// A frame may be empty, e.g. "BRANCH   4   9" is immediately followed by "ENDBRANCH   4   9".
 			// This emptiness is likely to be caused by invalid input structure, especially when all the atoms are located in the same plane.
 			if (f->beg == atoms.size()) throw domain_error("Error parsing " + p.filename().string() + ": an empty BRANCH has been detected, indicating the input ligand structure is probably invalid.");
@@ -178,11 +168,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 
 			// Update the pointer to the current frame.
 			f = &frames[current];
-		}
-		else if (record == "ROOT" || record == "ENDROO" || record == "TORSDO")
-		{
-			// This line will be dumped to the output ligand file.
-			lines.push_back(line);
 		}
 	}
 	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
@@ -603,12 +588,7 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<result>& resu
 {
 	assert(representatives.size());
 	assert(representatives.size() <= results.size());
-
-	const size_t num_lines = lines.size();
-
-	// Dump binding conformations to the output ligand file.
-	using namespace std;
-	boost::filesystem::ofstream ofs(output_ligand_path); // Dumping starts. Open the file stream as late as possible.
+	boost::filesystem::ofstream ofs(output_ligand_path);
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
 	for (size_t k = 0; k < representatives.size(); ++k)
