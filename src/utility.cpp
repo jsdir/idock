@@ -182,23 +182,6 @@ array<float, 4> vec4_to_qtn4(const array<float, 3>& axis, const float angle)
 	);
 }
 
-/// Constructs a quaternion by a rotation vector.
-array<float, 4> vec3_to_qtn4(const array<float, 3>& rotation)
-{
-	const float h = norm(rotation) * 0.5f;
-	const array<float, 3> axis = (0.5f / h) * rotation;
-	assert(normalized(axis));
-	const float s = sin(h);
-	const float c = cos(h);
-	return make_array
-	(
-		c,
-		s * axis[0],
-		s * axis[1],
-		s * axis[2]
-	);
-}
-
 /// Returns the product of two quaternions.
 array<float, 4> operator*(const array<float, 4>& a, const array<float, 4>& b)
 {

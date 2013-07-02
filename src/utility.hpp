@@ -67,9 +67,6 @@ array<float, 4> normalize(const array<float, 4>& a);
 /// Constructs a quaternion by a normalized axis and a rotation angle.
 array<float, 4> vec4_to_qtn4(const array<float, 3>& axis, const float angle);
 
-/// Constructs a quaternion by a rotation vector.
-array<float, 4> vec3_to_qtn4(const array<float, 3>& rotation);
-
 /// Returns the product of two quaternions.
 array<float, 4> operator*(const array<float, 4>& a, const array<float, 4>& b);
 
