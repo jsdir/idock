@@ -281,16 +281,11 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	}
 }
 
-bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const receptor& rec, const float e_upper_bound, float& e, vector<float>& g) const
+bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const receptor& rec, const float e_upper_bound, vector<array<float, 4>>& q, vector<array<float, 3>>& c, float& e, vector<float>& g) const
 {
-	// Initialize frame-wide conformational variables.
 	vector<array<float, 3>> a(num_frames); ///< Vector pointing from rotor Y to rotor X.
-	vector<array<float, 4>> q(num_frames); ///< Orientation in the form of quaternion.
 	vector<array<float, 3>> gf(num_frames, zero3); ///< Aggregated derivatives of heavy atoms.
 	vector<array<float, 3>> gt(num_frames, zero3); /// Torque of the force.
-
-	// Initialize atom-wide conformational variables.
-	vector<array<float, 3>> c(num_heavy_atoms); ///< Heavy atom coordinates.
 	vector<array<float, 3>> d(num_heavy_atoms); ///< Heavy atom derivatives.
 
 	// Apply position and orientation to ROOT frame.
@@ -450,40 +445,6 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	return true;
 }
 
-result ligand::compose_result(const float e, const vector<float>& x) const
-{
-	vector<array<float, 4>> q(num_frames);
-	vector<array<float, 3>> c(num_heavy_atoms);
-	vector<array<float, 3>> h(num_hydrogens);
-	c.front()[0] = x[0];
-	c.front()[1] = x[1];
-	c.front()[2] = x[2];
-	q.front()[0] = x[3];
-	q.front()[1] = x[4];
-	q.front()[2] = x[5];
-	q.front()[3] = x[6];
-	for (size_t k = 0, t = 0; k < num_frames; ++k)
-	{
-		const frame& f = frames[k];
-		const array<float, 9> m = qtn4_to_mat3(q[k]);
-		for (size_t i = f.habegin + 1; i < f.haend; ++i)
-		{
-			c[i] = c[f.rotorYidx] + m * this->heavy_atoms[i].coord;
-		}
-		for (size_t i = f.hybegin; i < f.hyend; ++i)
-		{
-			h[i] = c[f.rotorYidx] + m * this->hydrogens[i].coord;
-		}
-		for (const size_t i : f.branches)
-		{
-			const frame& b = frames[i];
-			c[b.rotorYidx] = c[f.rotorYidx] + m * b.parent_rotorY_to_current_rotorY;
-			q[i] = vec4_to_qtn4(m * b.parent_rotorX_to_current_rotorY, b.active ? x[7 + t++] : 0.0f) * q[k];
-		}
-	}
-	return result(e, static_cast<vector<array<float, 3>>&&>(c), static_cast<vector<array<float, 3>>&&>(h));
-}
-
 int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
 {
 	// Define constants.
@@ -492,6 +453,8 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 
 	// Declare variable.
 	vector<float> x0(7 + num_active_torsions), x1(7 + num_active_torsions), x2(7 + num_active_torsions);
+	vector<array<float, 4>> q0(num_frames), q1(num_frames), q2(num_frames);
+	vector<array<float, 3>> c0(num_heavy_atoms), c1(num_heavy_atoms), c2(num_heavy_atoms);
 	vector<float> g0(6 + num_active_torsions), g1(6 + num_active_torsions), g2(6 + num_active_torsions);
 	vector<float> p(6 + num_active_torsions), y(6 + num_active_torsions), mhy(6 + num_active_torsions);
 	vector<float> h(num_variables*(num_variables+1)>>1); // Symmetric triangular Hessian matrix.
@@ -514,8 +477,8 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	{
 		x0[7 + i] = uniform_11(rng);
 	}
-	evaluate(x0, sf, rec, e_upper_bound, e0, g0);
-	r = compose_result(e0, x0);
+	evaluate(x0, sf, rec, e_upper_bound, q0, c0, e0, g0);
+	r = result(q0, c0, e0);
 
 	for (g = 0; g < num_generations; ++g)
 	{
@@ -524,7 +487,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 		x1[0] += uniform_11(rng);
 		x1[1] += uniform_11(rng);
 		x1[2] += uniform_11(rng);
-		evaluate(x1, sf, rec, e_upper_bound, e1, g1);
+		evaluate(x1, sf, rec, e_upper_bound, q1, c1, e1, g1);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
@@ -581,7 +544,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(x2, sf, rec, e1 + 0.0001f * alpha * pg1, e2, g2))
+				if (evaluate(x2, sf, rec, e1 + 0.0001f * alpha * pg1, q2, c2, e2, g2))
 				{
 					pg2 = 0;
 					for (i = 0; i < num_variables; ++i)
@@ -629,7 +592,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 		// Accept c1 according to Metropolis criteria.
 		if (e1 < e0)
 		{
-			r = compose_result(e1, x1);
+			r = result(q1, c1, e1);
 			x0 = x1;
 			e0 = e1;
 		}
@@ -654,12 +617,24 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 		const result& r = results[representatives[i]];
 		ofs << "MODEL     " << setw(4) << (i + 1) << '\n'
 			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n";
+		vector<array<float, 3>> h(num_hydrogens);
+		size_t t = 0;
+		for (size_t k = 0; k < num_frames; ++k)
+		{
+			const frame& f = frames[k];
+			const array<float, 9> m = qtn4_to_mat3(r.q[k]);
+			for (size_t i = f.hybegin; i < f.hyend; ++i)
+			{
+				h[t++] = r.c[f.rotorYidx] + m * this->hydrogens[i].coord;
+			}
+		}
+		assert(t == num_hydrogens);
 		for (size_t j = 0, heavy_atom = 0, hydrogen = 0; j < num_lines; ++j)
 		{
 			const string& line = lines[j];
 			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
 			{
-				const array<float, 3>& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
+				const array<float, 3>& coordinate = line[77] == 'H' ? h[hydrogen++] : r.c[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
 					<< setw(8) << coordinate[1]

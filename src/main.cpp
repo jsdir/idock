@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 				float this_square_error = 0.0f;
 				for (size_t k = 0; k < lig.num_heavy_atoms; ++k)
 				{
-					this_square_error += distance_sqr(r.heavy_atoms[k], results[j].heavy_atoms[k]);
+					this_square_error += distance_sqr(r.c[k], results[j].c[k]);
 				}
 				if (this_square_error < required_square_error)
 				{
