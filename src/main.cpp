@@ -165,8 +165,8 @@ int main(int argc, char* argv[])
 	mt19937_64 rng(seed);
 
 	// Perform docking for each file in the ligand folder.
-	ptr_vector<result> results;
-	results.resize(num_mc_tasks);
+	ptr_vector<solution> solutions;
+	solutions.resize(num_mc_tasks);
 	vector<size_t> representatives;
 	representatives.reserve(max_conformations);
 	ptr_vector<summary> summaries;
@@ -221,29 +221,29 @@ int main(int argc, char* argv[])
 		// Run the Monte Carlo tasks in parallel
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
-			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), ref(results[i]), cref(sf), cref(rec), rng(), num_generations)));
+			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), ref(solutions[i]), cref(sf), cref(rec), rng(), num_generations)));
 		}
 		boost::timer::auto_cpu_timer t;
 		tp.sync(25);
 		t.stop();
 		cout << " | " << flush;
 
-		results.sort();
-		cout << setw(8) << results.front().e << " | " << flush;
-		summaries.push_back(new summary(stem, results.front().e));
+		solutions.sort();
+		cout << setw(8) << solutions.front().e << " | " << flush;
+		summaries.push_back(new summary(stem, solutions.front().e));
 
 		// Cluster results. Ligands with RMSD < 2.0 will be clustered into the same cluster.
 		const float required_square_error = 4.0f * lig.atoms.size();
 		for (size_t i = 0; i < num_mc_tasks && representatives.size() < representatives.capacity(); ++i)
 		{
-			const result& r = results[i];
+			const solution& s = solutions[i];
 			bool representative = true;
 			for (size_t j = 0; j < i; ++j)
 			{
 				float this_square_error = 0.0f;
 				for (size_t k = 0; k < lig.atoms.size(); ++k)
 				{
-					this_square_error += distance_sqr(r.c[k], results[j].c[k]);
+					this_square_error += distance_sqr(s.c[k], solutions[j].c[k]);
 				}
 				if (this_square_error < required_square_error)
 				{
@@ -261,8 +261,8 @@ int main(int argc, char* argv[])
 
 		// Write models to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		lig.save(output_ligand_path, results, representatives);
-		results.clear();
+		lig.save(output_ligand_path, solutions, representatives);
+		solutions.clear();
 	}
 
 	// Sort and write ligand summary to the log file.

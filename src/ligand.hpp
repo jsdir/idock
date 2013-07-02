@@ -11,20 +11,20 @@ using namespace boost::filesystem;
 using boost::ptr_vector;
 
 /// Represents a result found by BFGS local optimization for later clustering.
-class result
+class solution
 {
 public:
 	vector<array<float, 4>> q; ///< Frame quaternions.
 	vector<array<float, 3>> c; ///< Heavy atom coordinates.
 	float e; ///< Free energy.
 
-	result() {}
+	solution() {}
 
 	/// Constructs a result from free energy e, heavy atom coordinates and quaternions.
-	explicit result(const vector<array<float, 4>>& q, const vector<array<float, 3>>& c, const float e) : q(q), c(c), e(e) {}
+	explicit solution(const vector<array<float, 4>>& q, const vector<array<float, 3>>& c, const float e) : q(q), c(c), e(e) {}
 
-	/// For sorting ptr_vector<result>.
-	bool operator<(const result& r) const
+	/// For sorting ptr_vector<solution>.
+	bool operator<(const solution& r) const
 	{
 		return e < r.e;
 	}
@@ -70,10 +70,10 @@ public:
 	bool evaluate(const vector<float>& conf, const scoring_function& sf, const receptor& rec, const float e_upper_bound, vector<array<float, 4>>& q, vector<array<float, 3>>& c, float& e, vector<float>& g) const;
 
 	/// Task for running Monte Carlo Simulated Annealing algorithm to find local minimums of the scoring function.
-	int bfgs(result& r, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const;
+	int bfgs(solution& s, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const;
 
 	/// Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	void save(const path& output_ligand_path, const ptr_vector<result>& results, const vector<size_t>& representatives) const;
+	void save(const path& output_ligand_path, const ptr_vector<solution>& solutions, const vector<size_t>& representatives) const;
 
 private:
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.

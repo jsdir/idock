@@ -433,7 +433,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	return true;
 }
 
-int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
+int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * atoms.size(); // A conformation will be droped if its free energy is not better than e_upper_bound.
@@ -466,7 +466,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 		x0[7 + i] = uniform_11(rng);
 	}
 	evaluate(x0, sf, rec, e_upper_bound, q0, c0, e0, g0);
-	r = result(q0, c0, e0);
+	s = solution(q0, c0, e0);
 
 	for (g = 0; g < num_generations; ++g)
 	{
@@ -597,7 +597,7 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 		// Accept c1 according to Metropolis criteria.
 		if (e1 < e0)
 		{
-			r = result(q1, c1, e1);
+			s = solution(q1, c1, e1);
 			x0 = x1;
 			e0 = e1;
 		}
@@ -605,32 +605,32 @@ int ligand::bfgs(result& r, const scoring_function& sf, const receptor& rec, con
 	return 0;
 }
 
-void ligand::save(const path& output_ligand_path, const ptr_vector<result>& results, const vector<size_t>& representatives) const
+void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& solutions, const vector<size_t>& representatives) const
 {
 	assert(representatives.size());
-	assert(representatives.size() <= results.size());
+	assert(representatives.size() <= solutions.size());
 	boost::filesystem::ofstream ofs(output_ligand_path);
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
 	for (size_t k = 0; k < representatives.size(); ++k)
 	{
-		const result& r = results[representatives[k]];
+		const solution& s = solutions[representatives[k]];
 		ofs << "MODEL     " << setw(4) << (k + 1) << '\n'
-			<< "REMARK     pKd:" << setw(7) << r.e << '\n';
+			<< "REMARK     pKd:" << setw(7) << s.e << '\n';
 
 		// Dump the ROOT frame.
 		ofs << "ROOT\n";
 		{
 			const frame& f = frames.front();
-			const array<float, 9> m = qtn4_to_mat3(r.q.front());
+			const array<float, 9> m = qtn4_to_mat3(s.q.front());
 			for (size_t i = f.beg; i < f.end; ++i)
 			{
 				const atom& a = atoms[i];
-				a.output(ofs, r.c[i]);
+				a.output(ofs, s.c[i]);
 				if (a.hydrogens.empty()) continue;
 				for (const atom& h : a.hydrogens)
 				{
-					h.output(ofs, r.c[f.rotorYidx] + m * h.coord);
+					h.output(ofs, s.c[f.rotorYidx] + m * h.coord);
 				}
 			}
 		}
@@ -660,15 +660,15 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<result>& resu
 			else // This BRANCH frame has not been dumped.
 			{
 				f.output(ofs);
-				const array<float, 9> m = qtn4_to_mat3(f.active ? r.q[fn] : r.q[f.parent]);
+				const array<float, 9> m = qtn4_to_mat3(f.active ? s.q[fn] : s.q[f.parent]);
 				for (size_t i = f.beg; i < f.end; ++i)
 				{
 					const atom& a = atoms[i];
-					a.output(ofs, r.c[i]);
+					a.output(ofs, s.c[i]);
 					if (a.hydrogens.empty()) continue;
 					for (const atom& h : a.hydrogens)
 					{
-						h.output(ofs, r.c[f.rotorYidx] + m * h.coord);
+						h.output(ofs, s.c[f.rotorYidx] + m * h.coord);
 					}
 				}
 				dumped[fn] = true;
