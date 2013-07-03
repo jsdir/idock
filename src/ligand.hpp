@@ -21,7 +21,7 @@ public:
 	vector<array<float, 3>> d; ///< Heavy atom derivatives.
 	vector<array<float, 3>> f; ///< Aggregated derivatives of heavy atoms.
 	vector<array<float, 3>> t; /// Torque of the force.
-	vector<float> g; ///< Conformation vector.
+	vector<float> g; ///< Gradient vector.
 	float e; ///< Free energy.
 
 	solution()
