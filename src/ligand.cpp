@@ -253,37 +253,32 @@ ligand::ligand(const path& p) : nt(0)
 	}
 }
 
-bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const receptor& rec, const float e_upper_bound, vector<array<float, 4>>& q, vector<array<float, 3>>& c, float& e, vector<float>& g) const
+bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const
 {
-	vector<array<float, 3>> a(frames.size()); ///< Vector pointing from rotor Y to rotor X.
-	vector<array<float, 3>> gf(frames.size(), zero3); ///< Aggregated derivatives of heavy atoms.
-	vector<array<float, 3>> gt(frames.size(), zero3); /// Torque of the force.
-	vector<array<float, 3>> d(atoms.size()); ///< Heavy atom derivatives.
-
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
-	c.front()[0] = x[0];
-	c.front()[1] = x[1];
-	c.front()[2] = x[2];
-	q.front()[0] = x[3];
-	q.front()[1] = x[4];
-	q.front()[2] = x[5];
-	q.front()[3] = x[6];
+	s.c.front()[0] = s.x[0];
+	s.c.front()[1] = s.x[1];
+	s.c.front()[2] = s.x[2];
+	s.q.front()[0] = s.x[3];
+	s.q.front()[1] = s.x[4];
+	s.q.front()[2] = s.x[5];
+	s.q.front()[3] = s.x[6];
 
 	// Apply torsions to frames.
 	for (size_t k = 0, t = 0; k < frames.size(); ++k)
 	{
 		const frame& f = frames[k];
 		if (!f.active) continue;
-		const array<float, 9> m = qtn4_to_mat3(q[k]);
+		const array<float, 9> m = qtn4_to_mat3(s.q[k]);
 		for (size_t i = f.beg + 1; i < f.end; ++i)
 		{
-			c[i] = c[f.rotorYidx] + m * atoms[i].coord;
+			s.c[i] = s.c[f.rotorYidx] + m * atoms[i].coord;
 		}
 		for (const size_t i : f.branches)
 		{
 			const frame& b = frames[i];
-			c[b.rotorYidx] = c[f.rotorYidx] + m * b.parent_rotorY_to_current_rotorY;
+			s.c[b.rotorYidx] = s.c[f.rotorYidx] + m * b.parent_rotorY_to_current_rotorY;
 
 			// If the current BRANCH frame does not have an active torsion, skip it.
 			if (!b.active)
@@ -293,10 +288,10 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 				continue;
 			}
 			assert(normalized(b.parent_rotorX_to_current_rotorY));
-			a[i] = m * b.parent_rotorX_to_current_rotorY;
-			assert(normalized(a[i]));
-			q[i] = vec4_to_qtn4(a[i], x[7 + t++]) * q[k];
-			assert(normalized(q[i]));
+			s.a[i] = m * b.parent_rotorX_to_current_rotorY;
+			assert(normalized(s.a[i]));
+			s.q[i] = vec4_to_qtn4(s.a[i], s.x[7 + t++]) * s.q[k];
+			assert(normalized(s.q[i]));
 		}
 	}
 
@@ -318,14 +313,14 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	//	}
 	//}
 
-	e = 0;
+	s.e = 0;
 	for (size_t i = 0; i < atoms.size(); ++i)
 	{
 		bool within = true;
 		for (size_t j = 0; j < 3; ++j) // The loop may be unrolled by enabling compiler optimization.
 		{
 			// Half-open-half-close box, i.e. [corner0, corner1)
-			if (c[i][j] < rec.corner0[j] || rec.corner1[j] <= c[i][j])
+			if (s.c[i][j] < rec.corner0[j] || rec.corner1[j] <= s.c[i][j])
 			{
 				within = false;
 				break;
@@ -333,10 +328,10 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 		}
 		if (!within)
 		{
-			e += 10;
-			d[i][0] = 0;
-			d[i][1] = 0;
-			d[i][2] = 0;
+			s.e += 10;
+			s.d[i][0] = 0;
+			s.d[i][1] = 0;
+			s.d[i][2] = 0;
 			continue;
 		}
 
@@ -348,7 +343,7 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 		array<size_t, 3> index;
 		for (size_t j = 0; j < 3; ++j) // The loop may be unrolled by enabling compiler optimization.
 		{
-			index[j] = static_cast<size_t>((c[i][j] - rec.corner0[j]) * rec.granularity_inverse);
+			index[j] = static_cast<size_t>((s.c[i][j] - rec.corner0[j]) * rec.granularity_inverse);
 			assert(index[j] + 1 < rec.num_probes[j]);
 		}
 
@@ -361,11 +356,11 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 		const float e100 = map[o100];
 		const float e010 = map[o010];
 		const float e001 = map[o001];
-		d[i][0] = (e100 - e000) * rec.granularity_inverse;
-		d[i][1] = (e010 - e000) * rec.granularity_inverse;
-		d[i][2] = (e001 - e000) * rec.granularity_inverse;
+		s.d[i][0] = (e100 - e000) * rec.granularity_inverse;
+		s.d[i][1] = (e010 - e000) * rec.granularity_inverse;
+		s.d[i][2] = (e001 - e000) * rec.granularity_inverse;
 
-		e += e000; // Aggregate the energy.
+		s.e += e000; // Aggregate the energy.
 	}
 
 	// Calculate intra-ligand free energy.
@@ -373,22 +368,24 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 	for (size_t i = 0; i < num_interacting_pairs; ++i)
 	{
 		const interacting_pair& p = interacting_pairs[i];
-		const array<float, 3> r = c[p.i2] - c[p.i1];
+		const array<float, 3> r = s.c[p.i2] - s.c[p.i1];
 		const float r2 = norm_sqr(r);
 		if (r2 < scoring_function::cutoff_sqr)
 		{
 			const size_t o = p.p_offset + static_cast<size_t>(sf.ns * r2);
-			e += sf.e[o];
+			s.e += sf.e[o];
 			const array<float, 3> derivative = sf.d[o] * r;
-			d[p.i1] -= derivative;
-			d[p.i2] += derivative;
+			s.d[p.i1] -= derivative;
+			s.d[p.i2] += derivative;
 		}
 	}
 
 	// If the free energy is no better than the upper bound, refuse this conformation.
-	if (e >= e_upper_bound) return false;
+	if (s.e >= e_upper_bound) return false;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
+	fill(s.f.begin(), s.f.end(), zero3);
+	fill(s.t.begin(), s.t.end(), zero3);
 	for (size_t k = frames.size(), t = nt; --k;)
 	{
 		const frame& f = frames[k];
@@ -400,35 +397,35 @@ bool ligand::evaluate(const vector<float>& x, const scoring_function& sf, const 
 			// the negative total torque, and the negative torque projections, respectively,
 			// where the projections refer to the torque applied to the branch moved by the torsion,
 			// projected on its rotation axis.
-			gf[k] += d[i];
-			gt[k] += (c[i] - c[f.rotorYidx]) * d[i];
+			s.f[k] += s.d[i];
+			s.t[k] += (s.c[i] - s.c[f.rotorYidx]) * s.d[i];
 		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		gf[f.parent] += gf[k];
-		gt[f.parent] += gt[k] + (c[f.rotorYidx] - c[frames[f.parent].rotorYidx]) * gf[k];
+		s.f[f.parent] += s.f[k];
+		s.t[f.parent] += s.t[k] + (s.c[f.rotorYidx] - s.c[frames[f.parent].rotorYidx]) * s.f[k];
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
 
 		// Save the torsion.
-		g[6 + (--t)] = gt[k][0] * a[k][0] + gt[k][1] * a[k][1] + gt[k][2] * a[k][2]; // dot product
+		s.g[6 + (--t)] = s.t[k][0] * s.a[k][0] + s.t[k][1] * s.a[k][1] + s.t[k][2] * s.a[k][2]; // dot product
 	}
 
 	// Calculate and aggregate the force and torque of ROOT frame.
 	for (size_t i = root.beg; i < root.end; ++i)
 	{
-		gf.front() += d[i];
-		gt.front() += (c[i] - c.front()) * d[i];
+		s.f.front() += s.d[i];
+		s.t.front() += (s.c[i] - s.c.front()) * s.d[i];
 	}
 
 	// Save the aggregated force and torque to g.
-	g[0] = gf.front()[0];
-	g[1] = gf.front()[1];
-	g[2] = gf.front()[2];
-	g[3] = gt.front()[0];
-	g[4] = gt.front()[1];
-	g[5] = gt.front()[2];
+	s.g[0] = s.f.front()[0];
+	s.g[1] = s.f.front()[1];
+	s.g[2] = s.f.front()[2];
+	s.g[3] = s.t.front()[0];
+	s.g[4] = s.t.front()[1];
+	s.g[5] = s.t.front()[2];
 
 	return true;
 }
@@ -437,45 +434,42 @@ int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, c
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * atoms.size(); // A conformation will be droped if its free energy is not better than e_upper_bound.
-	vector<float> x0(nv + 1), x1(nv + 1), x2(nv + 1);
-	vector<array<float, 4>> q0(frames.size()), q1(frames.size()), q2(frames.size());
-	vector<array<float, 3>> c0(atoms.size()), c1(atoms.size()), c2(atoms.size());
-	vector<float> g0(nv), g1(nv), g2(nv);
+	solution s0(nv, frames.size(), atoms.size()), s1(nv, frames.size(), atoms.size()), s2(nv, frames.size(), atoms.size());
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
-	float e0, e1, e2, alpha, pg1, pg2, yhy, yp, ryp, pco, qw, qx, qy, qz, qnorm_inv;
+	float alpha, pg1, pg2, yhy, yp, ryp, pco, qw, qx, qy, qz, qnorm_inv;
 	size_t g, i, j;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
 
 	// Randomize conformation x0.
-	x0[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
-	x0[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
-	x0[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
+	s0.x[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
+	s0.x[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
+	s0.x[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
 	qw = uniform_11(rng);
 	qx = uniform_11(rng);
 	qy = uniform_11(rng);
 	qz = uniform_11(rng);
 	qnorm_inv = 1.0f / sqrt(qw*qw + qx*qx + qy*qy + qz*qz);
-	x0[3] = qw * qnorm_inv;
-	x0[4] = qx * qnorm_inv;
-	x0[5] = qy * qnorm_inv;
-	x0[6] = qz * qnorm_inv;
+	s0.x[3] = qw * qnorm_inv;
+	s0.x[4] = qx * qnorm_inv;
+	s0.x[5] = qy * qnorm_inv;
+	s0.x[6] = qz * qnorm_inv;
 	for (i = 0; i < nt; ++i)
 	{
-		x0[7 + i] = uniform_11(rng);
+		s0.x[7 + i] = uniform_11(rng);
 	}
-	evaluate(x0, sf, rec, e_upper_bound, q0, c0, e0, g0);
-	s = solution(q0, c0, e0);
+	evaluate(s0, sf, rec, e_upper_bound);
+	s = s0;
 
 	for (g = 0; g < num_generations; ++g)
 	{
 		// Make a copy, so the previous conformation is retained.
-		x1 = x0;
-		x1[0] += uniform_11(rng);
-		x1[1] += uniform_11(rng);
-		x1[2] += uniform_11(rng);
-		evaluate(x1, sf, rec, e_upper_bound, q1, c1, e1, g1);
+		s1.x = s0.x;
+		s1.x[0] += uniform_11(rng);
+		s1.x[1] += uniform_11(rng);
+		s1.x[2] += uniform_11(rng);
+		evaluate(s1, sf, rec, e_upper_bound);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
@@ -497,14 +491,14 @@ int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, c
 			{
 				float sum = 0.0f;
 				for (j = 0; j < nv; ++j)
-					sum += h[mp(i, j)] * g1[j];
+					sum += h[mp(i, j)] * s1.g[j];
 				p[i] = -sum;
 			}
 
 			// Calculate pg = p*g = -h*g^2 < 0
 			pg1 = 0;
 			for (i = 0; i < nv; ++i)
-				pg1 += p[i] * g1[i];
+				pg1 += p[i] * s1.g[i];
 
 			// Perform a line search to find an appropriate alpha.
 			// Try different alpha values for num_alphas times.
@@ -513,9 +507,9 @@ int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, c
 			for (j = 0; j < num_alphas; ++j)
 			{
 				// Calculate c2 = c1 + ap.
-				x2[0] = x1[0] + alpha * p[0];
-				x2[1] = x1[1] + alpha * p[1];
-				x2[2] = x1[2] + alpha * p[2];
+				s2.x[0] = s1.x[0] + alpha * p[0];
+				s2.x[1] = s1.x[1] + alpha * p[1];
+				s2.x[2] = s1.x[2] + alpha * p[2];
 				const float po0 = p[3];
 				const float po1 = p[4];
 				const float po2 = p[5];
@@ -527,33 +521,33 @@ int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, c
 				const float pq2 = u*po1;
 				const float pq3 = u*po2;
 				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 1e-3f);
-				const float x1q0 = x1[3];
-				const float x1q1 = x1[4];
-				const float x1q2 = x1[5];
-				const float x1q3 = x1[6];
+				const float x1q0 = s1.x[3];
+				const float x1q1 = s1.x[4];
+				const float x1q2 = s1.x[5];
+				const float x1q3 = s1.x[6];
 				assert(fabs(x1q0*x1q0 + x1q1*x1q1 + x1q2*x1q2 + x1q3*x1q3 - 1.0f) < 1e-3f);
 				const float x2q0 = pq0 * x1q0 - pq1 * x1q1 - pq2 * x1q2 - pq3 * x1q3;
 				const float x2q1 = pq0 * x1q1 + pq1 * x1q0 + pq2 * x1q3 - pq3 * x1q2;
 				const float x2q2 = pq0 * x1q2 - pq1 * x1q3 + pq2 * x1q0 + pq3 * x1q1;
 				const float x2q3 = pq0 * x1q3 + pq1 * x1q2 - pq2 * x1q1 + pq3 * x1q0;
 				assert(fabs(x2q0*x2q0 + x2q1*x2q1 + x2q2*x2q2 + x2q3*x2q3 - 1.0f) < 1e-3f);
-				x2[3] = x2q0;
-				x2[4] = x2q1;
-				x2[5] = x2q2;
-				x2[6] = x2q3;
+				s2.x[3] = x2q0;
+				s2.x[4] = x2q1;
+				s2.x[5] = x2q2;
+				s2.x[6] = x2q3;
 				for (i = 0; i < nt; ++i)
 				{
-					x2[7 + i] = x1[7 + i] + alpha * p[6 + i];
+					s2.x[7 + i] = s1.x[7 + i] + alpha * p[6 + i];
 				}
 
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(x2, sf, rec, e1 + 0.0001f * alpha * pg1, q2, c2, e2, g2))
+				if (evaluate(s2, sf, rec, s1.e + 0.0001f * alpha * pg1))
 				{
 					pg2 = 0;
 					for (i = 0; i < nv; ++i)
-						pg2 += p[i] * g2[i];
+						pg2 += p[i] * s2.g[i];
 					if (pg2 >= 0.9f * pg1)
 						break; // An appropriate alpha is found.
 				}
@@ -566,7 +560,7 @@ int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, c
 
 			// Update Hessian matrix h.
 			for (i = 0; i < nv; ++i) // Calculate y = g2 - g1.
-				y[i] = g2[i] - g1[i];
+				y[i] = s2.g[i] - s1.g[i];
 			for (i = 0; i < nv; ++i) // Calculate mhy = -h * y.
 			{
 				float sum = 0.0f;
@@ -589,17 +583,17 @@ int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, c
 			}
 
 			// Move to the next iteration.
-			x1 = x2;
-			e1 = e2;
-			g1 = g2;
+			s1.x = s2.x;
+			s1.e = s2.e;
+			s1.g = s2.g;
 		}
 
 		// Accept c1 according to Metropolis criteria.
-		if (e1 < e0)
+		if (s1.e < s0.e)
 		{
-			s = solution(q1, c1, e1);
-			x0 = x1;
-			e0 = e1;
+			s = s1;
+			s0.x = s1.x;
+			s0.e = s1.e;
 		}
 	}
 	return 0;

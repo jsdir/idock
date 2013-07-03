@@ -14,14 +14,23 @@ using boost::ptr_vector;
 class solution
 {
 public:
+	vector<float> x; ///< Conformation vector.
+	vector<array<float, 3>> a; ///< Vector pointing from rotor Y to rotor X.
 	vector<array<float, 4>> q; ///< Frame quaternions.
 	vector<array<float, 3>> c; ///< Heavy atom coordinates.
+	vector<array<float, 3>> d; ///< Heavy atom derivatives.
+	vector<array<float, 3>> f; ///< Aggregated derivatives of heavy atoms.
+	vector<array<float, 3>> t; /// Torque of the force.
+	vector<float> g; ///< Conformation vector.
 	float e; ///< Free energy.
 
-	solution() {}
+	solution()
+	{
+	}
 
-	/// Constructs a result from free energy e, heavy atom coordinates and quaternions.
-	explicit solution(const vector<array<float, 4>>& q, const vector<array<float, 3>>& c, const float e) : q(q), c(c), e(e) {}
+	explicit solution(const size_t nv, const size_t nf, const size_t na) : x(nv+1), a(nf), q(nf), c(na), d(na), f(nf), t(nf), g(nv)
+	{
+	}
 
 	/// For sorting ptr_vector<solution>.
 	bool operator<(const solution& r) const
@@ -67,7 +76,7 @@ public:
 	ligand(const path& p);
 
 	/// Evaluates free energy e, force f, and change g. Returns true if the conformation is accepted.
-	bool evaluate(const vector<float>& conf, const scoring_function& sf, const receptor& rec, const float e_upper_bound, vector<array<float, 4>>& q, vector<array<float, 3>>& c, float& e, vector<float>& g) const;
+	bool evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const;
 
 	/// Task for running Monte Carlo Simulated Annealing algorithm to find local minimums of the scoring function.
 	int bfgs(solution& s, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const;
