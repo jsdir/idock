@@ -165,10 +165,6 @@ int main(int argc, char* argv[])
 	mt19937_64 rng(seed);
 
 	// Perform docking for each file in the ligand folder.
-	ptr_vector<solution> solutions;
-	solutions.resize(num_mc_tasks);
-	vector<size_t> representatives;
-	representatives.reserve(max_conformations);
 	ptr_vector<summary> summaries;
 	size_t num_ligands = 0; // Ligand counter.
 	cout.setf(ios::fixed, ios::floatfield);
@@ -219,6 +215,8 @@ int main(int argc, char* argv[])
 		cout << setw(8) << ++num_ligands << " | " << setw(15) << stem << " | " << flush;
 
 		// Run the Monte Carlo tasks in parallel
+		ptr_vector<solution> solutions;
+		solutions.resize(num_mc_tasks);
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
 			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), ref(solutions[i]), cref(sf), cref(rec), rng(), num_generations)));
@@ -234,6 +232,8 @@ int main(int argc, char* argv[])
 
 		// Cluster results. Ligands with RMSD < 2.0 will be clustered into the same cluster.
 		const float required_square_error = 4.0f * lig.atoms.size();
+		vector<size_t> representatives;
+		representatives.reserve(max_conformations);
 		for (size_t i = 0; i < num_mc_tasks && representatives.size() < representatives.capacity(); ++i)
 		{
 			const solution& s = solutions[i];
@@ -262,7 +262,6 @@ int main(int argc, char* argv[])
 		// Write models to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 		lig.save(output_ligand_path, solutions, representatives);
-		solutions.clear();
 	}
 
 	// Sort and write ligand summary to the log file.
