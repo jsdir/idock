@@ -9,7 +9,7 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 	for (size_t i = 0; i < 3; ++i)
 	{
 		// Reserve one more probe to calculate the derivative.
-		num_probes[i] = static_cast<size_t>(size[i] * granularity_inverse) + 1;
+		num_probes[i] = static_cast<size_t>(size[i] * granularity_inverse) + 2;
 		num_probes_product *= num_probes[i];
 	}
 
