@@ -28,9 +28,7 @@ public:
 	{
 	}
 
-	explicit solution(const size_t nv, const size_t nf, const size_t na) : x(nv+1), a(nf), q(nf), c(na), d(na), f(nf), t(nf), g(nv)
-	{
-	}
+	void resize(const size_t nv, const size_t nf, const size_t na);
 
 	/// For sorting ptr_vector<solution>.
 	bool operator<(const solution& r) const

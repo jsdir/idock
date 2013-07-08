@@ -3,6 +3,18 @@
 #include "utility.hpp"
 #include "ligand.hpp"
 
+void solution::resize(const size_t nv, const size_t nf, const size_t na)
+{
+	x.resize(nv+1);
+	a.resize(nf);
+	q.resize(nf);
+	c.resize(na);
+	d.resize(na);
+	f.resize(nf);
+	t.resize(nf);
+	g.resize(nv);
+}
+
 void frame::output(boost::filesystem::ofstream& ofs) const
 {
 	ofs << "BRANCH"    << setw(4) << rotorXsrn << setw(4) << rotorYsrn << '\n';
@@ -430,11 +442,14 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	return true;
 }
 
-int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
+int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * atoms.size(); // A conformation will be droped if its free energy is not better than e_upper_bound.
-	solution s0(nv, frames.size(), atoms.size()), s1(nv, frames.size(), atoms.size()), s2(nv, frames.size(), atoms.size());
+	solution s1, s2;
+	s0.resize(nv, frames.size(), atoms.size());
+	s1.resize(nv, frames.size(), atoms.size());
+	s2.resize(nv, frames.size(), atoms.size());
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
 	float alpha, pg1, pg2, yhy, yp, ryp, pco, qw, qx, qy, qz, qnorm_inv;
@@ -460,7 +475,6 @@ int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, c
 		s0.x[7 + i] = uniform_11(rng);
 	}
 	evaluate(s0, sf, rec, e_upper_bound);
-	s = s0;
 
 	for (g = 0; g < num_generations; ++g)
 	{
@@ -591,7 +605,6 @@ int ligand::bfgs(solution& s, const scoring_function& sf, const receptor& rec, c
 		// Accept c1 according to Metropolis criteria.
 		if (s1.e < s0.e)
 		{
-			s = s1;
 			s0.x = s1.x;
 			s0.e = s1.e;
 		}
