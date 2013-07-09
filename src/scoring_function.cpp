@@ -72,11 +72,11 @@ int scoring_function::precalculate(const size_t t1, const size_t t2)
 
 		// The scoring function is a weighted sum of 5 terms. The first 3 terms depend on d only, while the latter 2 terms depend on t1, t2 and d.
 		et[i] =
-			(-0.035579f) * exp(-4.0f * d * d)
+		    (-0.035579f) * exp(-4.0f * d * d)
 		  + (-0.005156f) * exp(-0.25f * (d - 3.0f) * (d - 3.0f))
-		  + ( 0.840245f) * (d > 0.0f ? 0.0f : d * d)
-		  + (-0.035069f) * (hydrophobic ? (d >= 1.5f ? 0.0f : (d <= 0.5f ? 1.0f : 1.5f - d)) : 0.0f)
-		  + (-0.587439f) * (hbond ? (d >= 0.0f ? 0.0f : (d <= -0.7f ? 1.0f : d * -1.4285714285714286f)) : 0.0f);
+		  + (d < 0.0f ? 0.840245f * d * d : 0.0f)
+		  + (hydrophobic ? (-0.035069f) * (d >= 1.5f ? 0.0f : (d <= 0.5f ? 1.0f : 1.5f - d)) : 0.0f)
+		  + (hbond ? (-0.587439f) * (d >= 0.0f ? 0.0f : (d <= -0.7f ? 1.0f : d * -1.4285714285714286f)) : 0.0f);
 	}
 
 	// Calculate the derivative of scoring function evaluated at (t1, t2, r).
