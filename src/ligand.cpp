@@ -212,30 +212,21 @@ ligand::ligand(const path& p) : nt(0)
 		for (size_t i = f1.beg; i < f1.end; ++i)
 		{
 			// Find neighbor atoms within 3 consecutive covalent bonds.
-			const vector<size_t>& i0_bonds = bonds[i];
-			const size_t num_i0_bonds = i0_bonds.size();
-			for (size_t i0 = 0; i0 < num_i0_bonds; ++i0)
+			for (const size_t b1 : bonds[i])
 			{
-				const size_t b1 = i0_bonds[i0];
-				if (find(neighbors.begin(), neighbors.end(), b1) == neighbors.end())
+				if (find(neighbors.cbegin(), neighbors.cend(), b1) == neighbors.cend())
 				{
 					neighbors.push_back(b1);
 				}
-				const vector<size_t>& i1_bonds = bonds[b1];
-				const size_t num_i1_bonds = i1_bonds.size();
-				for (size_t i1 = 0; i1 < num_i1_bonds; ++i1)
+				for (const size_t b2 : bonds[b1])
 				{
-					const size_t b2 = i1_bonds[i1];
-					if (find(neighbors.begin(), neighbors.end(), b2) == neighbors.end())
+					if (find(neighbors.cbegin(), neighbors.cend(), b2) == neighbors.cend())
 					{
 						neighbors.push_back(b2);
 					}
-					const vector<size_t>& i2_bonds = bonds[b2];
-					const size_t num_i2_bonds = i2_bonds.size();
-					for (size_t i2 = 0; i2 < num_i2_bonds; ++i2)
+					for (const size_t b3 : bonds[b2])
 					{
-						const size_t b3 = i2_bonds[i2];
-						if (find(neighbors.begin(), neighbors.end(), b3) == neighbors.end())
+						if (find(neighbors.cbegin(), neighbors.cend(), b3) == neighbors.cend())
 						{
 							neighbors.push_back(b3);
 						}
