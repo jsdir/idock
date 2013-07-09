@@ -269,13 +269,13 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 {
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
-	s.c.front()[0] = s.x[0];
-	s.c.front()[1] = s.x[1];
-	s.c.front()[2] = s.x[2];
-	s.q.front()[0] = s.x[3];
-	s.q.front()[1] = s.x[4];
-	s.q.front()[2] = s.x[5];
-	s.q.front()[3] = s.x[6];
+	s.c[0][0] = s.x[0];
+	s.c[0][1] = s.x[1];
+	s.c[0][2] = s.x[2];
+	s.q[0][0] = s.x[3];
+	s.q[0][1] = s.x[4];
+	s.q[0][2] = s.x[5];
+	s.q[0][3] = s.x[6];
 
 	// Apply torsions to frames.
 	for (size_t k = 0, t = 0; k < frames.size(); ++k)
@@ -426,17 +426,17 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	// Calculate and aggregate the force and torque of ROOT frame.
 	for (size_t i = root.beg; i < root.end; ++i)
 	{
-		s.f.front() += s.d[i];
-		s.t.front() += (s.c[i] - s.c.front()) * s.d[i];
+		s.f[0] += s.d[i];
+		s.t[0] += (s.c[i] - s.c[0]) * s.d[i];
 	}
 
 	// Save the aggregated force and torque to g.
-	s.g[0] = s.f.front()[0];
-	s.g[1] = s.f.front()[1];
-	s.g[2] = s.f.front()[2];
-	s.g[3] = s.t.front()[0];
-	s.g[4] = s.t.front()[1];
-	s.g[5] = s.t.front()[2];
+	s.g[0] = s.f[0][0];
+	s.g[1] = s.f[0][1];
+	s.g[2] = s.f[0][2];
+	s.g[3] = s.t[0][0];
+	s.g[4] = s.t[0][1];
+	s.g[5] = s.t[0][2];
 
 	return true;
 }
