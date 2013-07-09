@@ -330,7 +330,16 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			s.a[i][0] = a_0;
 			s.a[i][1] = a_1;
 			s.a[i][2] = a_2;
-			s.q[i] = vec4_to_qtn4(s.a[i], s.x[t++]) * s.q[k];
+			const float h = s.x[t++] * 0.5f;
+			const float sinh = sin(h);
+			const float r_0 = cos(h);
+			const float r_1 = sinh * a_0;
+			const float r_2 = sinh * a_1;
+			const float r_3 = sinh * a_2;
+			s.q[i][0] = r_0 * q_0 - r_1 * q_1 - r_2 * q_2 - r_3 * q_3;
+			s.q[i][1] = r_0 * q_1 + r_1 * q_0 + r_2 * q_3 - r_3 * q_2;
+			s.q[i][2] = r_0 * q_2 - r_1 * q_3 + r_2 * q_0 + r_3 * q_1;
+			s.q[i][3] = r_0 * q_3 + r_1 * q_2 - r_2 * q_1 + r_3 * q_0;
 			assert(normalized(s.q[i]));
 		}
 	}
