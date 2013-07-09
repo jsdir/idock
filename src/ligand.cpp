@@ -384,7 +384,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
 	fill(s.f.begin(), s.f.end(), zero3);
 	fill(s.t.begin(), s.t.end(), zero3);
-	for (size_t k = frames.size(), t = nt; --k;)
+	for (size_t k = frames.size(), t = 6 + nt; --k;)
 	{
 		const frame& f = frames[k];
 		const float y_0 = s.c[f.rotorYidx][0];
@@ -440,7 +440,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		if (!f.active) continue;
 
 		// Save the torsion.
-		s.g[6 + (--t)] = t_0 * s.a[k][0] + t_1 * s.a[k][1] + t_2 * s.a[k][2]; // dot product
+		s.g[--t] = t_0 * s.a[k][0] + t_1 * s.a[k][1] + t_2 * s.a[k][2]; // dot product
 	}
 
 	// Calculate and aggregate the force and torque of ROOT frame.
