@@ -319,12 +319,12 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	for (size_t i = 0; i < atoms.size(); ++i)
 	{
 		// Load coordinate from memory into registers.
-		const float coord_0 = s.c[i][0];
-		const float coord_1 = s.c[i][1];
-		const float coord_2 = s.c[i][2];
+		const float c_0 = s.c[i][0];
+		const float c_1 = s.c[i][1];
+		const float c_2 = s.c[i][2];
 
 		// Deal with out-of-box case
-		if (coord_0 < rec.corner0[0] || rec.corner1[0] <= coord_0 || coord_1 < rec.corner0[1] || rec.corner1[1] <= coord_1 || coord_2 < rec.corner0[2] || rec.corner1[2] <= coord_2)
+		if (c_0 < rec.corner0[0] || rec.corner1[0] <= c_0 || c_1 < rec.corner0[1] || rec.corner1[1] <= c_1 || c_2 < rec.corner0[2] || rec.corner1[2] <= c_2)
 		{
 			e += 10;
 			s.d[i][0] = 0;
@@ -338,9 +338,9 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		assert(map.size());
 
 		// Find the index of the current coordinates.
-		const size_t index_0 = static_cast<size_t>((coord_0 - rec.corner0[0]) * rec.granularity_inverse);
-		const size_t index_1 = static_cast<size_t>((coord_1 - rec.corner0[1]) * rec.granularity_inverse);
-		const size_t index_2 = static_cast<size_t>((coord_2 - rec.corner0[2]) * rec.granularity_inverse);
+		const size_t index_0 = static_cast<size_t>((c_0 - rec.corner0[0]) * rec.granularity_inverse);
+		const size_t index_1 = static_cast<size_t>((c_1 - rec.corner0[1]) * rec.granularity_inverse);
+		const size_t index_2 = static_cast<size_t>((c_2 - rec.corner0[2]) * rec.granularity_inverse);
 		assert(index_0 + 1 < rec.num_probes[0]);
 		assert(index_1 + 1 < rec.num_probes[1]);
 		assert(index_2 + 1 < rec.num_probes[2]);
@@ -351,11 +351,10 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		const float e100 = map[o000 + 1];
 		const float e010 = map[o000 + rec.num_probes[0]];
 		const float e001 = map[o000 + rec.num_probes[0] * rec.num_probes[1]];
+		e += e000;
 		s.d[i][0] = (e100 - e000) * rec.granularity_inverse;
 		s.d[i][1] = (e010 - e000) * rec.granularity_inverse;
 		s.d[i][2] = (e001 - e000) * rec.granularity_inverse;
-
-		e += e000; // Aggregate the energy.
 	}
 
 	// Calculate intra-ligand free energy.
@@ -378,15 +377,17 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	// If the free energy is no better than the upper bound, refuse this conformation.
 	if (e >= e_upper_bound) return false;
 
-	// Save e from register into memory.
+	// Store e from register into memory.
 	s.e = e;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
 	fill(s.f.begin(), s.f.end(), zero3);
 	fill(s.t.begin(), s.t.end(), zero3);
-	for (size_t k = frames.size(), t = 6 + nt; --k;)
+	for (size_t k = frames.size(), t = 6 + nt;;)
 	{
-		const frame& f = frames[k];
+		const frame& f = frames[--k];
+
+		// Load variables from memory into registers.
 		const float y_0 = s.c[f.rotorYidx][0];
 		const float y_1 = s.c[f.rotorYidx][1];
 		const float y_2 = s.c[f.rotorYidx][2];
@@ -417,6 +418,20 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			t_1 += yc_2 * d_0 - yc_0 * d_2;
 			t_2 += yc_0 * d_1 - yc_1 * d_0;
 		}
+
+		// Save the aggregated force and torque of ROOT frame to g.
+		if (k == 0)
+		{
+			s.g[0] = f_0;
+			s.g[1] = f_1;
+			s.g[2] = f_2;
+			s.g[3] = t_0;
+			s.g[4] = t_1;
+			s.g[5] = t_2;
+			return true;
+		}
+
+		// Store variables from registers into memory.
 		s.f[k][0] = f_0;
 		s.f[k][1] = f_1;
 		s.f[k][2] = f_2;
@@ -439,27 +454,9 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
 
-		// Save the torsion.
+		// Save the aggregated torque of BRANCH frames to g.
 		s.g[--t] = t_0 * s.a[k][0] + t_1 * s.a[k][1] + t_2 * s.a[k][2]; // dot product
 	}
-
-	// Calculate and aggregate the force and torque of ROOT frame.
-	const frame& root = frames.front();
-	for (size_t i = root.beg; i < root.end; ++i)
-	{
-		s.f[0] += s.d[i];
-		s.t[0] += (s.c[i] - s.c[0]) * s.d[i];
-	}
-
-	// Save the aggregated force and torque to g.
-	s.g[0] = s.f[0][0];
-	s.g[1] = s.f[0][1];
-	s.g[2] = s.f[0][2];
-	s.g[3] = s.t[0][0];
-	s.g[4] = s.t[0][1];
-	s.g[5] = s.t[0][2];
-
-	return true;
 }
 
 int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
