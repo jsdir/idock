@@ -387,27 +387,60 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	for (size_t k = frames.size(), t = nt; --k;)
 	{
 		const frame& f = frames[k];
-
+		const float y_0 = s.c[f.rotorYidx][0];
+		const float y_1 = s.c[f.rotorYidx][1];
+		const float y_2 = s.c[f.rotorYidx][2];
+		float f_0 = s.f[k][0];
+		float f_1 = s.f[k][1];
+		float f_2 = s.f[k][2];
+		float t_0 = s.t[k][0];
+		float t_1 = s.t[k][1];
+		float t_2 = s.t[k][2];
 		for (size_t i = f.beg; i < f.end; ++i)
 		{
+			const float d_0 = s.d[i][0];
+			const float d_1 = s.d[i][1];
+			const float d_2 = s.d[i][2];
+
 			// The derivatives with respect to the position, orientation, and torsions
 			// would be the negative total force acting on the ligand,
 			// the negative total torque, and the negative torque projections, respectively,
 			// where the projections refer to the torque applied to the branch moved by the torsion,
 			// projected on its rotation axis.
-			s.f[k] += s.d[i];
-			s.t[k] += (s.c[i] - s.c[f.rotorYidx]) * s.d[i];
+			f_0 += d_0;
+			f_1 += d_1;
+			f_2 += d_2;
+			const float yc_0 = s.c[i][0] - y_0;
+			const float yc_1 = s.c[i][1] - y_1;
+			const float yc_2 = s.c[i][2] - y_2;
+			t_0 += yc_1 * d_2 - yc_2 * d_1;
+			t_1 += yc_2 * d_0 - yc_0 * d_2;
+			t_2 += yc_0 * d_1 - yc_1 * d_0;
 		}
+		s.f[k][0] = f_0;
+		s.f[k][1] = f_1;
+		s.f[k][2] = f_2;
+		s.t[k][0] = t_0;
+		s.t[k][1] = t_1;
+		s.t[k][2] = t_2;
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		s.f[f.parent] += s.f[k];
-		s.t[f.parent] += s.t[k] + (s.c[f.rotorYidx] - s.c[frames[f.parent].rotorYidx]) * s.f[k];
+		s.f[f.parent][0] += f_0;
+		s.f[f.parent][1] += f_1;
+		s.f[f.parent][2] += f_2;
+		const size_t p = frames[f.parent].rotorYidx;
+		const float yy_0 = y_0 - s.c[p][0];
+		const float yy_1 = y_1 - s.c[p][1];
+		const float yy_2 = y_2 - s.c[p][2];
+		s.t[f.parent][0] += t_0 + yy_1 * f_2 - yy_2 * f_1;
+		s.t[f.parent][1] += t_1 + yy_2 * f_0 - yy_0 * f_2;
+		s.t[f.parent][2] += t_2 + yy_0 * f_1 - yy_1 * f_0;
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
 
 		// Save the torsion.
-		s.g[6 + (--t)] = s.t[k][0] * s.a[k][0] + s.t[k][1] * s.a[k][1] + s.t[k][2] * s.a[k][2]; // dot product
+		s.g[6 + (--t)] = t_0 * s.a[k][0] + t_1 * s.a[k][1] + t_2 * s.a[k][2]; // dot product
 	}
 
 	// Calculate and aggregate the force and torque of ROOT frame.
