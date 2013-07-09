@@ -272,7 +272,27 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	{
 		const frame& f = frames[k];
 		if (!f.active) continue;
-		const array<float, 9> m = qtn4_to_mat3(s.q[k]);
+		const float q_0 = s.q[k][0];
+		const float q_1 = s.q[k][1];
+		const float q_2 = s.q[k][2];
+		const float q_3 = s.q[k][3];
+		assert(fabs(q_0*q_0 + q_1*q_1 + q_2*q_2 + q_3*q_3 - 1.0f) < 1e-3f);
+		const float q00 = q_0*q_0;
+		const float q01 = q_0*q_1;
+		const float q02 = q_0*q_2;
+		const float q03 = q_0*q_3;
+		const float q11 = q_1*q_1;
+		const float q12 = q_1*q_2;
+		const float q13 = q_1*q_3;
+		const float q22 = q_2*q_2;
+		const float q23 = q_2*q_3;
+		const float q33 = q_3*q_3;
+		const array<float, 9> m = make_array
+		(
+			q00+q11-q22-q33, 2*(-q03+q12), 2*(q02+q13),
+			2*(q03+q12), q00-q11+q22-q33, 2*(-q01+q23),
+			2*(-q02+q13), 2*(q01+q23), q00-q11-q22+q33
+		);
 		for (size_t i = f.beg + 1; i < f.end; ++i)
 		{
 			s.c[i] = s.c[f.rotorYidx] + m * atoms[i].coord;
