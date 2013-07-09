@@ -259,7 +259,6 @@ ligand::ligand(const path& p) : nt(0)
 bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const
 {
 	// Apply position and orientation to ROOT frame.
-	const frame& root = frames.front();
 	s.c[0][0] = s.x[0];
 	s.c[0][1] = s.x[1];
 	s.c[0][2] = s.x[2];
@@ -415,6 +414,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	}
 
 	// Calculate and aggregate the force and torque of ROOT frame.
+	const frame& root = frames.front();
 	for (size_t i = root.beg; i < root.end; ++i)
 	{
 		s.f[0] += s.d[i];
