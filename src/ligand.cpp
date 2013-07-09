@@ -325,7 +325,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	//	}
 	//}
 
-	s.e = 0;
+	float e = 0.0f;
 	for (size_t i = 0; i < atoms.size(); ++i)
 	{
 		// Load coordinate from memory into registers.
@@ -336,7 +336,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		// Deal with out-of-box case
 		if (coord_0 < rec.corner0[0] || rec.corner1[0] <= coord_0 || coord_1 < rec.corner0[1] || rec.corner1[1] <= coord_1 || coord_2 < rec.corner0[2] || rec.corner1[2] <= coord_2)
 		{
-			s.e += 10;
+			e += 10;
 			s.d[i][0] = 0;
 			s.d[i][1] = 0;
 			s.d[i][2] = 0;
@@ -368,7 +368,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		s.d[i][1] = (e010 - e000) * rec.granularity_inverse;
 		s.d[i][2] = (e001 - e000) * rec.granularity_inverse;
 
-		s.e += e000; // Aggregate the energy.
+		e += e000; // Aggregate the energy.
 	}
 
 	// Calculate intra-ligand free energy.
@@ -381,7 +381,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		if (r2 < scoring_function::cutoff_sqr)
 		{
 			const size_t o = p.p_offset + static_cast<size_t>(sf.ns * r2);
-			s.e += sf.e[o];
+			e += sf.e[o];
 			const array<float, 3> derivative = sf.d[o] * r;
 			s.d[p.i1] -= derivative;
 			s.d[p.i2] += derivative;
@@ -389,7 +389,10 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	}
 
 	// If the free energy is no better than the upper bound, refuse this conformation.
-	if (s.e >= e_upper_bound) return false;
+	if (e >= e_upper_bound) return false;
+
+	// Save e from register into memory.
+	s.e = e;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
 	fill(s.f.begin(), s.f.end(), zero3);
