@@ -347,13 +347,10 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 
 		// Calculate the offsets to grid map and lookup the values.
 		const size_t o000 = rec.num_probes[0] * (rec.num_probes[1] * index_2 + index_1) + index_0;
-		const size_t o100 = o000 + 1;
-		const size_t o010 = o000 + rec.num_probes[0];
-		const size_t o001 = o000 + rec.num_probes[0] * rec.num_probes[1];
 		const float e000 = map[o000];
-		const float e100 = map[o100];
-		const float e010 = map[o010];
-		const float e001 = map[o001];
+		const float e100 = map[o000 + 1];
+		const float e010 = map[o000 + rec.num_probes[0]];
+		const float e001 = map[o000 + rec.num_probes[0] * rec.num_probes[1]];
 		s.d[i][0] = (e100 - e000) * rec.granularity_inverse;
 		s.d[i][1] = (e010 - e000) * rec.granularity_inverse;
 		s.d[i][2] = (e001 - e000) * rec.granularity_inverse;
