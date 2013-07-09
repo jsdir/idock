@@ -328,8 +328,13 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	s.e = 0;
 	for (size_t i = 0; i < atoms.size(); ++i)
 	{
-		// Half-open-half-close box, i.e. [corner0, corner1)
-		if (s.c[i][0] < rec.corner0[0] || rec.corner1[0] <= s.c[i][0] || s.c[i][1] < rec.corner0[1] || rec.corner1[1] <= s.c[i][1] || s.c[i][2] < rec.corner0[2] || rec.corner1[2] <= s.c[i][2])
+		// Load coordinate from memory into registers.
+		const float coord_0 = s.c[i][0];
+		const float coord_1 = s.c[i][1];
+		const float coord_2 = s.c[i][2];
+
+		// Deal with out-of-box case
+		if (coord_0 < rec.corner0[0] || rec.corner1[0] <= coord_0 || coord_1 < rec.corner0[1] || rec.corner1[1] <= coord_1 || coord_2 < rec.corner0[2] || rec.corner1[2] <= coord_2)
 		{
 			s.e += 10;
 			s.d[i][0] = 0;
@@ -343,15 +348,15 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		assert(map.size());
 
 		// Find the index of the current coordinates.
-		array<size_t, 3> index;
-		for (size_t j = 0; j < 3; ++j) // The loop may be unrolled by enabling compiler optimization.
-		{
-			index[j] = static_cast<size_t>((s.c[i][j] - rec.corner0[j]) * rec.granularity_inverse);
-			assert(index[j] + 1 < rec.num_probes[j]);
-		}
+		const size_t index_0 = static_cast<size_t>((coord_0 - rec.corner0[0]) * rec.granularity_inverse);
+		const size_t index_1 = static_cast<size_t>((coord_1 - rec.corner0[1]) * rec.granularity_inverse);
+		const size_t index_2 = static_cast<size_t>((coord_2 - rec.corner0[2]) * rec.granularity_inverse);
+		assert(index_0 + 1 < rec.num_probes[0]);
+		assert(index_1 + 1 < rec.num_probes[1]);
+		assert(index_2 + 1 < rec.num_probes[2]);
 
 		// Calculate the offsets to grid map and lookup the values.
-		const size_t o000 = rec.num_probes[0] * (rec.num_probes[1] * index[2] + index[1]) + index[0];
+		const size_t o000 = rec.num_probes[0] * (rec.num_probes[1] * index_2 + index_1) + index_0;
 		const size_t o100 = o000 + 1;
 		const size_t o010 = o000 + rec.num_probes[0];
 		const size_t o001 = o000 + rec.num_probes[0] * rec.num_probes[1];
