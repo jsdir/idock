@@ -328,17 +328,8 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	s.e = 0;
 	for (size_t i = 0; i < atoms.size(); ++i)
 	{
-		bool within = true;
-		for (size_t j = 0; j < 3; ++j) // The loop may be unrolled by enabling compiler optimization.
-		{
-			// Half-open-half-close box, i.e. [corner0, corner1)
-			if (s.c[i][j] < rec.corner0[j] || rec.corner1[j] <= s.c[i][j])
-			{
-				within = false;
-				break;
-			}
-		}
-		if (!within)
+		// Half-open-half-close box, i.e. [corner0, corner1)
+		if (s.c[i][0] < rec.corner0[0] || rec.corner1[0] <= s.c[i][0] || s.c[i][1] < rec.corner0[1] || rec.corner1[1] <= s.c[i][1] || s.c[i][2] < rec.corner0[2] || rec.corner1[2] <= s.c[i][2])
 		{
 			s.e += 10;
 			s.d[i][0] = 0;
