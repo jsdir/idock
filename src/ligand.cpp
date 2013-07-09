@@ -272,6 +272,9 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	{
 		const frame& f = frames[k];
 		if (!f.active) continue;
+		const float y_0 = s.c[f.rotorYidx][0];
+		const float y_1 = s.c[f.rotorYidx][1];
+		const float y_2 = s.c[f.rotorYidx][2];
 		const float q_0 = s.q[k][0];
 		const float q_1 = s.q[k][1];
 		const float q_2 = s.q[k][2];
@@ -287,20 +290,30 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		const float q22 = q_2*q_2;
 		const float q23 = q_2*q_3;
 		const float q33 = q_3*q_3;
-		const array<float, 9> m = make_array
-		(
-			q00+q11-q22-q33, 2*(-q03+q12), 2*(q02+q13),
-			2*(q03+q12), q00-q11+q22-q33, 2*(-q01+q23),
-			2*(-q02+q13), 2*(q01+q23), q00-q11-q22+q33
-		);
+		const float m_0 = q00+q11-q22-q33;
+		const float m_1 = 2*(-q03+q12);
+		const float m_2 = 2*(q02+q13);
+		const float m_3 = 2*(q03+q12);
+		const float m_4 = q00-q11+q22-q33;
+		const float m_5 = 2*(-q01+q23);
+		const float m_6 = 2*(-q02+q13);
+		const float m_7 = 2*(q01+q23);
+		const float m_8 = q00-q11-q22+q33;
 		for (size_t i = f.beg + 1; i < f.end; ++i)
 		{
-			s.c[i] = s.c[f.rotorYidx] + m * atoms[i].coord;
+			const float o_0 = atoms[i].coord[0];
+			const float o_1 = atoms[i].coord[1];
+			const float o_2 = atoms[i].coord[2];
+			s.c[i][0] = y_0 + m_0 * o_0 + m_1 * o_1 + m_2 * o_2;
+			s.c[i][1] = y_1 + m_3 * o_0 + m_4 * o_1 + m_5 * o_2;
+			s.c[i][2] = y_2 + m_6 * o_0 + m_7 * o_1 + m_8 * o_2;
 		}
 		for (const size_t i : f.branches)
 		{
 			const frame& b = frames[i];
-			s.c[b.rotorYidx] = s.c[f.rotorYidx] + m * b.yy;
+			s.c[b.rotorYidx][0] = y_0 + m_0 * b.yy[0] + m_1 * b.yy[1] + m_2 * b.yy[2];
+			s.c[b.rotorYidx][1] = y_1 + m_3 * b.yy[0] + m_4 * b.yy[1] + m_5 * b.yy[2];
+			s.c[b.rotorYidx][2] = y_2 + m_6 * b.yy[0] + m_7 * b.yy[1] + m_8 * b.yy[2];
 
 			// If the current BRANCH frame does not have an active torsion, skip it.
 			if (!b.active)
@@ -310,7 +323,9 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 				continue;
 			}
 			assert(normalized(b.xy));
-			s.a[i] = m * b.xy;
+			s.a[i][0] = m_0 * b.xy[0] + m_1 * b.xy[1] + m_2 * b.xy[2];
+			s.a[i][1] = m_3 * b.xy[0] + m_4 * b.xy[1] + m_5 * b.xy[2];
+			s.a[i][2] = m_6 * b.xy[0] + m_7 * b.xy[1] + m_8 * b.xy[2];
 			assert(normalized(s.a[i]));
 			s.q[i] = vec4_to_qtn4(s.a[i], s.x[7 + t++]) * s.q[k];
 			assert(normalized(s.q[i]));
