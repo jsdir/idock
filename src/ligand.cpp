@@ -268,7 +268,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	s.q[0][3] = s.x[6];
 
 	// Apply torsions to frames.
-	for (size_t k = 0, t = 0; k < frames.size(); ++k)
+	for (size_t k = 0, t = 7; k < frames.size(); ++k)
 	{
 		const frame& f = frames[k];
 		if (!f.active) continue;
@@ -323,11 +323,14 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 				continue;
 			}
 			assert(normalized(b.xy));
-			s.a[i][0] = m_0 * b.xy[0] + m_1 * b.xy[1] + m_2 * b.xy[2];
-			s.a[i][1] = m_3 * b.xy[0] + m_4 * b.xy[1] + m_5 * b.xy[2];
-			s.a[i][2] = m_6 * b.xy[0] + m_7 * b.xy[1] + m_8 * b.xy[2];
-			assert(normalized(s.a[i]));
-			s.q[i] = vec4_to_qtn4(s.a[i], s.x[7 + t++]) * s.q[k];
+			const float a_0 = m_0 * b.xy[0] + m_1 * b.xy[1] + m_2 * b.xy[2];
+			const float a_1 = m_3 * b.xy[0] + m_4 * b.xy[1] + m_5 * b.xy[2];
+			const float a_2 = m_6 * b.xy[0] + m_7 * b.xy[1] + m_8 * b.xy[2];
+			assert(fabs(a_0*a_0 + a_1*a_1 + a_2*a_2 - 1.0f) < 1e-3f);
+			s.a[i][0] = a_0;
+			s.a[i][1] = a_1;
+			s.a[i][2] = a_2;
+			s.q[i] = vec4_to_qtn4(s.a[i], s.x[t++]) * s.q[k];
 			assert(normalized(s.q[i]));
 		}
 	}
