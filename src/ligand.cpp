@@ -168,10 +168,10 @@ ligand::ligand(const path& p) : nt(0)
 			if (rotorY.is_hetero() && !rotorX.is_hetero()) rotorX.dehydrophobicize();
 			if (rotorX.is_hetero() && !rotorY.is_hetero()) rotorY.dehydrophobicize();
 
-			// Calculate parent_rotorY_to_current_rotorY and parent_rotorX_to_current_rotorY.
+			// Calculate yy and xy.
 			const frame& p = frames[f->parent];
-			f->parent_rotorY_to_current_rotorY = rotorY.coord - atoms[p.rotorYidx].coord;
-			f->parent_rotorX_to_current_rotorY = normalize(rotorY.coord - rotorX.coord);
+			f->yy = rotorY.coord - atoms[p.rotorYidx].coord;
+			f->xy = normalize(rotorY.coord - rotorX.coord);
 
 			// Now the parent of the following frame is the parent of current frame.
 			current = f->parent;
@@ -280,7 +280,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		for (const size_t i : f.branches)
 		{
 			const frame& b = frames[i];
-			s.c[b.rotorYidx] = s.c[f.rotorYidx] + m * b.parent_rotorY_to_current_rotorY;
+			s.c[b.rotorYidx] = s.c[f.rotorYidx] + m * b.yy;
 
 			// If the current BRANCH frame does not have an active torsion, skip it.
 			if (!b.active)
@@ -289,8 +289,8 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 				assert(b.beg == b.rotorYidx);
 				continue;
 			}
-			assert(normalized(b.parent_rotorX_to_current_rotorY));
-			s.a[i] = m * b.parent_rotorX_to_current_rotorY;
+			assert(normalized(b.xy));
+			s.a[i] = m * b.xy;
 			assert(normalized(s.a[i]));
 			s.q[i] = vec4_to_qtn4(s.a[i], s.x[7 + t++]) * s.q[k];
 			assert(normalized(s.q[i]));

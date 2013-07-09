@@ -49,8 +49,8 @@ public:
 	size_t beg; ///< The inclusive beginning index to the heavy atoms of the current frame.
 	size_t end; ///< The exclusive ending index to the heavy atoms of the current frame.
 	bool active; ///< Indicates if the current frame is active.
-	array<float, 3> parent_rotorY_to_current_rotorY; ///< Vector pointing from the origin of parent frame to the origin of current frame.
-	array<float, 3> parent_rotorX_to_current_rotorY; ///< Normalized vector pointing from rotor X of parent frame to rotor Y of current frame.
+	array<float, 3> yy; ///< Vector pointing from the origin of parent frame to the origin of current frame.
+	array<float, 3> xy; ///< Normalized vector pointing from rotor X of parent frame to rotor Y of current frame.
 	vector<size_t> branches; ///< Indexes to child branches.
 
 	/// Constructs an active frame, and relates it to its parent frame.
