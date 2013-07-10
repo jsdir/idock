@@ -368,13 +368,8 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			s.c[b.rotorYidx][2] = y_2 + m_6 * b.yy[0] + m_7 * b.yy[1] + m_8 * b.yy[2];
 
 			// If the current BRANCH frame does not have an active torsion, skip it.
-			if (!b.active)
-			{
-				assert(b.beg + 1 == b.end);
-				assert(b.beg == b.rotorYidx);
-				continue;
-			}
-			assert(normalized(b.xy));
+			if (!b.active) continue;
+
 			a_0 = m_0 * b.xy[0] + m_1 * b.xy[1] + m_2 * b.xy[2];
 			a_1 = m_3 * b.xy[0] + m_4 * b.xy[1] + m_5 * b.xy[2];
 			a_2 = m_6 * b.xy[0] + m_7 * b.xy[1] + m_8 * b.xy[2];
@@ -450,7 +445,8 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	fill(s.f.begin(), s.f.end(), zero3);
 	fill(s.t.begin(), s.t.end(), zero3);
 	assert(k == frames.size());
-	for (t = 6 + nt;;)
+	t = 6 + nt;
+	while (true)
 	{
 		const frame& f = frames[--k];
 
@@ -536,46 +532,56 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 	s2.resize(nv, frames.size(), atoms.size());
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
-	float alpha, pg1, pg2, yhy, yp, ryp, pco, qw, qx, qy, qz, qnorm_inv;
-	size_t g, i, j;
+	float alpha, pg1, pg2, yhy, yp, ryp, pco, q0, q1, q2, q3, qni, sum;
+	size_t g, i, j, o;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
 
-	// Randomize conformation x0.
+	// Randomize s0.x.
 	s0.x[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
 	s0.x[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
 	s0.x[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
-	qw = uniform_11(rng);
-	qx = uniform_11(rng);
-	qy = uniform_11(rng);
-	qz = uniform_11(rng);
-	qnorm_inv = 1.0f / sqrt(qw*qw + qx*qx + qy*qy + qz*qz);
-	s0.x[3] = qw * qnorm_inv;
-	s0.x[4] = qx * qnorm_inv;
-	s0.x[5] = qy * qnorm_inv;
-	s0.x[6] = qz * qnorm_inv;
+	q0 = uniform_11(rng);
+	q1 = uniform_11(rng);
+	q2 = uniform_11(rng);
+	q3 = uniform_11(rng);
+	qni = 1.0f / sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
+	s0.x[3] = q0 * qni;
+	s0.x[4] = q1 * qni;
+	s0.x[5] = q2 * qni;
+	s0.x[6] = q3 * qni;
 	for (i = 0; i < nt; ++i)
 	{
 		s0.x[7 + i] = uniform_11(rng);
 	}
 	evaluate(s0, sf, rec, e_upper_bound);
 
+	// Repeat for a number of generations.
 	for (g = 0; g < num_generations; ++g)
 	{
 		// Make a copy, so the previous conformation is retained.
-		s1.x = s0.x;
-		s1.x[0] += uniform_11(rng);
-		s1.x[1] += uniform_11(rng);
-		s1.x[2] += uniform_11(rng);
+		s1.x[0] = s0.x[0] + uniform_11(rng);
+		s1.x[1] = s0.x[1] + uniform_11(rng);
+		s1.x[2] = s0.x[2] + uniform_11(rng);
+		for (i = 3; i < nv + 1;  ++i)
+		{
+			s1.x[i] = s0.x[i];
+		}
 		evaluate(s1, sf, rec, e_upper_bound);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
 		// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
 		// See N&R for a recipe to find this initializer.
-		fill(h.begin(), h.end(), 0.0f);
-		for (i = 0; i < nv; ++i)
-			h[mr(i, i)] = 1.0f;
+		o = 0;
+		for (j = 0; j < nv; ++j)
+		{
+			for (i = 0; i < j; ++i)
+			{
+				h[o++] = 0.0f;
+			}
+			h[o++] = 1.0f;
+		}
 
 		// Given the mutated conformation c1, use BFGS to find a local minimum.
 		// The conformation of the local minimum is saved to c2, and its derivative is saved to g2.
@@ -587,16 +593,20 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 			// Calculate p = -h*g, where p is for descent direction, h for Hessian, and g for gradient.
 			for (i = 0; i < nv; ++i)
 			{
-				float sum = 0.0f;
+				sum = 0.0f;
 				for (j = 0; j < nv; ++j)
+				{
 					sum += h[mp(i, j)] * s1.g[j];
+				}
 				p[i] = -sum;
 			}
 
 			// Calculate pg = p*g = -h*g^2 < 0
 			pg1 = 0;
 			for (i = 0; i < nv; ++i)
+			{
 				pg1 += p[i] * s1.g[i];
+			}
 
 			// Perform a line search to find an appropriate alpha.
 			// Try different alpha values for num_alphas times.
@@ -645,7 +655,9 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 				{
 					pg2 = 0;
 					for (i = 0; i < nv; ++i)
+					{
 						pg2 += p[i] * s2.g[i];
+					}
 					if (pg2 >= 0.9f * pg1)
 						break; // An appropriate alpha is found.
 				}
@@ -658,20 +670,28 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 
 			// Update Hessian matrix h.
 			for (i = 0; i < nv; ++i) // Calculate y = g2 - g1.
+			{
 				y[i] = s2.g[i] - s1.g[i];
+			}
 			for (i = 0; i < nv; ++i) // Calculate mhy = -h * y.
 			{
-				float sum = 0.0f;
+				sum = 0.0f;
 				for (j = 0; j < nv; ++j)
+				{
 					sum += h[mp(i, j)] * y[j];
+				}
 				mhy[i] = -sum;
 			}
 			yhy = 0;
 			for (i = 0; i < nv; ++i) // Calculate yhy = -y * mhy = -y * (-hy).
+			{
 				yhy -= y[i] * mhy[i];
+			}
 			yp = 0;
 			for (i = 0; i < nv; ++i) // Calculate yp = y * p.
+			{
 				yp += y[i] * p[i];
+			}
 			ryp = 1 / yp;
 			pco = ryp * (ryp * yhy + alpha);
 			for (i = 0; i < nv; ++i)
