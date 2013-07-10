@@ -532,7 +532,7 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 	s2.resize(nv, frames.size(), atoms.size());
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
-	float alpha, pg1, pg2, yhy, yp, ryp, pco, q0, q1, q2, q3, qni, sum;
+	float alpha, pg1, pg2, yhy, yp, ryp, pco, q0, q1, q2, q3, qni, sum, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3;
 	size_t g, i, j, o;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
@@ -559,7 +559,7 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 	// Repeat for a number of generations.
 	for (g = 0; g < num_generations; ++g)
 	{
-		// Make a copy, so the previous conformation is retained.
+		// Mutate s0.x into s1.x
 		s1.x[0] = s0.x[0] + uniform_11(rng);
 		s1.x[1] = s0.x[1] + uniform_11(rng);
 		s1.x[2] = s0.x[2] + uniform_11(rng);
@@ -618,26 +618,26 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 				s2.x[0] = s1.x[0] + alpha * p[0];
 				s2.x[1] = s1.x[1] + alpha * p[1];
 				s2.x[2] = s1.x[2] + alpha * p[2];
-				const float po0 = p[3];
-				const float po1 = p[4];
-				const float po2 = p[5];
-				const float ponrm = sqrt(po0*po0 + po1*po1 + po2*po2);
-				const float h = 0.5f * alpha * ponrm;
-				const float u = sin(h) / ponrm;
-				const float pq0 = cos(h);
-				const float pq1 = u*po0;
-				const float pq2 = u*po1;
-				const float pq3 = u*po2;
+				po0 = p[3];
+				po1 = p[4];
+				po2 = p[5];
+				pon = sqrt(po0*po0 + po1*po1 + po2*po2);
+				hn = 0.5f * alpha * pon;
+				u = sin(hn) / pon;
+				pq0 = cos(hn);
+				pq1 = u*po0;
+				pq2 = u*po1;
+				pq3 = u*po2;
 				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 1e-3f);
-				const float x1q0 = s1.x[3];
-				const float x1q1 = s1.x[4];
-				const float x1q2 = s1.x[5];
-				const float x1q3 = s1.x[6];
+				x1q0 = s1.x[3];
+				x1q1 = s1.x[4];
+				x1q2 = s1.x[5];
+				x1q3 = s1.x[6];
 				assert(fabs(x1q0*x1q0 + x1q1*x1q1 + x1q2*x1q2 + x1q3*x1q3 - 1.0f) < 1e-3f);
-				const float x2q0 = pq0 * x1q0 - pq1 * x1q1 - pq2 * x1q2 - pq3 * x1q3;
-				const float x2q1 = pq0 * x1q1 + pq1 * x1q0 + pq2 * x1q3 - pq3 * x1q2;
-				const float x2q2 = pq0 * x1q2 - pq1 * x1q3 + pq2 * x1q0 + pq3 * x1q1;
-				const float x2q3 = pq0 * x1q3 + pq1 * x1q2 - pq2 * x1q1 + pq3 * x1q0;
+				x2q0 = pq0 * x1q0 - pq1 * x1q1 - pq2 * x1q2 - pq3 * x1q3;
+				x2q1 = pq0 * x1q1 + pq1 * x1q0 + pq2 * x1q3 - pq3 * x1q2;
+				x2q2 = pq0 * x1q2 - pq1 * x1q3 + pq2 * x1q0 + pq3 * x1q1;
+				x2q3 = pq0 * x1q3 + pq1 * x1q2 - pq2 * x1q1 + pq3 * x1q0;
 				assert(fabs(x2q0*x2q0 + x2q1*x2q1 + x2q2*x2q2 + x2q3*x2q3 - 1.0f) < 1e-3f);
 				s2.x[3] = x2q0;
 				s2.x[4] = x2q1;
