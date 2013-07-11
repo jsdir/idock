@@ -15,7 +15,7 @@ class solution
 {
 public:
 	vector<float> x; ///< Conformation vector.
-	vector<array<float, 3>> a; ///< Vector pointing from rotor Y to rotor X.
+	vector<float> a; ///< Vector pointing from rotor Y to rotor X.
 	vector<array<float, 4>> q; ///< Frame quaternions.
 	vector<array<float, 3>> c; ///< Heavy atom coordinates.
 	vector<array<float, 3>> d; ///< Heavy atom derivatives.

@@ -6,7 +6,7 @@
 void solution::resize(const size_t nv, const size_t nf, const size_t na)
 {
 	x.resize(nv+1);
-	a.resize(nf);
+	a.resize(3 * nf);
 	q.resize(nf);
 	c.resize(na);
 	d.resize(na);
@@ -259,7 +259,7 @@ ligand::ligand(const path& p) : nt(0)
 bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const
 {
 	float e, y0, y1, y2, q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8, o0, o1, o2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, h, sinh, r0, r1, r2, r3, p2, dor, f0, f1, f2, t0, t1, t2, d0, d1, d2;
-	size_t k, t, i, index0, index1, index2, o, p;
+	size_t k, t, i, index0, index1, index2, o, p, ok0, ok1, ok2, op0, op1, op2;
 
 	// Apply position, orientation and torsions.
 	s.c[0][0] = s.x[0];
@@ -375,9 +375,12 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			a1 = m3 * b.xy[0] + m4 * b.xy[1] + m5 * b.xy[2];
 			a2 = m6 * b.xy[0] + m7 * b.xy[1] + m8 * b.xy[2];
 			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 1e-3f);
-			s.a[i][0] = a0;
-			s.a[i][1] = a1;
-			s.a[i][2] = a2;
+			ok0 = 3 * i;
+			ok1 = ok0 + 1;
+			ok2 = ok1 + 1;
+			s.a[ok0] = a0;
+			s.a[ok1] = a1;
+			s.a[ok2] = a2;
 			h = s.x[t++] * 0.5f;
 			sinh = sin(h);
 			r0 = cos(h);
@@ -432,9 +435,9 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	while (true)
 	{
 		const frame& f = frames[--k];
-		const size_t ok0 = 3 * k;
-		const size_t ok1 = ok0 + 1;
-		const size_t ok2 = ok1 + 1;
+		ok0 = 3 * k;
+		ok1 = ok0 + 1;
+		ok2 = ok1 + 1;
 
 		// Load variables from memory into registers.
 		y0 = s.c[f.rotorYidx][0];
@@ -489,9 +492,9 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		s.t[ok2] = t2;
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		const size_t op0 = 3 * f.parent;
-		const size_t op1 = op0 + 1;
-		const size_t op2 = op1 + 1;
+		op0 = 3 * f.parent;
+		op1 = op0 + 1;
+		op2 = op1 + 1;
 		s.f[op0] += f0;
 		s.f[op1] += f1;
 		s.f[op2] += f2;
@@ -507,7 +510,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		if (!f.active) continue;
 
 		// Save the aggregated torque of BRANCH frames to g.
-		s.g[--t] = t0 * s.a[k][0] + t1 * s.a[k][1] + t2 * s.a[k][2]; // dot product
+		s.g[--t] = t0 * s.a[ok0] + t1 * s.a[ok1] + t2 * s.a[ok2]; // dot product
 	}
 }
 
