@@ -5,25 +5,25 @@
 
 void solution::resize(const size_t nv, const size_t nf, const size_t na)
 {
-	const size_t es = 1;
-	const size_t xs = nv+1;
-	const size_t gs = nv;
-	const size_t as = 3 * nf;
-	const size_t qs = 4 * nf;
-	const size_t cs = 3 * na;
-	const size_t ds = 3 * na;
-	const size_t fs = 3 * nf;
-	const size_t ts = 3 * nf; // 3 * (nt + 1) is sufficient because the torques of inactive frames are always zero.
-	static_cast<vector<float>*>(this)->resize(es + xs + gs + as + qs + cs + ds + fs + ts);
+	const size_t ox = 1;
+	const size_t og = ox + nv + 1;
+	const size_t oa = og + nv;
+	const size_t oq = oa + 3 * nf;
+	const size_t oc = oq + 4 * nf;
+	const size_t od = oc + 3 * na;
+	const size_t of = od + 3 * na;
+	const size_t ot = of + 3 * nf;
+	const size_t oz = ot + 3 * nf; // 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
+	static_cast<vector<float>*>(this)->resize(oz);
 	e = data();
-	x = e + es;
-	g = x + xs;
-	a = g + gs;
-	q = a + as;
-	c = q + qs;
-	d = c + cs;
-	f = d + ds;
-	t = f + fs;
+	x = e + ox;
+	g = e + og;
+	a = e + oa;
+	q = e + oq;
+	c = e + oc;
+	d = e + od;
+	f = e + of;
+	t = e + ot;
 }
 
 void frame::output(boost::filesystem::ofstream& ofs) const
