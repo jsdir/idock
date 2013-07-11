@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
 		solutions.resize(num_mc_tasks);
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
-			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), ref(solutions[i]), cref(sf), cref(rec), rng(), num_generations, i)));
+			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), ref(solutions[i]), cref(sf), cref(rec), rng(), num_generations, i, num_mc_tasks)));
 		}
 		boost::timer::auto_cpu_timer t;
 		tp.sync(25);

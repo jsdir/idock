@@ -75,7 +75,7 @@ public:
 	bool evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const;
 
 	/// Task for running Monte Carlo Simulated Annealing algorithm to find local minimums of the scoring function.
-	int bfgs(solution& s, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const size_t threadIdx) const;
+	int bfgs(solution& s, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const size_t threadIdx, const size_t blockDim) const;
 
 	/// Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
 	void save(const path& output_ligand_path, const ptr_vector<solution>& solutions, const vector<size_t>& representatives) const;
