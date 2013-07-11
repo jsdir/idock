@@ -64,6 +64,8 @@ public:
 	vector<atom> atoms; ///< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
 	size_t nt; ///< Number of active torsions.
 	size_t nv; ///< Number of variables to optimize.
+	size_t nf; ///< Number of frames.
+	size_t na; ///< Number of atoms.
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.
 	/// @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.

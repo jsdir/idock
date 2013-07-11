@@ -179,7 +179,7 @@ int main(int argc, char* argv[])
 
 		// Create grid maps on the fly if necessary.
 		vector<size_t> xs;
-		for (size_t i = 0; i < lig.atoms.size(); ++i)
+		for (size_t i = 0; i < lig.na; ++i)
 		{
 			const size_t t = lig.atoms[i].xs;
 			if (rec.maps[t].empty() && find(xs.cbegin(), xs.cend(), t) == xs.cend())
@@ -231,20 +231,20 @@ int main(int argc, char* argv[])
 		summaries.push_back(new summary(stem, *solutions.front().e));
 
 		// Cluster results. Ligands with RMSD < 2.0 will be clustered into the same cluster.
-		const float required_square_error = 4.0f * lig.atoms.size();
+		const float required_square_error = 4.0f * lig.na;
 		vector<size_t> representatives;
 		representatives.reserve(max_conformations);
 		for (size_t k = 0; k < num_mc_tasks && representatives.size() < representatives.capacity(); ++k)
 		{
 			solution& sk = solutions[k];
 			// Solutions store x and e only. Evaluate c and skip f and t.
-			lig.evaluate(sk, sf, rec, -40.0f * lig.atoms.size());
+			lig.evaluate(sk, sf, rec, -40.0f * lig.na);
 			bool representative = true;
 			for (size_t j = 0; j < k; ++j)
 			{
 				const solution& sj = solutions[j];
 				float this_square_error = 0.0f;
-				for (size_t i = 0; i < lig.atoms.size(); ++i)
+				for (size_t i = 0; i < lig.na; ++i)
 				{
 					const size_t i0 = 3 * i;
 					const size_t i1 = i0 + 1;

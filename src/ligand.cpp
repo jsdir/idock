@@ -193,10 +193,11 @@ ligand::ligand(const path& p) : nt(0)
 	}
 	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
-	assert(frames.size() >= 1);
-	assert(frames.size() - 1 >= nt);
-	frames.back().end = atoms.size();
+	frames.back().end = na = atoms.size();
 	nv = 6 + nt;
+	nf = frames.size();
+	assert(nf >= 1);
+	assert(nf - 1 >= nt);
 
 	// Update atoms[].coord relative to frame origin.
 	for (const frame& f : frames)
@@ -214,10 +215,10 @@ ligand::ligand(const path& p) : nt(0)
 	}
 
 	// Find intra-ligand interacting pairs that are not 1-4.
-	interacting_pairs.reserve(atoms.size() * atoms.size());
+	interacting_pairs.reserve(na * na);
 	vector<size_t> neighbors;
 	neighbors.reserve(10); // An atom typically consists of <= 10 neighbors.
-	for (size_t k1 = 0; k1 < frames.size(); ++k1)
+	for (size_t k1 = 0; k1 < nf; ++k1)
 	{
 		const frame& f1 = frames[k1];
 		for (size_t i = f1.beg; i < f1.end; ++i)
@@ -246,7 +247,7 @@ ligand::ligand(const path& p) : nt(0)
 			}
 
 			// Determine if interacting pairs can be possibly formed.
-			for (size_t k2 = k1 + 1; k2 < frames.size(); ++k2)
+			for (size_t k2 = k1 + 1; k2 < nf; ++k2)
 			{
 				const frame& f2 = frames[k2];
 				const frame& f3 = frames[f2.parent];
@@ -281,7 +282,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	s.q[2] = s.x[5];
 	s.q[3] = s.x[6];
 	e = 0.0f;
-	for (k = 0, t = 7; k < frames.size(); ++k)
+	for (k = 0, t = 7; k < nf; ++k)
 	{
 		const frame& f = frames[k];
 		i0 = 3 * f.rotorYidx;
@@ -459,12 +460,12 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	*s.e = e;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
-	for (i = 0; i < 3 * frames.size(); ++i)
+	for (i = 0; i < 3 * nf; ++i)
 	{
 		s.f[i] = 0.0f;
 		s.t[i] = 0.0f;
 	}
-	assert(k == frames.size());
+	assert(k == nf);
 	t = 6 + nt;
 	while (true)
 	{
@@ -548,11 +549,11 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const size_t threadIdx) const
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
-	const float e_upper_bound = 40.0f * atoms.size(); // A conformation will be droped if its free energy is not better than e_upper_bound.
+	const float e_upper_bound = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
 	solution s1, s2;
-	s0.resize(nv, frames.size(), atoms.size());
-	s1.resize(nv, frames.size(), atoms.size());
-	s2.resize(nv, frames.size(), atoms.size());
+	s0.resize(nv, nf, na);
+	s1.resize(nv, nf, na);
+	s2.resize(nv, nf, na);
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
 	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco;
@@ -793,9 +794,9 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 		ofs << "ENDROOT\n";
 
 		// Dump the BRANCH frames.
-		vector<bool> dumped(frames.size()); // dump_branches[0] is dummy. The ROOT frame has been dumped.
+		vector<bool> dumped(nf); // dump_branches[0] is dummy. The ROOT frame has been dumped.
 		vector<size_t> stack; // Stack to track the depth-first traversal sequence of frames in order to avoid recursion.
-		stack.reserve(frames.size() - 1); // The ROOT frame is excluded.
+		stack.reserve(nf - 1); // The ROOT frame is excluded.
 		{
 			const frame& f = frames.front();
 			for (auto i = f.branches.rbegin(); i < f.branches.rend(); ++i)
@@ -837,6 +838,6 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 				}
 			}
 		}
-		ofs << "TORSDOF " << frames.size() - 1 << '\n';
+		ofs << "TORSDOF " << nf - 1 << '\n';
 	}
 }
