@@ -179,9 +179,9 @@ int main(int argc, char* argv[])
 
 		// Create grid maps on the fly if necessary.
 		vector<size_t> xs;
-		for (size_t i = 0; i < lig.na; ++i)
+		for (const atom& a : lig.atoms)
 		{
-			const size_t t = lig.atoms[i].xs;
+			const size_t t = a.xs;
 			if (rec.maps[t].empty() && find(xs.cbegin(), xs.cend(), t) == xs.cend())
 			{
 				xs.push_back(t);
