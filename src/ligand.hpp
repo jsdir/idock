@@ -16,9 +16,9 @@ class solution
 public:
 	vector<float> x; ///< Conformation vector.
 	vector<float> a; ///< Vector pointing from rotor Y to rotor X.
-	vector<array<float, 4>> q; ///< Frame quaternions.
-	vector<array<float, 3>> c; ///< Heavy atom coordinates.
-	vector<array<float, 3>> d; ///< Heavy atom derivatives.
+	vector<float> q; ///< Frame quaternions.
+	vector<float> c; ///< Heavy atom coordinates.
+	vector<float> d; ///< Heavy atom derivatives.
 	vector<float> f; ///< Aggregated derivatives of heavy atoms.
 	vector<float> t; /// Torque of the force.
 	vector<float> g; ///< Gradient vector.
@@ -87,10 +87,10 @@ private:
 	class interacting_pair
 	{
 	public:
+		size_t i0; ///< Index of atom 0.
 		size_t i1; ///< Index of atom 1.
-		size_t i2; ///< Index of atom 2.
 		size_t p_offset; ///< Type pair index to the scoring function.
-		interacting_pair(const size_t i1, const size_t i2, const size_t p_offset) : i1(i1), i2(i2), p_offset(p_offset) {}
+		interacting_pair(const size_t i0, const size_t i1, const size_t p_offset) : i0(i0), i1(i1), p_offset(p_offset) {}
 	};
 
 	vector<interacting_pair> interacting_pairs; ///< Non 1-4 interacting pairs.

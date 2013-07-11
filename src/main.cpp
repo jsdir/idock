@@ -234,16 +234,23 @@ int main(int argc, char* argv[])
 		const float required_square_error = 4.0f * lig.atoms.size();
 		vector<size_t> representatives;
 		representatives.reserve(max_conformations);
-		for (size_t i = 0; i < num_mc_tasks && representatives.size() < representatives.capacity(); ++i)
+		for (size_t k = 0; k < num_mc_tasks && representatives.size() < representatives.capacity(); ++k)
 		{
-			const solution& s = solutions[i];
+			const solution& sk = solutions[k];
 			bool representative = true;
-			for (size_t j = 0; j < i; ++j)
+			for (size_t j = 0; j < k; ++j)
 			{
+				const solution& sj = solutions[j];
 				float this_square_error = 0.0f;
-				for (size_t k = 0; k < lig.atoms.size(); ++k)
+				for (size_t i = 0; i < lig.atoms.size(); ++i)
 				{
-					this_square_error += distance_sqr(s.c[k], solutions[j].c[k]);
+					const size_t i0 = 3 * i;
+					const size_t i1 = i0 + 1;
+					const size_t i2 = i1 + 1;
+					const float d0 = sk.c[i0] - sj.c[i0];
+					const float d1 = sk.c[i1] - sj.c[i1];
+					const float d2 = sk.c[i2] - sj.c[i2];
+					this_square_error += d0 * d0 + d1 * d1 + d2 * d2;
 				}
 				if (this_square_error < required_square_error)
 				{
@@ -253,7 +260,7 @@ int main(int argc, char* argv[])
 			}
 			if (representative)
 			{
-				representatives.push_back(i);
+				representatives.push_back(k);
 			}
 		}
 		cout << setw(4) << representatives.size() << endl;
