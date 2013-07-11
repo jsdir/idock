@@ -392,24 +392,6 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		}
 	}
 
-	// Check steric clash between atoms of different frames except for (rotorX, rotorY) pair.
-	//for (size_t k1 = frames.size() - 1; k1 > 0; --k1)
-	//{
-	//	const frame& f1 = frames[k1];
-	//	for (size_t i1 = f1.beg; i1 < f1.end; ++i1)
-	//	{
-	//		for (size_t k2 = 0; k2 < k1; ++k2)
-	//		{
-	//			const frame& f2 = frames[k2];
-	//			for (size_t i2 = f2.beg; i2 < f2.end; ++i2)
-	//			{
-	//				if ((distance_sqr(c[i1], c[i2]) < sqr(atoms[i1].covalent_radius() + atoms[i2].covalent_radius())) && (!((k2 == f1.parent) && (i1 == f1.rotorYidx) && (i2 == f1.rotorXidx))))
-	//					return false;
-	//			}
-	//		}
-	//	}
-	//}
-
 	// Calculate intra-ligand free energy.
 	const size_t num_interacting_pairs = interacting_pairs.size();
 	for (i = 0; i < num_interacting_pairs; ++i)
