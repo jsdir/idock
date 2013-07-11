@@ -29,7 +29,7 @@ public:
 	/// For sorting ptr_vector<solution>.
 	bool operator<(const solution& r) const
 	{
-		return *e < *r.e;
+		return front() < r.front();
 	}
 };
 
