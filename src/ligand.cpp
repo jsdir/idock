@@ -426,8 +426,11 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	s.e = e;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
-	fill(s.f.begin(), s.f.end(), 0.0f);
-	fill(s.t.begin(), s.t.end(), 0.0f);
+	for (i = 0; i < 3 * frames.size(); ++i)
+	{
+		s.f[i] = 0.0f;
+		s.t[i] = 0.0f;
+	}
 	assert(k == frames.size());
 	t = 6 + nt;
 	while (true)
