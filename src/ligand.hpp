@@ -11,25 +11,25 @@ using namespace boost::filesystem;
 using boost::ptr_vector;
 
 /// Represents a result found by BFGS local optimization for later clustering.
-class solution
+class solution : vector<float>
 {
 public:
-	float e; ///< Free energy.
-	vector<float> x; ///< Conformation vector.
-	vector<float> g; ///< Gradient vector.
-	vector<float> a; ///< Vector pointing from rotor Y to rotor X.
-	vector<float> q; ///< Frame quaternions.
-	vector<float> c; ///< Heavy atom coordinates.
-	vector<float> d; ///< Heavy atom derivatives.
-	vector<float> f; ///< Aggregated derivatives of heavy atoms.
-	vector<float> t; /// Torque of the force.
+	float* e; ///< Free energy.
+	float* x; ///< Conformation vector.
+	float* g; ///< Gradient vector.
+	float* a; ///< Vector pointing from rotor Y to rotor X.
+	float* q; ///< Frame quaternions.
+	float* c; ///< Heavy atom coordinates.
+	float* d; ///< Heavy atom derivatives.
+	float* f; ///< Aggregated derivatives of heavy atoms.
+	float* t; /// Torque of the force.
 
 	void resize(const size_t nv, const size_t nf, const size_t na);
 
 	/// For sorting ptr_vector<solution>.
 	bool operator<(const solution& r) const
 	{
-		return e < r.e;
+		return *e < *r.e;
 	}
 };
 

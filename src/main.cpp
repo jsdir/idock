@@ -227,8 +227,8 @@ int main(int argc, char* argv[])
 		cout << " | " << flush;
 
 		solutions.sort();
-		cout << setw(8) << solutions.front().e << " | " << flush;
-		summaries.push_back(new summary(stem, solutions.front().e));
+		cout << setw(8) << *solutions.front().e << " | " << flush;
+		summaries.push_back(new summary(stem, *solutions.front().e));
 
 		// Cluster results. Ligands with RMSD < 2.0 will be clustered into the same cluster.
 		const float required_square_error = 4.0f * lig.atoms.size();

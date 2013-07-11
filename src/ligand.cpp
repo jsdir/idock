@@ -5,14 +5,25 @@
 
 void solution::resize(const size_t nv, const size_t nf, const size_t na)
 {
-	x.resize(nv+1);
-	g.resize(nv);
-	a.resize(3 * nf);
-	q.resize(4 * nf);
-	c.resize(3 * na);
-	d.resize(3 * na);
-	f.resize(3 * nf);
-	t.resize(3 * nf); // 3 * (nt + 1) is sufficient because the torques of inactive frames are always zero.
+	const size_t es = 1;
+	const size_t xs = nv+1;
+	const size_t gs = nv;
+	const size_t as = 3 * nf;
+	const size_t qs = 4 * nf;
+	const size_t cs = 3 * na;
+	const size_t ds = 3 * na;
+	const size_t fs = 3 * nf;
+	const size_t ts = 3 * nf; // 3 * (nt + 1) is sufficient because the torques of inactive frames are always zero.
+	static_cast<vector<float>*>(this)->resize(es + xs + gs + as + qs + cs + ds + fs + ts);
+	e = data();
+	x = e + es;
+	g = x + xs;
+	a = g + gs;
+	q = a + as;
+	c = q + qs;
+	d = c + cs;
+	f = d + ds;
+	t = f + fs;
 }
 
 void frame::output(boost::filesystem::ofstream& ofs) const
@@ -445,7 +456,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	if (e >= e_upper_bound) return false;
 
 	// Store e from register into memory.
-	s.e = e;
+	*s.e = e;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
 	for (i = 0; i < 3 * frames.size(); ++i)
@@ -676,7 +687,7 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(s2, sf, rec, s1.e + 0.0001f * alpha * pg1))
+				if (evaluate(s2, sf, rec, *s1.e + 0.0001f * alpha * pg1))
 				{
 					pg2 = 0;
 					for (i = 0; i < nv; ++i)
@@ -730,7 +741,7 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 			{
 				s1.x[i] = s2.x[i];
 			}
-			s1.e = s2.e;
+			*s1.e = *s2.e;
 			for (i = 0; i < nv; ++i)
 			{
 				s1.g[i] = s2.g[i];
@@ -738,13 +749,13 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 		}
 
 		// Accept c1 according to Metropolis criteria.
-		if (s1.e < s0.e)
+		if (*s1.e < *s0.e)
 		{
 			for (i = 0; i < nv + 1; ++i)
 			{
 				s0.x[i] = s1.x[i];
 			}
-			s0.e = s1.e;
+			*s0.e = *s1.e;
 		}
 	}
 	return 0;
@@ -761,7 +772,7 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 	{
 		const solution& s = solutions[representatives[k]];
 		ofs << "MODEL     " << setw(4) << (k + 1) << '\n'
-			<< "REMARK     pKd:" << setw(7) << s.e << '\n';
+			<< "REMARK     pKd:" << setw(7) << *s.e << '\n';
 
 		// Dump the ROOT frame.
 		ofs << "ROOT\n";
