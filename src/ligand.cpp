@@ -259,7 +259,7 @@ ligand::ligand(const path& p) : nt(0)
 bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const
 {
 	float e, y0, y1, y2, q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, h, sinh, r0, r1, r2, r3, vs, dor, f0, f1, f2, t0, t1, t2, d0, d1, d2;
-	size_t k, t, i, index0, index1, index2, o, p, ok0, ok1, ok2, op0, op1, op2;
+	size_t k, t, i, index0, index1, index2, o, p, o0, o1, o2;
 
 	// Apply position, orientation and torsions.
 	s.c[0][0] = s.x[0];
@@ -375,12 +375,12 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			a1 = m3 * b.xy[0] + m4 * b.xy[1] + m5 * b.xy[2];
 			a2 = m6 * b.xy[0] + m7 * b.xy[1] + m8 * b.xy[2];
 			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 1e-3f);
-			ok0 = 3 * i;
-			ok1 = ok0 + 1;
-			ok2 = ok1 + 1;
-			s.a[ok0] = a0;
-			s.a[ok1] = a1;
-			s.a[ok2] = a2;
+			o0 = 3 * i;
+			o1 = o0 + 1;
+			o2 = o1 + 1;
+			s.a[o0] = a0;
+			s.a[o1] = a1;
+			s.a[o2] = a2;
 			h = s.x[t++] * 0.5f;
 			sinh = sin(h);
 			r0 = cos(h);
@@ -435,20 +435,20 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	while (true)
 	{
 		const frame& f = frames[--k];
-		ok0 = 3 * k;
-		ok1 = ok0 + 1;
-		ok2 = ok1 + 1;
+		o0 = 3 * k;
+		o1 = o0 + 1;
+		o2 = o1 + 1;
 
 		// Load variables from memory into registers.
 		y0 = s.c[f.rotorYidx][0];
 		y1 = s.c[f.rotorYidx][1];
 		y2 = s.c[f.rotorYidx][2];
-		f0 = s.f[ok0];
-		f1 = s.f[ok1];
-		f2 = s.f[ok2];
-		t0 = s.t[ok0];
-		t1 = s.t[ok1];
-		t2 = s.t[ok2];
+		f0 = s.f[o0];
+		f1 = s.f[o1];
+		f2 = s.f[o2];
+		t0 = s.t[o0];
+		t1 = s.t[o1];
+		t2 = s.t[o2];
 		for (i = f.beg; i < f.end; ++i)
 		{
 			d0 = s.d[i][0];
@@ -484,33 +484,33 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		}
 
 		// Store variables from registers into memory.
-		s.f[ok0] = f0;
-		s.f[ok1] = f1;
-		s.f[ok2] = f2;
-		s.t[ok0] = t0;
-		s.t[ok1] = t1;
-		s.t[ok2] = t2;
+		s.f[o0] = f0;
+		s.f[o1] = f1;
+		s.f[o2] = f2;
+		s.t[o0] = t0;
+		s.t[o1] = t1;
+		s.t[o2] = t2;
+
+		// Save the aggregated torque of active BRANCH frames to g.
+		if (f.active)
+		{
+			s.g[--t] = t0 * s.a[o0] + t1 * s.a[o1] + t2 * s.a[o2]; // dot product
+		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		op0 = 3 * f.parent;
-		op1 = op0 + 1;
-		op2 = op1 + 1;
-		s.f[op0] += f0;
-		s.f[op1] += f1;
-		s.f[op2] += f2;
+		o0 = 3 * f.parent;
+		o1 = o0 + 1;
+		o2 = o1 + 1;
+		s.f[o0] += f0;
+		s.f[o1] += f1;
+		s.f[o2] += f2;
 		p = frames[f.parent].rotorYidx;
 		v0 = y0 - s.c[p][0];
 		v1 = y1 - s.c[p][1];
 		v2 = y2 - s.c[p][2];
-		s.t[op0] += t0 + v1 * f2 - v2 * f1;
-		s.t[op1] += t1 + v2 * f0 - v0 * f2;
-		s.t[op2] += t2 + v0 * f1 - v1 * f0;
-
-		// If the current BRANCH frame does not have an active torsion, skip it.
-		if (!f.active) continue;
-
-		// Save the aggregated torque of BRANCH frames to g.
-		s.g[--t] = t0 * s.a[ok0] + t1 * s.a[ok1] + t2 * s.a[ok2]; // dot product
+		s.t[o0] += t0 + v1 * f2 - v2 * f1;
+		s.t[o1] += t1 + v2 * f0 - v0 * f2;
+		s.t[o2] += t2 + v0 * f1 - v1 * f0;
 	}
 }
 
