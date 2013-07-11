@@ -571,13 +571,15 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 	s0.x[1] = -31.025f;
 	s0.x[2] =  35.312f;
 	s0.x[3] = 1.0f;
-	for (i = 4; i < 7 + nt; ++i)
+	s0.x[4] = 0.0f;
+	s0.x[5] = 0.0f;
+	s0.x[6] = 0.0f;
+	for (i = 0; i < nt; ++i)
 	{
-		s0.x[i] = 0.0f;
+		s0.x[7 + i] = 0.0f;
 	}
 */
 	evaluate(s0, sf, rec, e_upper_bound);
-//	return 0;
 
 	// Repeat for a number of generations.
 	for (g = 0; g < num_generations; ++g)
