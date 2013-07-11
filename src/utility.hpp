@@ -14,8 +14,6 @@ size_t mp(const size_t x, const size_t y);
 /// Returns an array containing 3 given floats.
 array<float, 3> make_array(const float d0, const float d1, const float d2);
 
-const array<float, 3> zero3 = make_array(0.0f, 0.0f, 0.0f); ///< Constant vector with all the 3 elements of zero.
-
 /// Returns the square norm.
 float norm_sqr(const array<float, 3>& a);
 

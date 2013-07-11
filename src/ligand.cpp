@@ -10,8 +10,8 @@ void solution::resize(const size_t nv, const size_t nf, const size_t na)
 	q.resize(nf);
 	c.resize(na);
 	d.resize(na);
-	f.resize(nf);
-	t.resize(nf);
+	f.resize(3 * nf);
+	t.resize(3 * nf);
 	g.resize(nv);
 }
 
@@ -425,24 +425,27 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	s.e = e;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
-	fill(s.f.begin(), s.f.end(), zero3);
-	fill(s.t.begin(), s.t.end(), zero3);
+	fill(s.f.begin(), s.f.end(), 0.0f);
+	fill(s.t.begin(), s.t.end(), 0.0f);
 	assert(k == frames.size());
 	t = 6 + nt;
 	while (true)
 	{
 		const frame& f = frames[--k];
+		const size_t ok0 = 3 * k;
+		const size_t ok1 = ok0 + 1;
+		const size_t ok2 = ok1 + 1;
 
 		// Load variables from memory into registers.
 		y0 = s.c[f.rotorYidx][0];
 		y1 = s.c[f.rotorYidx][1];
 		y2 = s.c[f.rotorYidx][2];
-		f0 = s.f[k][0];
-		f1 = s.f[k][1];
-		f2 = s.f[k][2];
-		t0 = s.t[k][0];
-		t1 = s.t[k][1];
-		t2 = s.t[k][2];
+		f0 = s.f[ok0];
+		f1 = s.f[ok1];
+		f2 = s.f[ok2];
+		t0 = s.t[ok0];
+		t1 = s.t[ok1];
+		t2 = s.t[ok2];
 		for (i = f.beg; i < f.end; ++i)
 		{
 			d0 = s.d[i][0];
@@ -478,24 +481,27 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		}
 
 		// Store variables from registers into memory.
-		s.f[k][0] = f0;
-		s.f[k][1] = f1;
-		s.f[k][2] = f2;
-		s.t[k][0] = t0;
-		s.t[k][1] = t1;
-		s.t[k][2] = t2;
+		s.f[ok0] = f0;
+		s.f[ok1] = f1;
+		s.f[ok2] = f2;
+		s.t[ok0] = t0;
+		s.t[ok1] = t1;
+		s.t[ok2] = t2;
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		s.f[f.parent][0] += f0;
-		s.f[f.parent][1] += f1;
-		s.f[f.parent][2] += f2;
+		const size_t op0 = 3 * f.parent;
+		const size_t op1 = op0 + 1;
+		const size_t op2 = op1 + 1;
+		s.f[op0] += f0;
+		s.f[op1] += f1;
+		s.f[op2] += f2;
 		p = frames[f.parent].rotorYidx;
 		o0 = y0 - s.c[p][0];
 		o1 = y1 - s.c[p][1];
 		o2 = y2 - s.c[p][2];
-		s.t[f.parent][0] += t0 + o1 * f2 - o2 * f1;
-		s.t[f.parent][1] += t1 + o2 * f0 - o0 * f2;
-		s.t[f.parent][2] += t2 + o0 * f1 - o1 * f0;
+		s.t[op0] += t0 + o1 * f2 - o2 * f1;
+		s.t[op1] += t1 + o2 * f0 - o0 * f2;
+		s.t[op2] += t2 + o0 * f1 - o1 * f0;
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
