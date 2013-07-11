@@ -14,19 +14,15 @@ using boost::ptr_vector;
 class solution
 {
 public:
+	float e; ///< Free energy.
 	vector<float> x; ///< Conformation vector.
+	vector<float> g; ///< Gradient vector.
 	vector<float> a; ///< Vector pointing from rotor Y to rotor X.
 	vector<float> q; ///< Frame quaternions.
 	vector<float> c; ///< Heavy atom coordinates.
 	vector<float> d; ///< Heavy atom derivatives.
 	vector<float> f; ///< Aggregated derivatives of heavy atoms.
 	vector<float> t; /// Torque of the force.
-	vector<float> g; ///< Gradient vector.
-	float e; ///< Free energy.
-
-	solution()
-	{
-	}
 
 	void resize(const size_t nv, const size_t nf, const size_t na);
 

@@ -6,13 +6,13 @@
 void solution::resize(const size_t nv, const size_t nf, const size_t na)
 {
 	x.resize(nv+1);
+	g.resize(nv);
 	a.resize(3 * nf);
 	q.resize(4 * nf);
 	c.resize(3 * na);
 	d.resize(3 * na);
 	f.resize(3 * nf);
 	t.resize(3 * nf); // 3 * (nt + 1) is sufficient because the torques of inactive frames are always zero.
-	g.resize(nv);
 }
 
 void frame::output(boost::filesystem::ofstream& ofs) const
