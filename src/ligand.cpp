@@ -259,7 +259,7 @@ ligand::ligand(const path& p) : nt(0)
 bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const
 {
 	float e, y0, y1, y2, q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, h, sinh, r0, r1, r2, r3, vs, dor, f0, f1, f2, t0, t1, t2, d0, d1, d2;
-	size_t k, t, i, index0, index1, index2, o, p, o0, o1, o2;
+	size_t k, t, i, i0, i1, i2, o, p, o0, o1, o2;
 
 	// Apply position, orientation and torsions.
 	s.c[0][0] = s.x[0];
@@ -338,20 +338,18 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 				continue;
 			}
 
-			// Retrieve the grid map in need.
+			// Find the index of the current coordinates.
+			i0 = static_cast<size_t>((c0 - rec.corner0[0]) * rec.granularity_inverse);
+			i1 = static_cast<size_t>((c1 - rec.corner0[1]) * rec.granularity_inverse);
+			i2 = static_cast<size_t>((c2 - rec.corner0[2]) * rec.granularity_inverse);
+			assert(i0 + 1 < rec.num_probes[0]);
+			assert(i1 + 1 < rec.num_probes[1]);
+			assert(i2 + 1 < rec.num_probes[2]);
+			o = rec.num_probes[0] * (rec.num_probes[1] * i2 + i1) + i0;
+
+			// Retrieve the grid map and lookup the values.
 			const vector<float>& map = rec.maps[a.xs];
 			assert(map.size());
-
-			// Find the index of the current coordinates.
-			index0 = static_cast<size_t>((c0 - rec.corner0[0]) * rec.granularity_inverse);
-			index1 = static_cast<size_t>((c1 - rec.corner0[1]) * rec.granularity_inverse);
-			index2 = static_cast<size_t>((c2 - rec.corner0[2]) * rec.granularity_inverse);
-			assert(index0 + 1 < rec.num_probes[0]);
-			assert(index1 + 1 < rec.num_probes[1]);
-			assert(index2 + 1 < rec.num_probes[2]);
-
-			// Calculate the offsets to grid map and lookup the values.
-			o = rec.num_probes[0] * (rec.num_probes[1] * index2 + index1) + index0;
 			e000 = map[o];
 			e100 = map[o + 1];
 			e010 = map[o + rec.num_probes[0]];
