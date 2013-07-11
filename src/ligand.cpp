@@ -545,7 +545,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	}
 }
 
-int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations) const
+int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const size_t threadIdx) const
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * atoms.size(); // A conformation will be droped if its free energy is not better than e_upper_bound.
