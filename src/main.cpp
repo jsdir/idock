@@ -237,8 +237,8 @@ int main(int argc, char* argv[])
 		for (size_t k = 0; k < num_mc_tasks && representatives.size() < representatives.capacity(); ++k)
 		{
 			solution& sk = solutions[k];
-			// Solutions store x and e only. Evaluate c on the fly.
-			lig.evaluate(sk, sf, rec, 0.0f);
+			// Solutions store x and e only. Evaluate c and skip f and t.
+			lig.evaluate(sk, sf, rec, -40.0f * lig.atoms.size());
 			bool representative = true;
 			for (size_t j = 0; j < k; ++j)
 			{
