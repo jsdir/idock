@@ -236,7 +236,9 @@ int main(int argc, char* argv[])
 		representatives.reserve(max_conformations);
 		for (size_t k = 0; k < num_mc_tasks && representatives.size() < representatives.capacity(); ++k)
 		{
-			const solution& sk = solutions[k];
+			solution& sk = solutions[k];
+			// Solutions store x and e only. Evaluate c on the fly.
+			lig.evaluate(sk, sf, rec, 0.0f);
 			bool representative = true;
 			for (size_t j = 0; j < k; ++j)
 			{
