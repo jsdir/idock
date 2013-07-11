@@ -299,8 +299,8 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			m2 = 2 * (q02 + q13);
 			m3 = 2 * (q03 + q12);
 			m4 = q00 - q11 + q22 - q33;
-			m5 = 2 * (q23 + q01);
-			m6 = 2 * (q13 + q02);
+			m5 = 2 * (q23 - q01);
+			m6 = 2 * (q13 - q02);
 			m7 = 2 * (q01 + q23);
 			m8 = q00 - q11 - q22 + q33;
 		}
@@ -709,7 +709,7 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 			s1.e = s2.e;
 			for (i = 0; i < nv; ++i)
 			{
-				s1.g = s2.g;
+				s1.g[i] = s2.g[i];
 			}
 		}
 
