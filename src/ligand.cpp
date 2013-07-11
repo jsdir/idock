@@ -11,7 +11,7 @@ void solution::resize(const size_t nv, const size_t nf, const size_t na)
 	c.resize(3 * na);
 	d.resize(3 * na);
 	f.resize(3 * nf);
-	t.resize(3 * nf);
+	t.resize(3 * nf); // 3 * (nt + 1) is sufficient because the torques of inactive frames are always zero.
 	g.resize(nv);
 }
 
@@ -407,6 +407,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			s.q[k0 + 3] = q03;
 		}
 	}
+	assert(t == nv + 1);
 
 	// Calculate intra-ligand free energy.
 	const size_t num_interacting_pairs = interacting_pairs.size();
@@ -457,21 +458,21 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	while (true)
 	{
 		const frame& f = frames[--k];
+
+		// Load variables from memory into registers.
 		k0 = 3 * k;
 		k1 = k0 + 1;
 		k2 = k1 + 1;
-
-		// Load variables from memory into registers.
-		i0 = 3 * f.rotorYidx;
-		y0 = s.c[i0];
-		y1 = s.c[i0 + 1];
-		y2 = s.c[i0 + 2];
 		f0 = s.f[k0];
 		f1 = s.f[k1];
 		f2 = s.f[k2];
 		t0 = s.t[k0];
 		t1 = s.t[k1];
 		t2 = s.t[k2];
+		i0 = 3 * f.rotorYidx;
+		y0 = s.c[i0];
+		y1 = s.c[i0 + 1];
+		y2 = s.c[i0 + 2];
 		for (i = f.beg; i < f.end; ++i)
 		{
 			i0 = 3 * i;
@@ -489,6 +490,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			f0 += d0;
 			f1 += d1;
 			f2 += d2;
+			if (i == f.beg) continue;
 			v0 = s.c[i0] - y0;
 			v1 = s.c[i1] - y1;
 			v2 = s.c[i2] - y2;
@@ -508,14 +510,6 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			s.g[5] = t2;
 			return true;
 		}
-
-		// Store variables from registers into memory.
-		s.f[k0] = f0;
-		s.f[k1] = f1;
-		s.f[k2] = f2;
-		s.t[k0] = t0;
-		s.t[k1] = t1;
-		s.t[k2] = t2;
 
 		// Save the aggregated torque of active BRANCH frames to g.
 		if (f.active)
@@ -572,7 +566,18 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 	{
 		s0.x[7 + i] = uniform_11(rng);
 	}
+/*
+	s0.x[0] =  49.799f;
+	s0.x[1] = -31.025f;
+	s0.x[2] =  35.312f;
+	s0.x[3] = 1.0f;
+	for (i = 4; i < 7 + nt; ++i)
+	{
+		s0.x[i] = 0.0f;
+	}
+*/
 	evaluate(s0, sf, rec, e_upper_bound);
+//	return 0;
 
 	// Repeat for a number of generations.
 	for (g = 0; g < num_generations; ++g)
