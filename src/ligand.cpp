@@ -258,7 +258,7 @@ ligand::ligand(const path& p) : nt(0)
 
 bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const
 {
-	float e, y0, y1, y2, q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8, o0, o1, o2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, h, sinh, r0, r1, r2, r3, p2, dor, f0, f1, f2, t0, t1, t2, d0, d1, d2;
+	float e, y0, y1, y2, q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, h, sinh, r0, r1, r2, r3, vs, dor, f0, f1, f2, t0, t1, t2, d0, d1, d2;
 	size_t k, t, i, index0, index1, index2, o, p, ok0, ok1, ok2, op0, op1, op2;
 
 	// Apply position, orientation and torsions.
@@ -316,12 +316,12 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			else
 			{
 				// Calculate coordinate from transformation matrix and offset.
-				o0 = a.coord[0];
-				o1 = a.coord[1];
-				o2 = a.coord[2];
-				c0 = y0 + m0 * o0 + m1 * o1 + m2 * o2;
-				c1 = y1 + m3 * o0 + m4 * o1 + m5 * o2;
-				c2 = y2 + m6 * o0 + m7 * o1 + m8 * o2;
+				v0 = a.coord[0];
+				v1 = a.coord[1];
+				v2 = a.coord[2];
+				c0 = y0 + m0 * v0 + m1 * v1 + m2 * v2;
+				c1 = y1 + m3 * v0 + m4 * v1 + m5 * v2;
+				c2 = y2 + m6 * v0 + m7 * v1 + m8 * v2;
 
 				// Store coordinate from registers into memory.
 				s.c[i][0] = c0;
@@ -400,18 +400,18 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 	for (i = 0; i < num_interacting_pairs; ++i)
 	{
 		const interacting_pair& p = interacting_pairs[i];
-		o0 = s.c[p.i2][0] - s.c[p.i1][0];
-		o1 = s.c[p.i2][1] - s.c[p.i1][1];
-		o2 = s.c[p.i2][2] - s.c[p.i1][2];
-		p2 = o0*o0 + o1*o1 + o2*o2;
-		if (p2 < scoring_function::cutoff_sqr)
+		v0 = s.c[p.i2][0] - s.c[p.i1][0];
+		v1 = s.c[p.i2][1] - s.c[p.i1][1];
+		v2 = s.c[p.i2][2] - s.c[p.i1][2];
+		vs = v0*v0 + v1*v1 + v2*v2;
+		if (vs < scoring_function::cutoff_sqr)
 		{
-			o = p.p_offset + static_cast<size_t>(sf.ns * p2);
+			o = p.p_offset + static_cast<size_t>(sf.ns * vs);
 			e += sf.e[o];
 			dor = sf.d[o];
-			d0 = dor * o0;
-			d1 = dor * o1;
-			d2 = dor * o2;
+			d0 = dor * v0;
+			d1 = dor * v1;
+			d2 = dor * v2;
 			s.d[p.i1][0] -= d0;
 			s.d[p.i1][1] -= d1;
 			s.d[p.i1][2] -= d2;
@@ -463,12 +463,12 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			f0 += d0;
 			f1 += d1;
 			f2 += d2;
-			o0 = s.c[i][0] - y0;
-			o1 = s.c[i][1] - y1;
-			o2 = s.c[i][2] - y2;
-			t0 += o1 * d2 - o2 * d1;
-			t1 += o2 * d0 - o0 * d2;
-			t2 += o0 * d1 - o1 * d0;
+			v0 = s.c[i][0] - y0;
+			v1 = s.c[i][1] - y1;
+			v2 = s.c[i][2] - y2;
+			t0 += v1 * d2 - v2 * d1;
+			t1 += v2 * d0 - v0 * d2;
+			t2 += v0 * d1 - v1 * d0;
 		}
 
 		// Save the aggregated force and torque of ROOT frame to g.
@@ -499,12 +499,12 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		s.f[op1] += f1;
 		s.f[op2] += f2;
 		p = frames[f.parent].rotorYidx;
-		o0 = y0 - s.c[p][0];
-		o1 = y1 - s.c[p][1];
-		o2 = y2 - s.c[p][2];
-		s.t[op0] += t0 + o1 * f2 - o2 * f1;
-		s.t[op1] += t1 + o2 * f0 - o0 * f2;
-		s.t[op2] += t2 + o0 * f1 - o1 * f0;
+		v0 = y0 - s.c[p][0];
+		v1 = y1 - s.c[p][1];
+		v2 = y2 - s.c[p][2];
+		s.t[op0] += t0 + v1 * f2 - v2 * f1;
+		s.t[op1] += t1 + v2 * f0 - v0 * f2;
+		s.t[op2] += t2 + v0 * f1 - v1 * f0;
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
