@@ -259,7 +259,7 @@ ligand::ligand(const path& p) : nt(0)
 bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const
 {
 	float e, y0, y1, y2, q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, h, sinh, r0, r1, r2, r3, vs, dor, f0, f1, f2, t0, t1, t2, d0, d1, d2;
-	size_t k, t, i, i0, i1, i2, o, p, o0, o1, o2;
+	size_t k, t, i, i0, i1, i2, o0, o1, o2;
 
 	// Apply position, orientation and torsions.
 	s.c[0][0] = s.x[0];
@@ -345,15 +345,15 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			assert(i0 + 1 < rec.num_probes[0]);
 			assert(i1 + 1 < rec.num_probes[1]);
 			assert(i2 + 1 < rec.num_probes[2]);
-			o = rec.num_probes[0] * (rec.num_probes[1] * i2 + i1) + i0;
+			o0 = rec.num_probes[0] * (rec.num_probes[1] * i2 + i1) + i0;
 
 			// Retrieve the grid map and lookup the values.
 			const vector<float>& map = rec.maps[a.xs];
 			assert(map.size());
-			e000 = map[o];
-			e100 = map[o + 1];
-			e010 = map[o + rec.num_probes[0]];
-			e001 = map[o + rec.num_probes[0] * rec.num_probes[1]];
+			e000 = map[o0];
+			e100 = map[o0 + 1];
+			e010 = map[o0 + rec.num_probes[0]];
+			e001 = map[o0 + rec.num_probes[0] * rec.num_probes[1]];
 			e += e000;
 			s.d[i][0] = (e100 - e000) * rec.granularity_inverse;
 			s.d[i][1] = (e010 - e000) * rec.granularity_inverse;
@@ -366,9 +366,10 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			s.c[b.rotorYidx][1] = y1 + m3 * b.yy[0] + m4 * b.yy[1] + m5 * b.yy[2];
 			s.c[b.rotorYidx][2] = y2 + m6 * b.yy[0] + m7 * b.yy[1] + m8 * b.yy[2];
 
-			// If the current BRANCH frame does not have an active torsion, skip it.
+			// Skip inactive BRANCH frames.
 			if (!b.active) continue;
 
+			// Update s.a of BRANCH frames.
 			a0 = m0 * b.xy[0] + m1 * b.xy[1] + m2 * b.xy[2];
 			a1 = m3 * b.xy[0] + m4 * b.xy[1] + m5 * b.xy[2];
 			a2 = m6 * b.xy[0] + m7 * b.xy[1] + m8 * b.xy[2];
@@ -379,6 +380,8 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			s.a[o0] = a0;
 			s.a[o1] = a1;
 			s.a[o2] = a2;
+
+			// Update s.q of BRANCH frames.
 			h = s.x[t++] * 0.5f;
 			sinh = sin(h);
 			r0 = cos(h);
@@ -404,9 +407,9 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		vs = v0*v0 + v1*v1 + v2*v2;
 		if (vs < scoring_function::cutoff_sqr)
 		{
-			o = p.p_offset + static_cast<size_t>(sf.ns * vs);
-			e += sf.e[o];
-			dor = sf.d[o];
+			o0 = p.p_offset + static_cast<size_t>(sf.ns * vs);
+			e += sf.e[o0];
+			dor = sf.d[o0];
 			d0 = dor * v0;
 			d1 = dor * v1;
 			d2 = dor * v2;
@@ -505,10 +508,10 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		s.f[o0] += f0;
 		s.f[o1] += f1;
 		s.f[o2] += f2;
-		p = frames[f.parent].rotorYidx;
-		v0 = y0 - s.c[p][0];
-		v1 = y1 - s.c[p][1];
-		v2 = y2 - s.c[p][2];
+		i = frames[f.parent].rotorYidx;
+		v0 = y0 - s.c[i][0];
+		v1 = y1 - s.c[i][1];
+		v2 = y2 - s.c[i][2];
 		s.t[o0] += t0 + v1 * f2 - v2 * f1;
 		s.t[o1] += t1 + v2 * f0 - v0 * f2;
 		s.t[o2] += t2 + v0 * f1 - v1 * f0;
