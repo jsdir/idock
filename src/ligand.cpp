@@ -278,30 +278,31 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		y2 = s.c[f.rotorYidx][2];
 		if (f.active)
 		{
+			// Translate orientation from quaternion into 3x3 matrix.
 			q0 = s.q[k][0];
 			q1 = s.q[k][1];
 			q2 = s.q[k][2];
 			q3 = s.q[k][3];
 			assert(fabs(q0*q0 + q1*q1 + q2*q2 + q3*q3 - 1.0f) < 1e-3f);
-			q00 = q0*q0;
-			q01 = q0*q1;
-			q02 = q0*q2;
-			q03 = q0*q3;
-			q11 = q1*q1;
-			q12 = q1*q2;
-			q13 = q1*q3;
-			q22 = q2*q2;
-			q23 = q2*q3;
-			q33 = q3*q3;
-			m0 = q00+q11-q22-q33;
-			m1 = 2*(-q03+q12);
-			m2 = 2*(q02+q13);
-			m3 = 2*(q03+q12);
-			m4 = q00-q11+q22-q33;
-			m5 = 2*(-q01+q23);
-			m6 = 2*(-q02+q13);
-			m7 = 2*(q01+q23);
-			m8 = q00-q11-q22+q33;
+			q00 = q0 * q0;
+			q01 = q0 * q1;
+			q02 = q0 * q2;
+			q03 = q0 * q3;
+			q11 = q1 * q1;
+			q12 = q1 * q2;
+			q13 = q1 * q3;
+			q22 = q2 * q2;
+			q23 = q2 * q3;
+			q33 = q3 * q3;
+			m0 = q00 + q11 - q22 - q33;
+			m1 = 2 * (q12 - q03);
+			m2 = 2 * (q02 + q13);
+			m3 = 2 * (q03 + q12);
+			m4 = q00 - q11 + q22 - q33;
+			m5 = 2 * (q23 + q01);
+			m6 = 2 * (q13 + q02);
+			m7 = 2 * (q01 + q23);
+			m8 = q00 - q11 - q22 + q33;
 		}
 		for (i = f.beg; i < f.end; ++i)
 		{
@@ -532,7 +533,7 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 	s2.resize(nv, frames.size(), atoms.size());
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
-	float alpha, pg1, pg2, yhy, yp, ryp, pco, q0, q1, q2, q3, qni, sum, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3;
+	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco;
 	size_t g, i, j, o;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
@@ -701,15 +702,24 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 			}
 
 			// Move to the next iteration.
-			s1.x = s2.x;
+			for (i = 0; i < nv + 1; ++i)
+			{
+				s1.x[i] = s2.x[i];
+			}
 			s1.e = s2.e;
-			s1.g = s2.g;
+			for (i = 0; i < nv; ++i)
+			{
+				s1.g = s2.g;
+			}
 		}
 
 		// Accept c1 according to Metropolis criteria.
 		if (s1.e < s0.e)
 		{
-			s0.x = s1.x;
+			for (i = 0; i < nv + 1; ++i)
+			{
+				s0.x[i] = s1.x[i];
+			}
 			s0.e = s1.e;
 		}
 	}
