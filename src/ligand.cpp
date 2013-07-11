@@ -771,8 +771,6 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 	for (size_t k = 0; k < representatives.size(); ++k)
 	{
 		const solution& s = solutions[representatives[k]];
-		ofs << "MODEL     " << setw(4) << (k + 1) << '\n'
-			<< "REMARK     pKd:" << setw(7) << *s.e << '\n';
 
 		// Dump the ROOT frame.
 		ofs << "ROOT\n";
@@ -839,7 +837,6 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 				}
 			}
 		}
-		ofs << "TORSDOF " << frames.size() - 1 << '\n'
-			<< "ENDMDL" << '\n';
+		ofs << "TORSDOF " << frames.size() - 1 << '\n';
 	}
 }
