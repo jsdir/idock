@@ -11,7 +11,7 @@ using namespace boost::filesystem;
 using boost::ptr_vector;
 
 /// Represents a result found by BFGS local optimization for later clustering.
-class solution : vector<float>
+class solution : public vector<float>
 {
 public:
 	float* e; ///< Free energy.
@@ -24,12 +24,10 @@ public:
 	float* f; ///< Aggregated derivatives of heavy atoms.
 	float* t; /// Torque of the force.
 
-	void resize(const size_t nv, const size_t nf, const size_t na);
-
 	/// For sorting ptr_vector<solution>.
-	bool operator<(const solution& r) const
+	bool operator<(const solution& s) const
 	{
-		return front() < r.front();
+		return front() < s.front();
 	}
 };
 
@@ -66,16 +64,17 @@ public:
 	size_t nv; ///< Number of variables to optimize.
 	size_t nf; ///< Number of frames.
 	size_t na; ///< Number of atoms.
+	size_t ox, og, oa, oq, oc, od, of, ot, oz;
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.
 	/// @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.
 	ligand(const path& p);
 
 	/// Evaluates free energy e, force f, and change g. Returns true if the conformation is accepted.
-	bool evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const;
+	bool evaluate(const float* x, float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const;
 
 	/// Task for running Monte Carlo Simulated Annealing algorithm to find local minimums of the scoring function.
-	int bfgs(solution& s, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const size_t threadIdx, const size_t blockDim) const;
+	int bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const size_t threadIdx, const size_t blockDim) const;
 
 	/// Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
 	void save(const path& output_ligand_path, const ptr_vector<solution>& solutions, const vector<size_t>& representatives) const;

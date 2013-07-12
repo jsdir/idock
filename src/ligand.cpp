@@ -3,29 +3,6 @@
 #include "utility.hpp"
 #include "ligand.hpp"
 
-void solution::resize(const size_t nv, const size_t nf, const size_t na)
-{
-	const size_t ox = 1;
-	const size_t og = ox + nv + 1;
-	const size_t oa = og + nv;
-	const size_t oq = oa + 3 * nf;
-	const size_t oc = oq + 4 * nf;
-	const size_t od = oc + 3 * na;
-	const size_t of = od + 3 * na;
-	const size_t ot = of + 3 * nf;
-	const size_t oz = ot + 3 * nf; // 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
-	static_cast<vector<float>*>(this)->resize(oz);
-	e = data();
-	x = e + ox;
-	g = e + og;
-	a = e + oa;
-	q = e + oq;
-	c = e + oc;
-	d = e + od;
-	f = e + of;
-	t = e + ot;
-}
-
 void frame::output(boost::filesystem::ofstream& ofs) const
 {
 	ofs << "BRANCH"    << setw(4) << rotorXsrn << setw(4) << rotorYsrn << '\n';
@@ -198,6 +175,15 @@ ligand::ligand(const path& p) : nt(0)
 	nf = frames.size();
 	assert(nf >= 1);
 	assert(nf - 1 >= nt);
+	ox = 1;
+	og = ox + nv + 1;
+	oa = og + nv;
+	oq = oa + 3 * nf;
+	oc = oq + 4 * nf;
+	od = oc + 3 * na;
+	of = od + 3 * na;
+	ot = of + 3 * nf;
+	oz = ot + 3 * nf; // 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
 
 	// Update atoms[].coord relative to frame origin.
 	for (const frame& f : frames)
@@ -268,35 +254,35 @@ ligand::ligand(const path& p) : nt(0)
 	}
 }
 
-bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const
+bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const scoring_function& sf, const receptor& rec, const float e_upper_bound) const
 {
-	float e, y0, y1, y2, q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, h, sinh, r0, r1, r2, r3, vs, dor, f0, f1, f2, t0, t1, t2, d0, d1, d2;
-	size_t k, t, i, i0, i1, i2, k0, k1, k2;
+	float y, y0, y1, y2, q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, h, sinh, r0, r1, r2, r3, vs, dor, f0, f1, f2, t0, t1, t2, d0, d1, d2;
+	size_t k, w, i, i0, i1, i2, k0, k1, k2;
 
 	// Apply position, orientation and torsions.
-	s.c[0] = s.x[0];
-	s.c[1] = s.x[1];
-	s.c[2] = s.x[2];
-	s.q[0] = s.x[3];
-	s.q[1] = s.x[4];
-	s.q[2] = s.x[5];
-	s.q[3] = s.x[6];
-	e = 0.0f;
-	for (k = 0, t = 7; k < nf; ++k)
+	c[0] = x[0];
+	c[1] = x[1];
+	c[2] = x[2];
+	q[0] = x[3];
+	q[1] = x[4];
+	q[2] = x[5];
+	q[3] = x[6];
+	y = 0.0f;
+	for (k = 0, w = 7; k < nf; ++k)
 	{
-		const frame& f = frames[k];
-		i0 = 3 * f.rotorYidx;
-		y0 = s.c[i0    ];
-		y1 = s.c[i0 + 1];
-		y2 = s.c[i0 + 2];
+		const frame& m = frames[k];
+		i0 = 3 * m.rotorYidx;
+		y0 = c[i0    ];
+		y1 = c[i0 + 1];
+		y2 = c[i0 + 2];
 		// Translate orientation of active frames from quaternion into 3x3 matrix.
-		if (f.active)
+		if (m.active)
 		{
 			k0 = 4 * k;
-			q0 = s.q[k0    ];
-			q1 = s.q[k0 + 1];
-			q2 = s.q[k0 + 2];
-			q3 = s.q[k0 + 3];
+			q0 = q[k0    ];
+			q1 = q[k0 + 1];
+			q2 = q[k0 + 2];
+			q3 = q[k0 + 3];
 			assert(fabs(q0*q0 + q1*q1 + q2*q2 + q3*q3 - 1.0f) < 1e-3f);
 			q00 = q0 * q0;
 			q01 = q0 * q1;
@@ -318,7 +304,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			m7 = 2 * (q01 + q23);
 			m8 = q00 - q11 - q22 + q33;
 		}
-		for (i = f.beg; i < f.end; ++i)
+		for (i = m.beg; i < m.end; ++i)
 		{
 			const atom& a = atoms[i];
 			i0 = 3 * i;
@@ -326,7 +312,7 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			i2 = i1 + 1;
 
 			// The first atom of a frame is assumed to be its rotor Y.
-			if (i == f.beg)
+			if (i == m.beg)
 			{
 				c0 = y0;
 				c1 = y1;
@@ -343,22 +329,22 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 				c2 = y2 + m6 * v0 + m7 * v1 + m8 * v2;
 
 				// Store coordinate from registers into memory.
-				s.c[i0] = c0;
-				s.c[i1] = c1;
-				s.c[i2] = c2;
+				c[i0] = c0;
+				c[i1] = c1;
+				c[i2] = c2;
 			}
 
 			// Penalize out-of-box case.
 			if (c0 < rec.corner0[0] || rec.corner1[0] <= c0 || c1 < rec.corner0[1] || rec.corner1[1] <= c1 || c2 < rec.corner0[2] || rec.corner1[2] <= c2)
 			{
-				e += 10.0f;
-				s.d[i0] = 0.0f;
-				s.d[i1] = 0.0f;
-				s.d[i2] = 0.0f;
+				y += 10.0f;
+				d[i0] = 0.0f;
+				d[i1] = 0.0f;
+				d[i2] = 0.0f;
 				continue;
 			}
 
-			// Find the index of the current coordinates.
+			// Find the index of the current coordinate
 			k0 = static_cast<size_t>((c0 - rec.corner0[0]) * rec.granularity_inverse);
 			k1 = static_cast<size_t>((c1 - rec.corner0[1]) * rec.granularity_inverse);
 			k2 = static_cast<size_t>((c2 - rec.corner0[2]) * rec.granularity_inverse);
@@ -367,41 +353,41 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			assert(k2 + 1 < rec.num_probes[2]);
 			k0 = rec.num_probes[0] * (rec.num_probes[1] * k2 + k1) + k0;
 
-			// Retrieve the grid map and lookup the values.
+			// Retrieve the grid map and lookup the value
 			const vector<float>& map = rec.maps[a.xs];
 			assert(map.size());
 			e000 = map[k0];
 			e100 = map[k0 + 1];
 			e010 = map[k0 + rec.num_probes[0]];
 			e001 = map[k0 + rec.num_probes[0] * rec.num_probes[1]];
-			e += e000;
-			s.d[i0] = (e100 - e000) * rec.granularity_inverse;
-			s.d[i1] = (e010 - e000) * rec.granularity_inverse;
-			s.d[i2] = (e001 - e000) * rec.granularity_inverse;
+			y += e000;
+			d[i0] = (e100 - e000) * rec.granularity_inverse;
+			d[i1] = (e010 - e000) * rec.granularity_inverse;
+			d[i2] = (e001 - e000) * rec.granularity_inverse;
 		}
-		for (const size_t i : f.branches)
+		for (const size_t i : m.branches)
 		{
 			const frame& b = frames[i];
 			i0 = 3 * b.rotorYidx;
-			s.c[i0    ] = y0 + m0 * b.yy[0] + m1 * b.yy[1] + m2 * b.yy[2];
-			s.c[i0 + 1] = y1 + m3 * b.yy[0] + m4 * b.yy[1] + m5 * b.yy[2];
-			s.c[i0 + 2] = y2 + m6 * b.yy[0] + m7 * b.yy[1] + m8 * b.yy[2];
+			c[i0    ] = y0 + m0 * b.yy[0] + m1 * b.yy[1] + m2 * b.yy[2];
+			c[i0 + 1] = y1 + m3 * b.yy[0] + m4 * b.yy[1] + m5 * b.yy[2];
+			c[i0 + 2] = y2 + m6 * b.yy[0] + m7 * b.yy[1] + m8 * b.yy[2];
 
-			// Skip inactive BRANCH frames.
+			// Skip inactive BRANCH frame
 			if (!b.active) continue;
 
-			// Update s.a of BRANCH frames.
+			// Update a of BRANCH frame
 			a0 = m0 * b.xy[0] + m1 * b.xy[1] + m2 * b.xy[2];
 			a1 = m3 * b.xy[0] + m4 * b.xy[1] + m5 * b.xy[2];
 			a2 = m6 * b.xy[0] + m7 * b.xy[1] + m8 * b.xy[2];
 			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 1e-3f);
 			k0 = 3 * i;
-			s.a[k0    ] = a0;
-			s.a[k0 + 1] = a1;
-			s.a[k0 + 2] = a2;
+			a[k0    ] = a0;
+			a[k0 + 1] = a1;
+			a[k0 + 2] = a2;
 
-			// Update s.q of BRANCH frames.
-			h = s.x[t++] * 0.5f;
+			// Update q of BRANCH frame
+			h = x[w++] * 0.5f;
 			sinh = sin(h);
 			r0 = cos(h);
 			r1 = sinh * a0;
@@ -413,13 +399,13 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 			q03 = r0 * q3 + r1 * q2 - r2 * q1 + r3 * q0;
 			assert(fabs(q00*q00 + q01*q01 + q02*q02 + q03*q03 - 1.0f) < 1e-3f);
 			k0 = 4 * i;
-			s.q[k0    ] = q00;
-			s.q[k0 + 1] = q01;
-			s.q[k0 + 2] = q02;
-			s.q[k0 + 3] = q03;
+			q[k0    ] = q00;
+			q[k0 + 1] = q01;
+			q[k0 + 2] = q02;
+			q[k0 + 3] = q03;
 		}
 	}
-	assert(t == nv + 1);
+	assert(w == nv + 1);
 
 	// Calculate intra-ligand free energy.
 	const size_t num_interacting_pairs = interacting_pairs.size();
@@ -432,80 +418,80 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		k0 = 3 * p.i1;
 		k1 = k0 + 1;
 		k2 = k1 + 1;
-		v0 = s.c[k0] - s.c[i0];
-		v1 = s.c[k1] - s.c[i1];
-		v2 = s.c[k2] - s.c[i2];
+		v0 = c[k0] - c[i0];
+		v1 = c[k1] - c[i1];
+		v2 = c[k2] - c[i2];
 		vs = v0*v0 + v1*v1 + v2*v2;
 		if (vs < scoring_function::cutoff_sqr)
 		{
-			t = p.p_offset + static_cast<size_t>(sf.ns * vs);
-			e += sf.e[t];
-			dor = sf.d[t];
+			w = p.p_offset + static_cast<size_t>(sf.ns * vs);
+			y += sf.e[w];
+			dor = sf.d[w];
 			d0 = dor * v0;
 			d1 = dor * v1;
 			d2 = dor * v2;
-			s.d[i0] -= d0;
-			s.d[i1] -= d1;
-			s.d[i2] -= d2;
-			s.d[k0] += d0;
-			s.d[k1] += d1;
-			s.d[k2] += d2;
+			d[i0] -= d0;
+			d[i1] -= d1;
+			d[i2] -= d2;
+			d[k0] += d0;
+			d[k1] += d1;
+			d[k2] += d2;
 		}
 	}
 
 	// If the free energy is no better than the upper bound, refuse this conformation.
-	if (e >= e_upper_bound) return false;
+	if (y >= e_upper_bound) return false;
 
 	// Store e from register into memory.
-	*s.e = e;
+	*e = y;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
 	for (i = 0; i < 3 * nf; ++i)
 	{
-		s.f[i] = 0.0f;
-		s.t[i] = 0.0f;
+		f[i] = 0.0f;
+		t[i] = 0.0f;
 	}
 	assert(k == nf);
-	t = 6 + nt;
+	w = 6 + nt;
 	while (true)
 	{
-		const frame& f = frames[--k];
+		const frame& m = frames[--k];
 
-		// Load variables from memory into registers.
+		// Load variables from memory into register
 		k0 = 3 * k;
 		k1 = k0 + 1;
 		k2 = k1 + 1;
-		f0 = s.f[k0];
-		f1 = s.f[k1];
-		f2 = s.f[k2];
-		t0 = s.t[k0];
-		t1 = s.t[k1];
-		t2 = s.t[k2];
-		i0 = 3 * f.rotorYidx;
-		y0 = s.c[i0];
-		y1 = s.c[i0 + 1];
-		y2 = s.c[i0 + 2];
-		for (i = f.beg; i < f.end; ++i)
+		f0 = f[k0];
+		f1 = f[k1];
+		f2 = f[k2];
+		t0 = t[k0];
+		t1 = t[k1];
+		t2 = t[k2];
+		i0 = 3 * m.rotorYidx;
+		y0 = c[i0];
+		y1 = c[i0 + 1];
+		y2 = c[i0 + 2];
+		for (i = m.beg; i < m.end; ++i)
 		{
 			i0 = 3 * i;
 			i1 = i0 + 1;
 			i2 = i1 + 1;
-			d0 = s.d[i0];
-			d1 = s.d[i1];
-			d2 = s.d[i2];
+			d0 = d[i0];
+			d1 = d[i1];
+			d2 = d[i2];
 
 			// The derivatives with respect to the position, orientation, and torsions
 			// would be the negative total force acting on the ligand,
 			// the negative total torque, and the negative torque projections, respectively,
 			// where the projections refer to the torque applied to the branch moved by the torsion,
-			// projected on its rotation axis.
+			// projected on its rotation axi
 			f0 += d0;
 			f1 += d1;
 			f2 += d2;
-			if (i == f.beg) continue;
-			v0 = s.c[i0] - y0;
-			v1 = s.c[i1] - y1;
-			v2 = s.c[i2] - y2;
+			if (i == m.beg) continue;
+			v0 = c[i0] - y0;
+			v1 = c[i1] - y1;
+			v2 = c[i2] - y2;
 			t0 += v1 * d2 - v2 * d1;
 			t1 += v2 * d0 - v0 * d2;
 			t2 += v0 * d1 - v1 * d0;
@@ -514,46 +500,66 @@ bool ligand::evaluate(solution& s, const scoring_function& sf, const receptor& r
 		// Save the aggregated force and torque of ROOT frame to g.
 		if (k == 0)
 		{
-			s.g[0] = f0;
-			s.g[1] = f1;
-			s.g[2] = f2;
-			s.g[3] = t0;
-			s.g[4] = t1;
-			s.g[5] = t2;
+			g[0] = f0;
+			g[1] = f1;
+			g[2] = f2;
+			g[3] = t0;
+			g[4] = t1;
+			g[5] = t2;
 			return true;
 		}
 
 		// Save the aggregated torque of active BRANCH frames to g.
-		if (f.active)
+		if (m.active)
 		{
-			s.g[--t] = t0 * s.a[k0] + t1 * s.a[k1] + t2 * s.a[k2]; // dot product
+			g[--w] = t0 * a[k0] + t1 * a[k1] + t2 * a[k2]; // dot product
 		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		k0 = 3 * f.parent;
+		k0 = 3 * m.parent;
 		k1 = k0 + 1;
 		k2 = k1 + 1;
-		s.f[k0] += f0;
-		s.f[k1] += f1;
-		s.f[k2] += f2;
-		i0 = 3 * frames[f.parent].rotorYidx;
-		v0 = y0 - s.c[i0    ];
-		v1 = y1 - s.c[i0 + 1];
-		v2 = y2 - s.c[i0 + 2];
-		s.t[k0] += t0 + v1 * f2 - v2 * f1;
-		s.t[k1] += t1 + v2 * f0 - v0 * f2;
-		s.t[k2] += t2 + v0 * f1 - v1 * f0;
+		f[k0] += f0;
+		f[k1] += f1;
+		f[k2] += f2;
+		i0 = 3 * frames[m.parent].rotorYidx;
+		v0 = y0 - c[i0    ];
+		v1 = y1 - c[i0 + 1];
+		v2 = y2 - c[i0 + 2];
+		t[k0] += t0 + v1 * f2 - v2 * f1;
+		t[k1] += t1 + v2 * f0 - v0 * f2;
+		t[k2] += t2 + v0 * f1 - v1 * f0;
 	}
 }
 
-int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const size_t threadIdx, const size_t blockDim) const
+int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const size_t threadIdx, const size_t blockDim) const
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
-	solution s1, s2;
-	s0.resize(nv, nf, na);
-	s1.resize(nv, nf, na);
-	s2.resize(nv, nf, na);
+	float* s0x = s0e + ox;
+	float* s1x = s1e + ox;
+	float* s2x = s2e + ox;
+	float* s0g = s0e + og;
+	float* s1g = s1e + og;
+	float* s2g = s2e + og;
+	float* s0a = s0e + oa;
+	float* s1a = s1e + oa;
+	float* s2a = s2e + oa;
+	float* s0q = s0e + oq;
+	float* s1q = s1e + oq;
+	float* s2q = s2e + oq;
+	float* s0c = s0e + oc;
+	float* s1c = s1e + oc;
+	float* s2c = s2e + oc;
+	float* s0d = s0e + od;
+	float* s1d = s1e + od;
+	float* s2d = s2e + od;
+	float* s0f = s0e + of;
+	float* s1f = s1e + of;
+	float* s2f = s2e + of;
+	float* s0t = s0e + ot;
+	float* s1t = s1e + ot;
+	float* s2t = s2e + ot;
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
 	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco;
@@ -562,21 +568,21 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
 
 	// Randomize s0.x.
-	s0.x[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
-	s0.x[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
-	s0.x[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
+	s0x[0] = rec.center[0] + uniform_11(rng) * rec.size[0];
+	s0x[1] = rec.center[1] + uniform_11(rng) * rec.size[1];
+	s0x[2] = rec.center[2] + uniform_11(rng) * rec.size[2];
 	q0 = uniform_11(rng);
 	q1 = uniform_11(rng);
 	q2 = uniform_11(rng);
 	q3 = uniform_11(rng);
 	qni = 1.0f / sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
-	s0.x[3] = q0 * qni;
-	s0.x[4] = q1 * qni;
-	s0.x[5] = q2 * qni;
-	s0.x[6] = q3 * qni;
+	s0x[3] = q0 * qni;
+	s0x[4] = q1 * qni;
+	s0x[5] = q2 * qni;
+	s0x[6] = q3 * qni;
 	for (i = 0; i < nt; ++i)
 	{
-		s0.x[7 + i] = uniform_11(rng);
+		s0x[7 + i] = uniform_11(rng);
 	}
 /*
 	s0.x[0] =  49.799f;
@@ -591,20 +597,20 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 		s0.x[7 + i] = 0.0f;
 	}
 */
-	evaluate(s0, sf, rec, e_upper_bound);
+	evaluate(s0x, s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, sf, rec, e_upper_bound);
 
 	// Repeat for a number of generations.
 	for (g = 0; g < num_generations; ++g)
 	{
 		// Mutate s0.x into s1.x
-		s1.x[0] = s0.x[0] + uniform_11(rng);
-		s1.x[1] = s0.x[1] + uniform_11(rng);
-		s1.x[2] = s0.x[2] + uniform_11(rng);
+		s1x[0] = s0x[0] + uniform_11(rng);
+		s1x[1] = s0x[1] + uniform_11(rng);
+		s1x[2] = s0x[2] + uniform_11(rng);
 		for (i = 3; i < nv + 1;  ++i)
 		{
-			s1.x[i] = s0.x[i];
+			s1x[i] = s0x[i];
 		}
-		evaluate(s1, sf, rec, e_upper_bound);
+		evaluate(s1x, s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, sf, rec, e_upper_bound);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
@@ -633,7 +639,7 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 				sum = 0.0f;
 				for (j = 0; j < nv; ++j)
 				{
-					sum += h[mp(i, j)] * s1.g[j];
+					sum += h[mp(i, j)] * s1g[j];
 				}
 				p[i] = -sum;
 			}
@@ -642,7 +648,7 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 			pg1 = 0;
 			for (i = 0; i < nv; ++i)
 			{
-				pg1 += p[i] * s1.g[i];
+				pg1 += p[i] * s1g[i];
 			}
 
 			// Perform a line search to find an appropriate alpha.
@@ -652,9 +658,9 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 			for (j = 0; j < num_alphas; ++j)
 			{
 				// Calculate c2 = c1 + ap.
-				s2.x[0] = s1.x[0] + alpha * p[0];
-				s2.x[1] = s1.x[1] + alpha * p[1];
-				s2.x[2] = s1.x[2] + alpha * p[2];
+				s2x[0] = s1x[0] + alpha * p[0];
+				s2x[1] = s1x[1] + alpha * p[1];
+				s2x[2] = s1x[2] + alpha * p[2];
 				po0 = p[3];
 				po1 = p[4];
 				po2 = p[5];
@@ -666,34 +672,34 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 				pq2 = u*po1;
 				pq3 = u*po2;
 				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 1e-3f);
-				x1q0 = s1.x[3];
-				x1q1 = s1.x[4];
-				x1q2 = s1.x[5];
-				x1q3 = s1.x[6];
+				x1q0 = s1x[3];
+				x1q1 = s1x[4];
+				x1q2 = s1x[5];
+				x1q3 = s1x[6];
 				assert(fabs(x1q0*x1q0 + x1q1*x1q1 + x1q2*x1q2 + x1q3*x1q3 - 1.0f) < 1e-3f);
 				x2q0 = pq0 * x1q0 - pq1 * x1q1 - pq2 * x1q2 - pq3 * x1q3;
 				x2q1 = pq0 * x1q1 + pq1 * x1q0 + pq2 * x1q3 - pq3 * x1q2;
 				x2q2 = pq0 * x1q2 - pq1 * x1q3 + pq2 * x1q0 + pq3 * x1q1;
 				x2q3 = pq0 * x1q3 + pq1 * x1q2 - pq2 * x1q1 + pq3 * x1q0;
 				assert(fabs(x2q0*x2q0 + x2q1*x2q1 + x2q2*x2q2 + x2q3*x2q3 - 1.0f) < 1e-3f);
-				s2.x[3] = x2q0;
-				s2.x[4] = x2q1;
-				s2.x[5] = x2q2;
-				s2.x[6] = x2q3;
+				s2x[3] = x2q0;
+				s2x[4] = x2q1;
+				s2x[5] = x2q2;
+				s2x[6] = x2q3;
 				for (i = 0; i < nt; ++i)
 				{
-					s2.x[7 + i] = s1.x[7 + i] + alpha * p[6 + i];
+					s2x[7 + i] = s1x[7 + i] + alpha * p[6 + i];
 				}
 
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(s2, sf, rec, *s1.e + 0.0001f * alpha * pg1))
+				if (evaluate(s2x, s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, sf, rec, *s1e + 0.0001f * alpha * pg1))
 				{
 					pg2 = 0;
 					for (i = 0; i < nv; ++i)
 					{
-						pg2 += p[i] * s2.g[i];
+						pg2 += p[i] * s2g[i];
 					}
 					if (pg2 >= 0.9f * pg1)
 						break; // An appropriate alpha is found.
@@ -708,7 +714,7 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 			// Update Hessian matrix h.
 			for (i = 0; i < nv; ++i) // Calculate y = g2 - g1.
 			{
-				y[i] = s2.g[i] - s1.g[i];
+				y[i] = s2g[i] - s1g[i];
 			}
 			for (i = 0; i < nv; ++i) // Calculate mhy = -h * y.
 			{
@@ -740,23 +746,23 @@ int ligand::bfgs(solution& s0, const scoring_function& sf, const receptor& rec, 
 			// Move to the next iteration.
 			for (i = 0; i < nv + 1; ++i)
 			{
-				s1.x[i] = s2.x[i];
+				s1x[i] = s2x[i];
 			}
-			*s1.e = *s2.e;
+			*s1e = *s2e;
 			for (i = 0; i < nv; ++i)
 			{
-				s1.g[i] = s2.g[i];
+				s1g[i] = s2g[i];
 			}
 		}
 
 		// Accept c1 according to Metropolis criteria.
-		if (*s1.e < *s0.e)
+		if (*s1e < *s0e)
 		{
 			for (i = 0; i < nv + 1; ++i)
 			{
-				s0.x[i] = s1.x[i];
+				s0x[i] = s1x[i];
 			}
-			*s0.e = *s1.e;
+			*s0e = *s1e;
 		}
 	}
 	return 0;
