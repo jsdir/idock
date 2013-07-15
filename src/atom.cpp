@@ -35,6 +35,7 @@ const array<string, atom::n> atom::ad_strings =
 	"Cd", // 26
 	"As", // 27
 	"Sr", // 28
+	"U" , // 29
 };
 
 /// AutoDock4 covalent radii, factorized by 1.1 for extra allowance.
@@ -69,6 +70,7 @@ const array<float, atom::n> atom::ad_covalent_radii =
 	1.628f, // 26 = Cd, 1.628 = 1.1 * 1.48
 	1.309f, // 27 = As, 1.309 = 1.1 * 1.19
 	2.112f, // 28 = Sr, 2.112 = 1.1 * 1.92
+	2.156f, // 29 = U , 2.156 = 1.1 * 1.96
 };
 
 /// Mapping from AutoDock4 atom type to XScore atom type.
@@ -103,6 +105,7 @@ const array<size_t, atom::n> atom::ad_to_xs =
 	14, // 26 = Cd -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 27 = As -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 28 = Sr -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 29 = U  -> Met_D = 14, Metal, hydrogen bond donor.
 };
 
 /// Mapping from AutoDock4 atom type to RF-Score atom type.
@@ -137,6 +140,7 @@ const array<size_t, atom::n> atom::ad_to_rf =
 	n, // 26 = Cd -> dummy
 	n, // 27 = As -> dummy
 	n, // 28 = Sr -> dummy
+	n, // 29 = U  -> dummy
 };
 
 atom::atom(const string& line) :
