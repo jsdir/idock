@@ -601,12 +601,16 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 	for (g = 0; g < num_generations; ++g)
 	{
 		// Mutate s0.x into s1.x
-		s1x[o = threadIdx] = s0x[o] + uniform_11(rng);
-		s1x[o += blockDim] = s0x[o] + uniform_11(rng);
-		s1x[o += blockDim] = s0x[o] + uniform_11(rng);
+		o = threadIdx;
+		s1x[o] = s0x[o] + uniform_11(rng);
+		o += blockDim;
+		s1x[o] = s0x[o] + uniform_11(rng);
+		o += blockDim;
+		s1x[o] = s0x[o] + uniform_11(rng);
 		for (i = 3; i < nv + 1;  ++i)
 		{
-			s1x[o += blockDim] = s0x[o];
+			o += blockDim;
+			s1x[o] = s0x[o];
 		}
 		evaluate(s1x, s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, sf, rec, e_upper_bound, threadIdx, blockDim);
 
@@ -656,9 +660,12 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 			for (j = 0; j < num_alphas; ++j)
 			{
 				// Calculate c2 = c1 + ap.
-				s2x[o = threadIdx] = s1x[o] + alpha * p[0];
-				s2x[o += blockDim] = s1x[o] + alpha * p[1];
-				s2x[o += blockDim] = s1x[o] + alpha * p[2];
+				o = threadIdx;
+				s2x[o] = s1x[o] + alpha * p[0];
+				o += blockDim;
+				s2x[o] = s1x[o] + alpha * p[1];
+				o += blockDim;
+				s2x[o] = s1x[o] + alpha * p[2];
 				po0 = p[3];
 				po1 = p[4];
 				po2 = p[5];
@@ -686,7 +693,8 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 				s2x[o += blockDim] = x2q3;
 				for (i = 0; i < nt; ++i)
 				{
-					s2x[o += blockDim] = s1x[o] + alpha * p[6 + i];
+					o += blockDim;
+					s2x[o] = s1x[o] + alpha * p[6 + i];
 				}
 
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
@@ -710,10 +718,12 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 			if (j == num_alphas) break;
 
 			// Update Hessian matrix h.
-			y[0] = s2g[o = threadIdx] - s1g[o];
+			o = threadIdx;
+			y[0] = s2g[o] - s1g[o];
 			for (i = 1; i < nv; ++i) // Calculate y = g2 - g1.
 			{
-				y[i] = s2g[o += blockDim] - s1g[o];
+				o += blockDim;
+				y[i] = s2g[o] - s1g[o];
 			}
 			for (i = 0; i < nv; ++i) // Calculate mhy = -h * y.
 			{
@@ -744,15 +754,19 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 
 			// Move to the next iteration.
 			s1e[threadIdx] = s2e[threadIdx];
-			s1x[o = threadIdx] = s2x[o];
+			o = threadIdx;
+			s1x[o] = s2x[o];
 			for (i = 1; i < nv + 1; ++i)
 			{
-				s1x[o += blockDim] = s2x[o];
+				o += blockDim;
+				s1x[o] = s2x[o];
 			}
-			s1g[o = threadIdx] = s2g[o];
+			o = threadIdx;
+			s1g[o] = s2g[o];
 			for (i = 1; i < nv; ++i)
 			{
-				s1g[o += blockDim] = s2g[o];
+				o += blockDim;
+				s1g[o] = s2g[o];
 			}
 		}
 
@@ -760,10 +774,12 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 		if (s1e[threadIdx] < s0e[threadIdx])
 		{
 			s0e[threadIdx] = s1e[threadIdx];
-			s0x[o = threadIdx] = s1x[o];
+			o = threadIdx;
+			s0x[o] = s1x[o];
 			for (i = 1; i < nv + 1; ++i)
 			{
-				s0x[o += blockDim] = s1x[o];
+				o += blockDim;
+				s0x[o] = s1x[o];
 			}
 		}
 	}
