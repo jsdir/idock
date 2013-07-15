@@ -215,25 +215,36 @@ int main(int argc, char* argv[])
 		cout << setw(8) << ++num_ligands << " | " << setw(15) << stem << " | " << flush;
 
 		// Run the Monte Carlo tasks in parallel
-		ptr_vector<solution> s0s, s1s, s2s;
-		s0s.resize(num_mc_tasks);
-		s1s.resize(num_mc_tasks);
-		s2s.resize(num_mc_tasks);
-		for (auto& s : s0s) s.resize(lig.oz);
-		for (auto& s : s1s) s.resize(lig.oz);
-		for (auto& s : s2s) s.resize(lig.oz);
+		const size_t solution_size = lig.oz * num_mc_tasks;
+		vector<float> s0s(solution_size), s1s(solution_size), s2s(solution_size);
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
-			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), s0s[i].data(), s1s[i].data(), s2s[i].data(), cref(sf), cref(rec), rng(), num_generations, i, num_mc_tasks)));
+			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), s0s.data(), s1s.data(), s2s.data(), cref(sf), cref(rec), rng(), num_generations, i, num_mc_tasks)));
 		}
 		boost::timer::auto_cpu_timer t;
 		tp.sync(25);
 		t.stop();
 		cout << " | " << flush;
 
-		s0s.sort();
-		cout << setw(8) << s0s.front().front() << " | " << flush;
-		summaries.push_back(new summary(stem, s0s.front().front()));
+		ptr_vector<solution> solutions;
+		solutions.resize(num_mc_tasks);
+		for (size_t i = 0; i < num_mc_tasks; ++i)
+		{
+			solution& s = solutions[i];
+			s.resize(lig.oz);
+			s.e = s.data();
+			s.x = s.e + lig.ox;
+			*s.e = s0s[i];
+			size_t o;
+			s.x[0] = s0s[o = lig.ox * num_mc_tasks + i];
+			for (size_t j = 1; j < lig.nv + 1; ++j)
+			{
+				s.x[j] = s0s[o += num_mc_tasks];
+			}
+		}
+		solutions.sort();
+		cout << setw(8) << solutions.front().front() << " | " << flush;
+		summaries.push_back(new summary(stem, solutions.front().front()));
 
 		// Cluster results. Ligands with RMSD < 2.0 will be clustered into the same cluster.
 		const float required_square_error = 4.0f * lig.na;
@@ -241,31 +252,29 @@ int main(int argc, char* argv[])
 		representatives.reserve(max_conformations);
 		for (size_t k = 0; k < num_mc_tasks && representatives.size() < representatives.capacity(); ++k)
 		{
-			solution& sk = s0s[k];
+			solution& s = solutions[k];
 			// Solutions store x and e only. Evaluate c and skip f and t.
-			sk.e = sk.data();
-			sk.x = sk.e + lig.ox;
-			sk.g = sk.e + lig.og;
-			sk.a = sk.e + lig.oa;
-			sk.q = sk.e + lig.oq;
-			sk.c = sk.e + lig.oc;
-			sk.d = sk.e + lig.od;
-			sk.f = sk.e + lig.of;
-			sk.t = sk.e + lig.ot;
-			lig.evaluate(sk.x, sk.e, sk.g, sk.a, sk.q, sk.c, sk.d, sk.f, sk.t, sf, rec, -40.0f * lig.na);
+			s.g = s.e + lig.og;
+			s.a = s.e + lig.oa;
+			s.q = s.e + lig.oq;
+			s.c = s.e + lig.oc;
+			s.d = s.e + lig.od;
+			s.f = s.e + lig.of;
+			s.t = s.e + lig.ot;
+			lig.evaluate(s.x, s.e, s.g, s.a, s.q, s.c, s.d, s.f, s.t, sf, rec, -40.0f * lig.na, 0, 1);
 			bool representative = true;
 			for (size_t j = 0; j < k; ++j)
 			{
-				const solution& sj = s0s[j];
+				const solution& sj = solutions[j];
 				float this_square_error = 0.0f;
 				for (size_t i = 0; i < lig.na; ++i)
 				{
 					const size_t i0 = 3 * i;
 					const size_t i1 = i0 + 1;
 					const size_t i2 = i1 + 1;
-					const float d0 = sk.c[i0] - sj.c[i0];
-					const float d1 = sk.c[i1] - sj.c[i1];
-					const float d2 = sk.c[i2] - sj.c[i2];
+					const float d0 = s.c[i0] - sj.c[i0];
+					const float d1 = s.c[i1] - sj.c[i1];
+					const float d2 = s.c[i2] - sj.c[i2];
 					this_square_error += d0 * d0 + d1 * d1 + d2 * d2;
 				}
 				if (this_square_error < required_square_error)
@@ -284,7 +293,7 @@ int main(int argc, char* argv[])
 
 		// Write models to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		lig.save(output_ligand_path, s0s, representatives);
+		lig.save(output_ligand_path, solutions, representatives);
 	}
 
 	// Sort and write ligand summary to the log file.
