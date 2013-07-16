@@ -11,7 +11,7 @@ public:
 	explicit kernel(const scoring_function& sf, const receptor& rec, const size_t num_mc_tasks, const size_t num_generations);
 
 	// Update grid map pointers.
-	void update(const vector<vector<float>>& maps, const vector<size_t>& xs);
+	void update(const receptor& rec, const vector<size_t>& xs);
 
 	// Launch the kernel.
 	void launch(vector<float>& h_s0, const ligand& lig);
