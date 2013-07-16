@@ -216,10 +216,10 @@ int main(int argc, char* argv[])
 
 		// Run the Monte Carlo tasks in parallel
 		const size_t solution_size = lig.oz * num_mc_tasks;
-		vector<float> s0s(solution_size), s1s(solution_size), s2s(solution_size);
+		vector<float> s0(solution_size), s1(solution_size), s2(solution_size);
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
-			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), s0s.data(), s1s.data(), s2s.data(), cref(sf), cref(rec), rng(), num_generations, i, num_mc_tasks)));
+			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), s0.data(), s1.data(), s2.data(), cref(sf), cref(rec), rng(), num_generations, i, num_mc_tasks)));
 		}
 		boost::timer::auto_cpu_timer t;
 		tp.sync(25);
@@ -234,12 +234,12 @@ int main(int argc, char* argv[])
 			s.resize(lig.oz);
 			s.e = s.data();
 			s.x = s.e + lig.ox;
-			*s.e = s0s[i];
+			*s.e = s0[i];
 			size_t o;
-			s.x[0] = s0s[o = lig.ox * num_mc_tasks + i];
+			s.x[0] = s0[o = lig.ox * num_mc_tasks + i];
 			for (size_t j = 1; j < lig.nv + 1; ++j)
 			{
-				s.x[j] = s0s[o += num_mc_tasks];
+				s.x[j] = s0[o += num_mc_tasks];
 			}
 		}
 		solutions.sort();
