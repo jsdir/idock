@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 	mt19937_64 rng(seed);
 
 //	cout << "Setting up a CUDA kernel" << endl;
-//	kernel knl(sf, rec, num_mc_tasks, num_generations);
+//	kernel knl(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations);
 
 	// Perform docking for each file in the ligand folder.
 	ptr_vector<summary> summaries;
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
 			}
 			tp.sync(25);
 			cout << '\r' << setw(55) << '\r';
-//			knl.update(rec, xs);
+//			knl.update(rec.maps, rec.num_probes_product, xs.data(), xs.size());
 		}
 
 		// Output the ligand file stem.
@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
 			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), s0.data(), s1.data(), s2.data(), cref(sf), cref(rec), rng(), num_generations, i, num_mc_tasks)));
 		}
 		boost::timer::auto_cpu_timer t;
-//		knl.launch(s0, lig);
+//		knl.launch(s0.data(), lig, lig.oz, lig.og, seeds);
 		tp.sync(25);
 		t.stop();
 		cout << " | " << flush;
