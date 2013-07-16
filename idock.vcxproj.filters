@@ -52,5 +52,13 @@
     <ClInclude Include="src\utility.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\kernel.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\kernel.cu">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>
