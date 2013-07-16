@@ -387,8 +387,8 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 
 			// Update q of BRANCH frame
 			h = x[(w++) * blockDim + threadIdx] * 0.5f;
-			sinh = sin(h);
-			r0 = cos(h);
+			sinh = sinf(h);
+			r0 = cosf(h);
 			r1 = sinh * a0;
 			r2 = sinh * a1;
 			r3 = sinh * a2;
@@ -671,8 +671,8 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 				po2 = p[5];
 				pon = sqrt(po0*po0 + po1*po1 + po2*po2);
 				hn = 0.5f * alpha * pon;
-				u = sin(hn) / pon;
-				pq0 = cos(hn);
+				u = sinf(hn) / pon;
+				pq0 = cosf(hn);
 				pq1 = u*po0;
 				pq2 = u*po1;
 				pq3 = u*po2;
