@@ -173,8 +173,7 @@ ligand::ligand(const path& p) : nt(0)
 	frames.back().end = na = atoms.size();
 	nv = 6 + nt;
 	nf = frames.size();
-	assert(nf >= 1);
-	assert(nf - 1 >= nt);
+	assert(nf >= 1 + nt);
 	ox = 1;
 	og = ox + nv + 1;
 	oa = og + nv;
@@ -504,7 +503,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 		t[k0] = 0.0f;
 	}
 	assert(k == nf);
-	w = 6 + nt;
+	w = nv;
 	while (true)
 	{
 		--k;
@@ -613,7 +612,7 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
 	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco;
-	size_t g, i, j, o;
+	int g, i, j, o;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
 
@@ -633,7 +632,7 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 	s0x[o += blockDim] = q1 * qni;
 	s0x[o += blockDim] = q2 * qni;
 	s0x[o += blockDim] = q3 * qni;
-	for (i = 0; i < nt; ++i)
+	for (i = 6; i < nv; ++i)
 	{
 		s0x[o += blockDim] = uniform_11(rng);
 	}
@@ -645,7 +644,7 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 	s0.x[o += blockDim] = 0.0f;
 	s0.x[o += blockDim] = 0.0f;
 	s0.x[o += blockDim] = 0.0f;
-	for (i = 0; i < nt; ++i)
+	for (i = 6; i < nv; ++i)
 	{
 		s0.x[o += blockDim] = 0.0f;
 	}
@@ -746,10 +745,10 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 				s2x[o += blockDim] = x2q1;
 				s2x[o += blockDim] = x2q2;
 				s2x[o += blockDim] = x2q3;
-				for (i = 0; i < nt; ++i)
+				for (i = 6; i < nv; ++i)
 				{
 					o += blockDim;
-					s2x[o] = s1x[o] + alpha * p[6 + i];
+					s2x[o] = s1x[o] + alpha * p[i];
 				}
 
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
