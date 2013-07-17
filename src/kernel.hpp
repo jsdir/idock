@@ -2,6 +2,9 @@
 #ifndef IDOCK_KERNEL_HPP
 #define IDOCK_KERNEL_HPP
 
+#include <vector>
+using namespace std;
+
 const size_t sf_n = 15;
 
 class kernel
@@ -11,10 +14,10 @@ public:
 	explicit kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const float* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int num_generations);
 
 	// Update grid map pointers.
-	void update(const float* h_maps[], const size_t num_probes_product, const size_t* xs, const size_t n);
+	void update(const vector<vector<float> > h_maps, const size_t num_probes_product, const vector<size_t>& xs);
 
 	// Launch the kernel.
-	void launch(float* h_s0, const float* lig, const int n, const size_t oz, const size_t og, const size_t* seed);
+	void launch(vector<float>& h_ex, const int* h_lig, const int nv, const int nf, const int na, const int np, const size_t* seed);
 
 	// Free device memory.
 	~kernel();

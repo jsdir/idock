@@ -27,7 +27,7 @@ bool evaluate(const float* x, float* e, float* g, float* a, float* q, float* c, 
 
 __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
-void bfgs(float* __restrict__ s0e, float* __restrict__ s1e, float* __restrict__ s2e, const int seed)
+void bfgs(float* __restrict__ s0e, float* __restrict__ s1e, float* __restrict__ s2e, const float* lig, const int nv, const int nf, const int na, const int np, const int seed)
 {
 	float h, s, c;
 	int i = blockIdx.x * blockDim.x + threadIdx.x;
@@ -63,40 +63,49 @@ kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, cons
 	memset(d_maps, 0, sizeof(d_maps));
 }
 
-void kernel::update(const float* h_maps[], const size_t num_probes_product, const size_t* xs, const size_t n)
+void kernel::update(const vector<vector<float> > h_maps, const size_t map_bytes, const vector<size_t>& xs)
 {
-	for (int i = 0; i < n; ++i)
+	for (int i = 0; i < xs.size(); ++i)
 	{
 		const size_t t = xs[i];
 		float* d_m;
-		cudaMalloc(&d_m, sizeof(float) * num_probes_product);
-		cudaMemcpy(d_m, &h_maps[t], sizeof(float) * num_probes_product, cudaMemcpyHostToDevice);
+		cudaMalloc(&d_m, map_bytes);
+		cudaMemcpy(d_m, &h_maps[t].front(), map_bytes, cudaMemcpyHostToDevice);
 		d_maps[t] = d_m;
 	}
-	cudaMemcpyToSymbol(c_maps, &d_maps.front(), sizeof(c_maps));
+	assert(sizeof(c_maps) == sizeof(d_maps));
+	cudaMemcpyToSymbol(c_maps, d_maps, sizeof(c_maps));
 }
 
-void kernel::launch(float* h_s0, const float* h_lig, const int n, const size_t oz, const size_t og, const size_t* seed)
+void kernel::launch(vector<float>& h_ex, const int* h_lig, const int nv, const int nf, const int na, const int np, const size_t* seed)
 {
-//	cudaMemcpy(d_lig, &h_lig, sizeof(float) * n, cudaMemcpyHostToDevice);
+	// Copy ligand content from host memory to device memory.
+	const size_t lig_bytes = sizeof(int) * (11 * nf + nf - 1 + 4 * na + 3 * np);
+	float* d_lig;
+	cudaMalloc(&d_lig, lig_bytes);
+	cudaMemcpy(d_lig, &h_lig, lig_bytes, cudaMemcpyHostToDevice);
 
-	const size_t solution_size = oz * num_mc_tasks;
+	// Allocate device memory for solutions.
+	const size_t sln_bytes = sizeof(float) * (1 + (nv + 1) + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks;
 	float* d_s0, d_s1, d_s2;
-	cudaMalloc(&d_s0, solution_size);
-	cudaMalloc(&d_s1, solution_size);
-	cudaMalloc(&d_s2, solution_size);
+	cudaMalloc(&d_s0, sln_bytes);
+	cudaMalloc(&d_s1, sln_bytes);
+	cudaMalloc(&d_s2, sln_bytes);
 
-	bfgs<<<num_mc_tasks / 128, 128, sizeof(float) * n>>>(d_s0, d_s1, d_s2);
+	// Invoke CUDA kernel.
+	bfgs<<<num_mc_tasks / 128, 128, lig_bytes>>>(d_s0, d_s1, d_s2, d_lig, nv, nf, na, np);
 
-	// Transfer e and x only.
-	const size_t result_size = og * num_mc_tasks;
-	h_s0.resize(result_size);
-	cudaMemcpy(h_s0, d_s0, result_size, cudaMemcpyDeviceToHost);
+	// Copy e and x from device memory to host memory.
+	const size_t ex_size = (1 + nv + 1) * num_mc_tasks;
+	const size_t ex_bytes = sizeof(float) * ex_size;
+	h_ex.resize(ex_size);
+	cudaMemcpy(h_ex, d_s0, ex_bytes, cudaMemcpyDeviceToHost);
 
 	// Free device memory.
 	cudaFree(d_s0);
 	cudaFree(d_s1);
 	cudaFree(d_s2);
+	cudaFree(d_lig);
 }
 
 kernel::~kernel()
