@@ -17,7 +17,7 @@ public:
 	void update(const vector<vector<float> > h_maps, const size_t num_probes_product, const vector<size_t>& xs);
 
 	// Launch the kernel.
-	void launch(vector<float>& h_ex, const int* h_lig, const int nv, const int nf, const int na, const int np, const size_t* seed);
+	void launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv, const int nf, const int na, const int np, const size_t* seed);
 
 	// Free device memory.
 	~kernel();

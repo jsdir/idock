@@ -77,15 +77,15 @@ void kernel::update(const vector<vector<float> > h_maps, const size_t map_bytes,
 	cudaMemcpyToSymbol(c_maps, d_maps, sizeof(c_maps));
 }
 
-void kernel::launch(vector<float>& h_ex, const int* h_lig, const int nv, const int nf, const int na, const int np, const size_t* seed)
+void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv, const int nf, const int na, const int np, const size_t* seed)
 {
 	// Copy ligand content from host memory to device memory.
-	const size_t lig_bytes = sizeof(int) * (11 * nf + nf - 1 + 4 * na + 3 * np);
+	const size_t lig_bytes = sizeof(int) * h_lig.size();
 	float* d_lig;
 	cudaMalloc(&d_lig, lig_bytes);
-	cudaMemcpy(d_lig, &h_lig, lig_bytes, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_lig, &h_lig.front(), lig_bytes, cudaMemcpyHostToDevice);
 
-	// Allocate device memory for solutions.
+	// Allocate device memory for solutions. 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
 	const size_t sln_bytes = sizeof(float) * (1 + (nv + 1) + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks;
 	float* d_s0, d_s1, d_s2;
 	cudaMalloc(&d_s0, sln_bytes);
@@ -99,7 +99,7 @@ void kernel::launch(vector<float>& h_ex, const int* h_lig, const int nv, const i
 	const size_t ex_size = (1 + nv + 1) * num_mc_tasks;
 	const size_t ex_bytes = sizeof(float) * ex_size;
 	h_ex.resize(ex_size);
-	cudaMemcpy(h_ex, d_s0, ex_bytes, cudaMemcpyDeviceToHost);
+	cudaMemcpy(&h_ex.front(), d_s0, ex_bytes, cudaMemcpyDeviceToHost);
 
 	// Free device memory.
 	cudaFree(d_s0);
