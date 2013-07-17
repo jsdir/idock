@@ -55,12 +55,10 @@ class ligand
 public:
 	vector<frame> frames; ///< ROOT and BRANCH frames.
 	vector<atom> atoms; ///< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
-	size_t nt; ///< Number of active torsions.
 	size_t nv; ///< Number of variables to optimize.
 	size_t nf; ///< Number of frames.
 	size_t na; ///< Number of atoms.
 	size_t np; ///< Number of interacting pairs.
-	size_t ox, og, oa, oq, oc, od, of, ot, oz;
 	vector<int> content;
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.

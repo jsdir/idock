@@ -218,7 +218,7 @@ int main(int argc, char* argv[])
 		cout << setw(8) << ++num_ligands << " | " << setw(15) << stem << " | " << flush;
 
 		// Run the Monte Carlo tasks in parallel
-		const size_t solution_size = lig.oz * num_mc_tasks;
+		const size_t solution_size = (1 + (lig.nv + 1) + lig.nv + 3 * lig.nf + 4 * lig.nf + 3 * lig.na + 3 * lig.na + 3 * lig.nf + 3 * lig.nf) * num_mc_tasks;
 		vector<float> s0(solution_size), s1(solution_size), s2(solution_size);
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
@@ -239,7 +239,7 @@ int main(int argc, char* argv[])
 			s.e = s0[i];
 			size_t o;
 			s.x.resize(lig.nv + 1);
-			s.x[0] = s0[o = lig.ox * num_mc_tasks + i];
+			s.x[0] = s0[o = num_mc_tasks + i];
 			for (size_t j = 1; j < lig.nv + 1; ++j)
 			{
 				s.x[j] = s0[o += num_mc_tasks];

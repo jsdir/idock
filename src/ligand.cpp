@@ -8,7 +8,7 @@ void frame::output(boost::filesystem::ofstream& ofs) const
 	ofs << "BRANCH"    << setw(4) << rotorXsrn << setw(4) << rotorYsrn << '\n';
 }
 
-ligand::ligand(const path& p) : nt(0)
+ligand::ligand(const path& p) : nv(6)
 {
 	// Initialize necessary variables for constructing a ligand.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
@@ -143,7 +143,7 @@ ligand::ligand(const path& p) : nt(0)
 			}
 			else
 			{
-				++nt;
+				++nv;
 			}
 
 			// Set up bonds between rotorX and rotorY.
@@ -171,18 +171,8 @@ ligand::ligand(const path& p) : nt(0)
 	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	frames.back().end = na = atoms.size();
-	nv = 6 + nt;
 	nf = frames.size();
-	assert(nf >= 1 + nt);
-	ox = 1;
-	og = ox + nv + 1;
-	oa = og + nv;
-	oq = oa + 3 * nf;
-	oc = oq + 4 * nf;
-	od = oc + 3 * na;
-	of = od + 3 * na;
-	ot = of + 3 * nf;
-	oz = ot + 3 * nf; // 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
+	assert(nf >= 1 + nv - 6);
 
 	// Update atoms[].coord relative to frame origin.
 	for (const frame& f : frames)
