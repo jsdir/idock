@@ -271,7 +271,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 	for (k = 0, w = 7; k < nf; ++k)
 	{
 		const frame& m = frames[k];
-		y0 = c[i0 = 3 * m.rotorYidx * blockDim + threadIdx];
+		y0 = c[i0 = 3 * m.beg * blockDim + threadIdx];
 		y1 = c[i0 += blockDim];
 		y2 = c[i0 += blockDim];
 		// Translate orientation of active frames from quaternion into 3x3 matrix.
@@ -366,7 +366,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 		for (const size_t i : m.branches)
 		{
 			const frame& b = frames[i];
-			i0 = 3 * b.rotorYidx * blockDim + threadIdx;
+			i0 = 3 * b.beg * blockDim + threadIdx;
 			i1 = i0 + blockDim;
 			i2 = i1 + blockDim;
 			c[i0] = y0 + m0 * b.yy[0] + m1 * b.yy[1] + m2 * b.yy[2];
@@ -467,7 +467,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 		t0 = t[k0];
 		t1 = t[k1];
 		t2 = t[k2];
-		y0 = c[i0 = 3 * m.rotorYidx * blockDim + threadIdx];
+		y0 = c[i0 = 3 * m.beg * blockDim + threadIdx];
 		y1 = c[i0 += blockDim];
 		y2 = c[i0 += blockDim];
 		for (i = m.beg; i < m.end; ++i)
@@ -521,7 +521,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 		f[k0] += f0;
 		f[k1] += f1;
 		f[k2] += f2;
-		v0 = y0 - c[i0 = 3 * frames[m.parent].rotorYidx * blockDim + threadIdx];
+		v0 = y0 - c[i0 = 3 * frames[m.parent].beg * blockDim + threadIdx];
 		v1 = y1 - c[i0 += blockDim];
 		v2 = y2 - c[i0 += blockDim];
 		t[k0] += t0 + v1 * f2 - v2 * f1;
@@ -807,12 +807,12 @@ void ligand::recover(solution& s) const
 		const array<float, 9> m = qtn4_to_mat3(s.q[k]);
 		for (size_t i = f.beg + 1; i < f.end; ++i)
 		{
-			s.c[i] = s.c[f.rotorYidx] + m * atoms[i].coord;
+			s.c[i] = s.c[f.beg] + m * atoms[i].coord;
 		}
 		for (const size_t i : f.branches)
 		{
 			const frame& b = frames[i];
-			s.c[b.rotorYidx] = s.c[f.rotorYidx] + m * b.yy;
+			s.c[b.beg] = s.c[f.beg] + m * b.yy;
 
 			// Skip inactive BRANCH frame
 			if (!b.active) continue;
@@ -847,7 +847,7 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 				a.output(ofs, s.c[i]);
 				for (const atom& h : a.hydrogens)
 				{
-					h.output(ofs, s.c[f.rotorYidx] + m * h.coord);
+					h.output(ofs, s.c[f.beg] + m * h.coord);
 				}
 			}
 		}
@@ -884,7 +884,7 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 					a.output(ofs, s.c[i]);
 					for (const atom& h : a.hydrogens)
 					{
-						h.output(ofs, s.c[f.rotorYidx] + m * h.coord);
+						h.output(ofs, s.c[f.beg] + m * h.coord);
 					}
 				}
 				dumped[fn] = true;
