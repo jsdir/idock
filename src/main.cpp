@@ -218,11 +218,10 @@ int main(int argc, char* argv[])
 		cout << setw(8) << ++num_ligands << " | " << setw(15) << stem << " | " << flush;
 
 		// Run the Monte Carlo tasks in parallel
-		const size_t solution_size = (1 + (lig.nv + 1) + lig.nv + 3 * lig.nf + 4 * lig.nf + 3 * lig.na + 3 * lig.na + 3 * lig.nf + 3 * lig.nf) * num_mc_tasks;
-		vector<float> s0(solution_size), s1(solution_size), s2(solution_size);
+		vector<float> s0((1 + (lig.nv + 1) + lig.nv + 3 * lig.nf + 4 * lig.nf + 3 * lig.na + 3 * lig.na + 3 * lig.nf + 3 * lig.nf) * num_mc_tasks * 3);
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
-			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), s0.data(), s1.data(), s2.data(), cref(sf), cref(rec), rng(), num_generations, static_cast<unsigned int>(i), static_cast<unsigned int>(num_mc_tasks))));
+			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), s0.data(), cref(sf), cref(rec), rng(), num_generations, static_cast<unsigned int>(i), static_cast<unsigned int>(num_mc_tasks))));
 		}
 		boost::timer::auto_cpu_timer t;
 //		knl.launch(s0, lig.content, lig.nv, lig.nf, lig.na, lig.np, seeds);

@@ -571,33 +571,35 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 	}
 }
 
-int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
+int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
 	float* s0x = s0e + blockDim;
-	float* s1x = s1e + blockDim;
-	float* s2x = s2e + blockDim;
 	float* s0g = s0x + (nv + 1) * blockDim;
-	float* s1g = s1x + (nv + 1) * blockDim;
-	float* s2g = s2x + (nv + 1) * blockDim;
 	float* s0a = s0g + nv * blockDim;
-	float* s1a = s1g + nv * blockDim;
-	float* s2a = s2g + nv * blockDim;
 	float* s0q = s0a + 3 * nf * blockDim;
-	float* s1q = s1a + 3 * nf * blockDim;
-	float* s2q = s2a + 3 * nf * blockDim;
 	float* s0c = s0q + 4 * nf * blockDim;
-	float* s1c = s1q + 4 * nf * blockDim;
-	float* s2c = s2q + 4 * nf * blockDim;
 	float* s0d = s0c + 3 * na * blockDim;
-	float* s1d = s1c + 3 * na * blockDim;
-	float* s2d = s2c + 3 * na * blockDim;
 	float* s0f = s0d + 3 * na * blockDim;
-	float* s1f = s1d + 3 * na * blockDim;
-	float* s2f = s2d + 3 * na * blockDim;
 	float* s0t = s0f + 3 * nf * blockDim;
+	float* s1e = s0t + 3 * nf * blockDim;
+	float* s1x = s1e + blockDim;
+	float* s1g = s1x + (nv + 1) * blockDim;
+	float* s1a = s1g + nv * blockDim;
+	float* s1q = s1a + 3 * nf * blockDim;
+	float* s1c = s1q + 4 * nf * blockDim;
+	float* s1d = s1c + 3 * na * blockDim;
+	float* s1f = s1d + 3 * na * blockDim;
 	float* s1t = s1f + 3 * nf * blockDim;
+	float* s2e = s1t + 3 * nf * blockDim;
+	float* s2x = s2e + blockDim;
+	float* s2g = s2x + (nv + 1) * blockDim;
+	float* s2a = s2g + nv * blockDim;
+	float* s2q = s2a + 3 * nf * blockDim;
+	float* s2c = s2q + 4 * nf * blockDim;
+	float* s2d = s2c + 3 * na * blockDim;
+	float* s2f = s2d + 3 * na * blockDim;
 	float* s2t = s2f + 3 * nf * blockDim;
 	vector<float> p(nv), y(nv), mhy(nv);
 	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
