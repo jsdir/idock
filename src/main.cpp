@@ -165,7 +165,7 @@ int main(int argc, char* argv[])
 	mt19937_64 rng(seed);
 
 //	cout << "Setting up a CUDA kernel" << endl;
-//	kernel knl(sf, rec, num_mc_tasks, num_generations);
+//	kernel knl(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations);
 
 	// Perform docking for each file in the ligand folder.
 	ptr_vector<summary> summaries;
@@ -210,7 +210,7 @@ int main(int argc, char* argv[])
 			}
 			tp.sync(25);
 			cout << '\r' << setw(55) << '\r';
-//			knl.update(rec, xs);
+//			knl.update(rec.maps, rec.num_probes_product, xs.data(), xs.size());
 		}
 
 		// Output the ligand file stem.
@@ -225,30 +225,31 @@ int main(int argc, char* argv[])
 			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), s0.data(), s1.data(), s2.data(), cref(sf), cref(rec), rng(), num_generations, i, num_mc_tasks)));
 		}
 		boost::timer::auto_cpu_timer t;
-//		knl.launch(s0, lig);
+//		knl.launch(s0.data(), lig, lig.oz, lig.og, seeds);
 		tp.sync(25);
 		t.stop();
 		cout << " | " << flush;
 
+		// Translate the s0 buffer into structured solutions.
 		ptr_vector<solution> solutions;
 		solutions.resize(num_mc_tasks);
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
 			solution& s = solutions[i];
-			s.resize(lig.oz);
-			s.e = s.data();
-			s.x = s.e + lig.ox;
-			*s.e = s0[i];
+			s.e = s0[i];
 			size_t o;
+			s.x.resize(lig.nv + 1);
 			s.x[0] = s0[o = lig.ox * num_mc_tasks + i];
 			for (size_t j = 1; j < lig.nv + 1; ++j)
 			{
 				s.x[j] = s0[o += num_mc_tasks];
 			}
 		}
+
+		// Sort solutions and output the top one.
 		solutions.sort();
-		cout << setw(8) << solutions.front().front() << " | " << flush;
-		summaries.push_back(new summary(stem, solutions.front().front()));
+		cout << setw(8) << solutions.front().e << " | " << flush;
+		summaries.push_back(new summary(stem, solutions.front().e));
 
 		// Cluster results. Ligands with RMSD < 2.0 will be clustered into the same cluster.
 		const float required_square_error = 4.0f * lig.na;
@@ -257,15 +258,8 @@ int main(int argc, char* argv[])
 		for (size_t k = 0; k < num_mc_tasks && representatives.size() < representatives.capacity(); ++k)
 		{
 			solution& s = solutions[k];
-			// Solutions store x and e only. Evaluate c and skip f and t.
-			s.g = s.e + lig.og;
-			s.a = s.e + lig.oa;
-			s.q = s.e + lig.oq;
-			s.c = s.e + lig.oc;
-			s.d = s.e + lig.od;
-			s.f = s.e + lig.of;
-			s.t = s.e + lig.ot;
-			lig.evaluate(s.x, s.e, s.g, s.a, s.q, s.c, s.d, s.f, s.t, sf, rec, -40.0f * lig.na, 0, 1);
+			// Solutions store e and x only. Recover q and c from x.
+			lig.recover(s);
 			bool representative = true;
 			for (size_t j = 0; j < k; ++j)
 			{
@@ -273,13 +267,7 @@ int main(int argc, char* argv[])
 				float this_square_error = 0.0f;
 				for (size_t i = 0; i < lig.na; ++i)
 				{
-					const size_t i0 = 3 * i;
-					const size_t i1 = i0 + 1;
-					const size_t i2 = i1 + 1;
-					const float d0 = s.c[i0] - sj.c[i0];
-					const float d1 = s.c[i1] - sj.c[i1];
-					const float d2 = s.c[i2] - sj.c[i2];
-					this_square_error += d0 * d0 + d1 * d1 + d2 * d2;
+					this_square_error += distance_sqr(s.c[i], sj.c[i]);
 				}
 				if (this_square_error < required_square_error)
 				{

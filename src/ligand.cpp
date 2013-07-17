@@ -271,7 +271,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 	for (k = 0, w = 7; k < nf; ++k)
 	{
 		const frame& m = frames[k];
-		y0 = c[i0 = 3 * m.rotorYidx * blockDim + threadIdx];
+		y0 = c[i0 = 3 * m.beg * blockDim + threadIdx];
 		y1 = c[i0 += blockDim];
 		y2 = c[i0 += blockDim];
 		// Translate orientation of active frames from quaternion into 3x3 matrix.
@@ -366,7 +366,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 		for (const size_t i : m.branches)
 		{
 			const frame& b = frames[i];
-			i0 = 3 * b.rotorYidx * blockDim + threadIdx;
+			i0 = 3 * b.beg * blockDim + threadIdx;
 			i1 = i0 + blockDim;
 			i2 = i1 + blockDim;
 			c[i0] = y0 + m0 * b.yy[0] + m1 * b.yy[1] + m2 * b.yy[2];
@@ -467,7 +467,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 		t0 = t[k0];
 		t1 = t[k1];
 		t2 = t[k2];
-		y0 = c[i0 = 3 * m.rotorYidx * blockDim + threadIdx];
+		y0 = c[i0 = 3 * m.beg * blockDim + threadIdx];
 		y1 = c[i0 += blockDim];
 		y2 = c[i0 += blockDim];
 		for (i = m.beg; i < m.end; ++i)
@@ -521,7 +521,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 		f[k0] += f0;
 		f[k1] += f1;
 		f[k2] += f2;
-		v0 = y0 - c[i0 = 3 * frames[m.parent].rotorYidx * blockDim + threadIdx];
+		v0 = y0 - c[i0 = 3 * frames[m.parent].beg * blockDim + threadIdx];
 		v1 = y1 - c[i0 += blockDim];
 		v2 = y2 - c[i0 += blockDim];
 		t[k0] += t0 + v1 * f2 - v2 * f1;
@@ -786,6 +786,45 @@ int ligand::bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf,
 	return 0;
 }
 
+void ligand::recover(solution& s) const
+{
+	// Apply position and orientation to ROOT frame.
+	s.q.resize(nf);
+	s.c.resize(na);
+	s.c[0][0] = s.x[0];
+	s.c[0][1] = s.x[1];
+	s.c[0][2] = s.x[2];
+	s.q[0][0] = s.x[3];
+	s.q[0][1] = s.x[4];
+	s.q[0][2] = s.x[5];
+	s.q[0][3] = s.x[6];
+
+	// Apply torsions to frames.
+	for (size_t k = 0, w = 7; k < nf; ++k)
+	{
+		const frame& f = frames[k];
+		if (!f.active) continue;
+		const array<float, 9> m = qtn4_to_mat3(s.q[k]);
+		for (size_t i = f.beg + 1; i < f.end; ++i)
+		{
+			s.c[i] = s.c[f.beg] + m * atoms[i].coord;
+		}
+		for (const size_t i : f.branches)
+		{
+			const frame& b = frames[i];
+			s.c[b.beg] = s.c[f.beg] + m * b.yy;
+
+			// Skip inactive BRANCH frame
+			if (!b.active) continue;
+
+			const array<float, 3> a = m * b.xy;
+			assert(normalized(a));
+			s.q[i] = vec4_to_qtn4(a, s.x[w++]) * s.q[k];
+			assert(normalized(s.q[i]));
+		}
+	}
+}
+
 void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& solutions, const vector<size_t>& representatives) const
 {
 	assert(representatives.size());
@@ -801,17 +840,14 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 		ofs << "ROOT\n";
 		{
 			const frame& f = frames.front();
-			const array<float, 9> m = qtn4_to_mat3(make_array(s.q[0], s.q[1], s.q[2], s.q[3]));
+			const array<float, 9> m = qtn4_to_mat3(s.q[0]);
 			for (size_t i = f.beg; i < f.end; ++i)
 			{
 				const atom& a = atoms[i];
-				const size_t i0 = 3 * i;
-				a.output(ofs, make_array(s.c[i0], s.c[i0 + 1], s.c[i0 + 2]));
-				if (a.hydrogens.empty()) continue;
+				a.output(ofs, s.c[i]);
 				for (const atom& h : a.hydrogens)
 				{
-					const size_t i0 = 3 * f.rotorYidx;
-					h.output(ofs, make_array(s.c[i0], s.c[i0 + 1], s.c[i0 + 2]) + m * h.coord);
+					h.output(ofs, s.c[f.beg] + m * h.coord);
 				}
 			}
 		}
@@ -841,18 +877,14 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 			else // This BRANCH frame has not been dumped.
 			{
 				f.output(ofs);
-				const size_t k0 = 4 * (f.active ? fn : f.parent);
-				const array<float, 9> m = qtn4_to_mat3(make_array(s.q[k0], s.q[k0 + 1], s.q[k0 + 2], s.q[k0 + 3]));
+				const array<float, 9> m = qtn4_to_mat3(s.q[f.active ? fn : f.parent]);
 				for (size_t i = f.beg; i < f.end; ++i)
 				{
 					const atom& a = atoms[i];
-					const size_t i0 = 3 * i;
-					a.output(ofs, make_array(s.c[i0], s.c[i0 + 1], s.c[i0 + 2]));
-					if (a.hydrogens.empty()) continue;
+					a.output(ofs, s.c[i]);
 					for (const atom& h : a.hydrogens)
 					{
-						const size_t i0 = 3 * f.rotorYidx;
-						h.output(ofs, make_array(s.c[i0], s.c[i0 + 1], s.c[i0 + 2]) + m * h.coord);
+						h.output(ofs, s.c[f.beg] + m * h.coord);
 					}
 				}
 				dumped[fn] = true;
