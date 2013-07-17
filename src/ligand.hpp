@@ -11,23 +11,18 @@ using namespace boost::filesystem;
 using boost::ptr_vector;
 
 /// Represents a result found by BFGS local optimization for later clustering.
-class solution : public vector<float>
+class solution
 {
 public:
-	float* e; ///< Free energy.
-	float* x; ///< Conformation vector.
-	float* g; ///< Gradient vector.
-	float* a; ///< Vector pointing from rotor Y to rotor X.
-	float* q; ///< Frame quaternions.
-	float* c; ///< Heavy atom coordinates.
-	float* d; ///< Heavy atom derivatives.
-	float* f; ///< Aggregated derivatives of heavy atoms.
-	float* t; /// Torque of the force.
+	float e; ///< Free energy.
+	vector<float> x; ///< Conformation vector.
+	vector<array<float, 4>> q; ///< Frame quaternions.
+	vector<array<float, 3>> c; ///< Heavy atom coordinates.
 
 	/// For sorting ptr_vector<solution>.
 	bool operator<(const solution& s) const
 	{
-		return front() < s.front();
+		return e < s.e;
 	}
 };
 
@@ -75,6 +70,9 @@ public:
 
 	/// Task for running Monte Carlo Simulated Annealing algorithm to find local minimums of the scoring function.
 	int bfgs(float* s0e, float* s1e, float* s2e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const size_t threadIdx, const size_t blockDim) const;
+
+	/// Recovers q and c from x.
+	void recover(solution& s) const;
 
 	/// Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
 	void save(const path& output_ligand_path, const ptr_vector<solution>& solutions, const vector<size_t>& representatives) const;
