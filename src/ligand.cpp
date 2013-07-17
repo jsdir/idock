@@ -222,6 +222,7 @@ ligand::ligand(const path& p) : nv(6)
 			}
 
 			// Determine if interacting pairs can be possibly formed.
+			const size_t t1 = atoms[i].xs;
 			for (size_t k2 = k1 + 1; k2 < nf; ++k2)
 			{
 				const frame& f2 = frames[k2];
@@ -232,8 +233,7 @@ ligand::ligand(const path& p) : nv(6)
 					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue;
 					if (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) continue;
 					if (find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) continue;
-					const size_t p_offset = scoring_function::nr * mp(atoms[i].xs, atoms[j].xs);
-					interacting_pairs.push_back(interacting_pair(i, j, p_offset));
+					interacting_pairs.push_back(interacting_pair(i, j, scoring_function::nr * mp(t1, atoms[j].xs)));
 				}
 			}
 
