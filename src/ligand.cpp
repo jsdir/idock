@@ -845,7 +845,6 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 			{
 				const atom& a = atoms[i];
 				a.output(ofs, s.c[i]);
-				if (a.hydrogens.empty()) continue;
 				for (const atom& h : a.hydrogens)
 				{
 					h.output(ofs, s.c[f.rotorYidx] + m * h.coord);
@@ -883,7 +882,6 @@ void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& so
 				{
 					const atom& a = atoms[i];
 					a.output(ofs, s.c[i]);
-					if (a.hydrogens.empty()) continue;
 					for (const atom& h : a.hydrogens)
 					{
 						h.output(ofs, s.c[f.rotorYidx] + m * h.coord);
