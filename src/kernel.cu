@@ -27,12 +27,27 @@ bool evaluate(const float* x, float* e, float* g, float* a, float* q, float* c, 
 
 __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
-void bfgs(float* __restrict__ s0e, float* __restrict__ s1e, float* __restrict__ s2e, const float* lig, const int nv, const int nf, const int na, const int np, const int seed)
+void bfgs(float* __restrict__ s0e, float* __restrict__ s1e, float* __restrict__ s2e, const int* lig, const int nv, const int nf, const int na, const int np, const int seed)
 {
 	float h, s, c;
-	int i = blockIdx.x * blockDim.x + threadIdx.x;
-	// Load constants and lig into shared memory.
+	int i, j, z, o;
+
+	// Load ligand into external shared memory.
+	z = 11 * nf + nf - 1 + 4 * na + 3 * np;
+	j = (z - 1) / blockDim.x;
+	o = threadIdx.x;
+	for (i = 0; i < j; ++i)
+	{
+		shared[o] = lig[o];
+		o += blockDim.x;
+	}
+	if (o < z)
+	{
+		shared[o] = lig[o];
+	}
 	__syncthreads();
+
+//	i = blockIdx.x * blockDim.x + threadIdx.x;
 	sincosf(h, &s, &c);
 }
 
