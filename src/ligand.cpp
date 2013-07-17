@@ -252,6 +252,7 @@ ligand::ligand(const path& p) : nt(0)
 			neighbors.clear();
 		}
 	}
+	np = interacting_pairs.size();
 }
 
 bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const scoring_function& sf, const receptor& rec, const float e_upper_bound, const size_t threadIdx, const size_t blockDim) const
@@ -406,8 +407,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 	assert(w == nv + 1);
 
 	// Calculate intra-ligand free energy.
-	const size_t num_interacting_pairs = interacting_pairs.size();
-	for (i = 0; i < num_interacting_pairs; ++i)
+	for (i = 0; i < np; ++i)
 	{
 		const interacting_pair& p = interacting_pairs[i];
 		i0 = 3 * p.i0 * blockDim + threadIdx;
