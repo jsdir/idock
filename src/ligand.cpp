@@ -571,7 +571,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 	}
 }
 
-int ligand::bfgs(float* s0e, float* h, float* pym, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
+int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
@@ -601,7 +601,8 @@ int ligand::bfgs(float* s0e, float* h, float* pym, const scoring_function& sf, c
 	float* s2d = s2c + 3 * na * blockDim;
 	float* s2f = s2d + 3 * na * blockDim;
 	float* s2t = s2f + 3 * nf * blockDim;
-	float* p = pym;
+	float* h = s2t + 3 * nf * blockDim;
+	float* p = h + (nv*(nv+1)>>1) * blockDim;
 	float* y = p + nv * blockDim;
 	float* m = y + nv * blockDim;
 	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco, pi, pj, mi, pcopi;
