@@ -571,7 +571,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 	}
 }
 
-int ligand::bfgs(float* s0e, float* h, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
+int ligand::bfgs(float* s0e, float* h, float* pym, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
@@ -601,9 +601,11 @@ int ligand::bfgs(float* s0e, float* h, const scoring_function& sf, const recepto
 	float* s2d = s2c + 3 * na * blockDim;
 	float* s2f = s2d + 3 * na * blockDim;
 	float* s2t = s2f + 3 * nf * blockDim;
-	vector<float> p(nv), y(nv), m(nv);
-	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco, pi, pj, mi;
-	int g, i, j, k, o;
+	float* p = pym;
+	float* y = p + nv * blockDim;
+	float* m = y + nv * blockDim;
+	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco, pi, pj, mi, pcopi;
+	int g, i, j, k, o, o1;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
 
@@ -681,21 +683,29 @@ int ligand::bfgs(float* s0e, float* h, const scoring_function& sf, const recepto
 		while (true)
 		{
 			// Calculate p = -h*g, where p is for descent direction, h for Hessian, and g for gradient.
-			for (i = 0; i < nv; ++i)
+			sum = h[k = threadIdx] * s1g[o = threadIdx];
+			for (j = 1; j < nv; ++j)
+			{
+				sum += h[k += j * blockDim] * s1g[o += blockDim];
+			}
+			p[o1 = threadIdx] = -sum;
+			for (i = 1; i < nv; ++i)
 			{
 				sum = h[k = (i*(i+1)>>1) * blockDim + threadIdx] * s1g[o = threadIdx];
 				for (j = 1; j < nv; ++j)
 				{
 					sum += h[k += j > i ? j * blockDim : blockDim] * s1g[o += blockDim];
 				}
-				p[i] = -sum;
+				p[o1 += blockDim] = -sum;
 			}
 
 			// Calculate pg = p*g = -h*g^2 < 0
-			pg1 = p[0] * s1g[o = threadIdx];
+			o = threadIdx;
+			pg1 = p[o] * s1g[o];
 			for (i = 1; i < nv; ++i)
 			{
-				pg1 += p[i] * s1g[o += blockDim];
+				o += blockDim;
+				pg1 += p[o] * s1g[o];
 			}
 
 			// Perform a line search to find an appropriate alpha.
@@ -706,14 +716,23 @@ int ligand::bfgs(float* s0e, float* h, const scoring_function& sf, const recepto
 			{
 				// Calculate c2 = c1 + ap.
 				o = threadIdx;
-				s2x[o] = s1x[o] + alpha * p[0];
+				s2x[o] = s1x[o] + alpha * p[o];
 				o += blockDim;
-				s2x[o] = s1x[o] + alpha * p[1];
+				s2x[o] = s1x[o] + alpha * p[o];
 				o += blockDim;
-				s2x[o] = s1x[o] + alpha * p[2];
-				po0 = p[3];
-				po1 = p[4];
-				po2 = p[5];
+				s2x[o] = s1x[o] + alpha * p[o];
+				o += blockDim;
+				x1q0 = s1x[o];
+				po0 = p[o];
+				o += blockDim;
+				x1q1 = s1x[o];
+				po1 = p[o];
+				o += blockDim;
+				x1q2 = s1x[o];
+				po2 = p[o];
+				o += blockDim;
+				x1q3 = s1x[o];
+				assert(fabs(x1q0*x1q0 + x1q1*x1q1 + x1q2*x1q2 + x1q3*x1q3 - 1.0f) < 1e-3f);
 				pon = sqrt(po0*po0 + po1*po1 + po2*po2);
 				hn = 0.5f * alpha * pon;
 				u = sinf(hn) / pon;
@@ -722,24 +741,20 @@ int ligand::bfgs(float* s0e, float* h, const scoring_function& sf, const recepto
 				pq2 = u*po1;
 				pq3 = u*po2;
 				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 1e-3f);
-				x1q0 = s1x[o += blockDim];
-				x1q1 = s1x[o += blockDim];
-				x1q2 = s1x[o += blockDim];
-				x1q3 = s1x[o += blockDim];
-				assert(fabs(x1q0*x1q0 + x1q1*x1q1 + x1q2*x1q2 + x1q3*x1q3 - 1.0f) < 1e-3f);
 				x2q0 = pq0 * x1q0 - pq1 * x1q1 - pq2 * x1q2 - pq3 * x1q3;
 				x2q1 = pq0 * x1q1 + pq1 * x1q0 + pq2 * x1q3 - pq3 * x1q2;
 				x2q2 = pq0 * x1q2 - pq1 * x1q3 + pq2 * x1q0 + pq3 * x1q1;
 				x2q3 = pq0 * x1q3 + pq1 * x1q2 - pq2 * x1q1 + pq3 * x1q0;
 				assert(fabs(x2q0*x2q0 + x2q1*x2q1 + x2q2*x2q2 + x2q3*x2q3 - 1.0f) < 1e-3f);
-				s2x[o -= 3* blockDim] = x2q0;
+				s2x[o -= 3 * blockDim] = x2q0;
 				s2x[o += blockDim] = x2q1;
 				s2x[o += blockDim] = x2q2;
 				s2x[o += blockDim] = x2q3;
 				for (i = 6; i < nv; ++i)
 				{
+					u = p[o];
 					o += blockDim;
-					s2x[o] = s1x[o] + alpha * p[i];
+					s2x[o] = s1x[o] + alpha * u;
 				}
 
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
@@ -747,10 +762,12 @@ int ligand::bfgs(float* s0e, float* h, const scoring_function& sf, const recepto
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
 				if (evaluate(s2x, s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, sf, rec, s1e[threadIdx] + 0.0001f * alpha * pg1, threadIdx, blockDim))
 				{
-					pg2 = p[0] * s2g[o = threadIdx];
+					o = threadIdx;
+					pg2 = p[o] * s2g[o];
 					for (i = 1; i < nv; ++i)
 					{
-						pg2 += p[i] * s2g[o += blockDim];
+						o += blockDim;
+						pg2 += p[o] * s2g[o];
 					}
 					if (pg2 >= 0.9f * pg1)
 						break; // An appropriate alpha is found.
@@ -762,45 +779,63 @@ int ligand::bfgs(float* s0e, float* h, const scoring_function& sf, const recepto
 			// If an appropriate alpha cannot be found, exit the BFGS loop.
 			if (j == num_alphas) break;
 
-			// Update Hessian matrix h.
+			// Calculate y = g2 - g1.
 			o = threadIdx;
-			y[0] = s2g[o] - s1g[o];
-			for (i = 1; i < nv; ++i) // Calculate y = g2 - g1.
+			y[o] = s2g[o] - s1g[o];
+			for (i = 1; i < nv; ++i)
 			{
 				o += blockDim;
-				y[i] = s2g[o] - s1g[o];
+				y[o] = s2g[o] - s1g[o];
 			}
-			for (i = 0; i < nv; ++i) // Calculate m = -h * y.
+			// Calculate m = -h * y.
+			sum = h[k = threadIdx] * y[o = threadIdx];
+			for (j = 1; j < nv; ++j)
 			{
-				sum = h[k = (i*(i+1)>>1) * blockDim + threadIdx] * y[0];
+				sum += h[k += j * blockDim] * y[o += blockDim];
+			}
+			m[o1 = threadIdx] = -sum;
+			for (i = 1; i < nv; ++i)
+			{
+				sum = h[k = (i*(i+1)>>1) * blockDim + threadIdx] * y[o = threadIdx];
 				for (j = 1; j < nv; ++j)
 				{
-					sum += h[k += j > i ? j * blockDim : blockDim] * y[j];
+					sum += h[k += j > i ? j * blockDim : blockDim] * y[o += blockDim];
 				}
-				m[i] = -sum;
+				m[o1 += blockDim] = -sum;
 			}
-			yhy = 0;
-			for (i = 0; i < nv; ++i) // Calculate yhy = -y * mhy = -y * (-hy).
+			// Calculate yhy = -y * mhy = -y * (-hy).
+			o = threadIdx;
+			yhy = -y[o] * m[o];
+			for (i = 1; i < nv; ++i)
 			{
-				yhy -= y[i] * m[i];
+				o += blockDim;
+				yhy -= y[o] * m[o];
 			}
-			yp = 0;
-			for (i = 0; i < nv; ++i) // Calculate yp = y * p.
+			// Calculate yp = y * p.
+			o = threadIdx;
+			yp = y[o] * p[o];
+			for (i = 1; i < nv; ++i)
 			{
-				yp += y[i] * p[i];
+				o += blockDim;
+				yp += y[o] * p[o];
 			}
+			// Update Hessian matrix h.
 			ryp = 1 / yp;
 			pco = ryp * (ryp * yhy + alpha);
+			o = threadIdx;
 			for (i = 0; i < nv; ++i)
 			{
-				pi = p[i];
-				mi = m[i];
-				h[k = (i*(i+3)>>1) * blockDim + threadIdx] += ryp * (mi * pi + mi * pi) + pco * pi * pi;
+				pi = p[o];
+				mi = m[o];
+				pcopi = pco * pi;
+				h[k = (i*(i+3)>>1) * blockDim + threadIdx] += ryp * (mi * pi + mi * pi) + pcopi * pi;
 				for (j = i + 1; j < nv; ++j)
 				{
-					pj = p[j];
-					h[k += j * blockDim] += ryp * (mi * pj + m[j] * pi) + pco * pi * pj;
+					o1 = j * blockDim + threadIdx;
+					pj = p[o1];
+					h[k += j * blockDim] += ryp * (mi * pj + m[o1] * pi) + pcopi * pj;
 				}
+				o += blockDim;
 			}
 
 			// Move to the next iteration.
