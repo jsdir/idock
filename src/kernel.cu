@@ -57,7 +57,7 @@ kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, cons
 	cudaMemcpy(d_sf_d, h_sf_d, sizeof(float) * h_sf_ne, cudaMemcpyHostToDevice);
 	assert(sizeof(c_sf_e)  == sizeof(d_sf_e));
 	assert(sizeof(c_sf_d)  == sizeof(d_sf_d));
-	assert(sizeof(c_sf_ns) == sizeof(d_sf_ns));
+	assert(sizeof(c_sf_ns) == sizeof(h_sf_ns));
 	cudaMemcpyToSymbol(c_sf_e,  &d_sf_e,  sizeof(c_sf_e));
 	cudaMemcpyToSymbol(c_sf_d,  &d_sf_d,  sizeof(c_sf_d));
 	cudaMemcpyToSymbol(c_sf_ns, &h_sf_ns, sizeof(c_sf_ns));
@@ -93,7 +93,7 @@ void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv,
 {
 	// Copy ligand content from host memory to device memory.
 	const size_t lig_bytes = sizeof(int) * h_lig.size();
-	float* d_lig;
+	int* d_lig;
 	cudaMalloc(&d_lig, lig_bytes);
 	cudaMemcpy(d_lig, &h_lig.front(), lig_bytes, cudaMemcpyHostToDevice);
 
@@ -120,7 +120,7 @@ kernel::~kernel()
 {
 	for (size_t t = 0; t < sf_n; ++t)
 	{
-		const float* d_m = d_maps[t];
+		float* const d_m = d_maps[t];
 		if (d_m) cudaFree(d_m);
 	}
 	cudaFree(d_sf_d);
