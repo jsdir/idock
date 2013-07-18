@@ -840,33 +840,24 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 			}
 
 			// Move to the next iteration.
-			s1e[threadIdx] = s2e[threadIdx];
 			o = threadIdx;
-			s1x[o] = s2x[o];
-			for (i = 1; i < nv + 1; ++i)
+			s1e[o] = s2e[o];
+			for (i = 1; i < 2 * (nv + 1); ++i)
 			{
 				o += blockDim;
-				s1x[o] = s2x[o];
-			}
-			o = threadIdx;
-			s1g[o] = s2g[o];
-			for (i = 1; i < nv; ++i)
-			{
-				o += blockDim;
-				s1g[o] = s2g[o];
+				s1e[o] = s2e[o];
 			}
 		}
 
 		// Accept c1 according to Metropolis criteria.
 		if (s1e[threadIdx] < s0e[threadIdx])
 		{
-			s0e[threadIdx] = s1e[threadIdx];
 			o = threadIdx;
-			s0x[o] = s1x[o];
-			for (i = 1; i < nv + 1; ++i)
+			s0e[o] = s1e[o];
+			for (i = 1; i < nv + 2; ++i)
 			{
 				o += blockDim;
-				s0x[o] = s1x[o];
+				s0e[o] = s1e[o];
 			}
 		}
 	}
