@@ -658,8 +658,8 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 		s1x[o0] = s0x[o0] + uniform_11(rng);
 		o0 += blockDim;
 		s1x[o0] = s0x[o0] + uniform_11(rng);
-//		for (i = 2 - mv; i < 0; ++i)
-		for (i = 3; i < nv + 1; ++i)
+//		for (i = 3; i < nv + 1; ++i)
+		for (i = 2 - nv; i < 0; ++i)
 		{
 			o0 += blockDim;
 			s1x[o0] = s0x[o0];
@@ -852,8 +852,8 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 			// Move to the next iteration, i.e. e1 = e2, x1 = x2, g1 = g2.
 			o0 = threadIdx;
 			s1e[o0] = s2e[o0];
-//			for (i = -1 - 2 * nv; i < 0; ++i)
-			for (i = 1; i < 2 * (nv + 1); ++i)
+//			for (i = 1; i < 2 * (nv + 1); ++i)
+			for (i = -1 - 2 * nv; i < 0; ++i)
 			{
 				o0 += blockDim;
 				s1e[o0] = s2e[o0];
@@ -865,8 +865,8 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 		{
 			o0 = threadIdx;
 			s0e[o0] = s1e[o0];
-//			for (i = -1 - nv; i < 0; ++i)
-			for (i = 1; i < nv + 2; ++i)
+//			for (i = 1; i < nv + 2; ++i)
+			for (i = -1 - nv; i < 0; ++i)
 			{
 				o0 += blockDim;
 				s0e[o0] = s1e[o0];
