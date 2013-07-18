@@ -571,7 +571,7 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 	}
 }
 
-int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
+int ligand::bfgs(float* s0e, float* h, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
 {
 	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
 	const float e_upper_bound = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
@@ -601,10 +601,9 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 	float* s2d = s2c + 3 * na * blockDim;
 	float* s2f = s2d + 3 * na * blockDim;
 	float* s2t = s2f + 3 * nf * blockDim;
-	vector<float> p(nv), y(nv), mhy(nv);
-	vector<float> h(nv*(nv+1)>>1); // Symmetric triangular Hessian matrix.
-	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco;
-	int g, i, j, o;
+	vector<float> p(nv), y(nv), m(nv);
+	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco, pi, pj, mi;
+	int g, i, j, k, o;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
 
@@ -664,14 +663,14 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
 		// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
 		// See N&R for a recipe to find this initializer.
-		o = 0;
-		for (j = 0; j < nv; ++j)
+		h[o = threadIdx] = 1.0f;
+		for (j = 1; j < nv; ++j)
 		{
 			for (i = 0; i < j; ++i)
 			{
-				h[o++] = 0.0f;
+				h[o += blockDim] = 0.0f;
 			}
-			h[o++] = 1.0f;
+			h[o += blockDim] = 1.0f;
 		}
 
 		// Given the mutated conformation c1, use BFGS to find a local minimum.
@@ -684,10 +683,10 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 			// Calculate p = -h*g, where p is for descent direction, h for Hessian, and g for gradient.
 			for (i = 0; i < nv; ++i)
 			{
-				sum = h[mr(0, i)] * s1g[o = threadIdx];
+				sum = h[k = (i*(i+1)>>1) * blockDim + threadIdx] * s1g[o = threadIdx];
 				for (j = 1; j < nv; ++j)
 				{
-					sum += h[mp(i, j)] * s1g[o += blockDim];
+					sum += h[k += j > i ? j * blockDim : blockDim] * s1g[o += blockDim];
 				}
 				p[i] = -sum;
 			}
@@ -771,19 +770,19 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 				o += blockDim;
 				y[i] = s2g[o] - s1g[o];
 			}
-			for (i = 0; i < nv; ++i) // Calculate mhy = -h * y.
+			for (i = 0; i < nv; ++i) // Calculate m = -h * y.
 			{
-				sum = 0.0f;
-				for (j = 0; j < nv; ++j)
+				sum = h[k = (i*(i+1)>>1) * blockDim + threadIdx] * y[0];
+				for (j = 1; j < nv; ++j)
 				{
-					sum += h[mp(i, j)] * y[j];
+					sum += h[k += j > i ? j * blockDim : blockDim] * y[j];
 				}
-				mhy[i] = -sum;
+				m[i] = -sum;
 			}
 			yhy = 0;
 			for (i = 0; i < nv; ++i) // Calculate yhy = -y * mhy = -y * (-hy).
 			{
-				yhy -= y[i] * mhy[i];
+				yhy -= y[i] * m[i];
 			}
 			yp = 0;
 			for (i = 0; i < nv; ++i) // Calculate yp = y * p.
@@ -793,9 +792,15 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 			ryp = 1 / yp;
 			pco = ryp * (ryp * yhy + alpha);
 			for (i = 0; i < nv; ++i)
-			for (j = i; j < nv; ++j) // includes i
 			{
-				h[mr(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
+				pi = p[i];
+				mi = m[i];
+				h[k = (i*(i+3)>>1) * blockDim + threadIdx] += ryp * (mi * pi + mi * pi) + pco * pi * pi;
+				for (j = i + 1; j < nv; ++j)
+				{
+					pj = p[j];
+					h[k += j * blockDim] += ryp * (mi * pj + m[j] * pi) + pco * pi * pj;
+				}
 			}
 
 			// Move to the next iteration.
