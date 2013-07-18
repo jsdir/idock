@@ -585,7 +585,7 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 	assert(w == 6 * blockDim + threadIdx);
 }
 
-int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
+int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t ng, const unsigned int threadIdx, const unsigned int blockDim) const
 {
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
@@ -648,22 +648,22 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 		s0x[o0 += blockDim] = uniform_11(rng);
 	}
 /*
-	s0x[o = threadIdx] =  49.799f;
-	s0x[o += blockDim] = -31.025f;
-	s0x[o += blockDim] =  35.312f;
-	s0x[o += blockDim] = 1.0f;
-	s0x[o += blockDim] = 0.0f;
-	s0x[o += blockDim] = 0.0f;
-	s0x[o += blockDim] = 0.0f;
+	s0x[o0 = threadIdx] =  49.799f;
+	s0x[o0 += blockDim] = -31.025f;
+	s0x[o0 += blockDim] =  35.312f;
+	s0x[o0 += blockDim] = 1.0f;
+	s0x[o0 += blockDim] = 0.0f;
+	s0x[o0 += blockDim] = 0.0f;
+	s0x[o0 += blockDim] = 0.0f;
 	for (i = 6; i < nv; ++i)
 	{
-		s0x[o += blockDim] = 0.0f;
+		s0x[o0 += blockDim] = 0.0f;
 	}
 */
 	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, sf, rec, eub, threadIdx, blockDim);
 
 	// Repeat for a number of generations.
-	for (g = 0; g < num_generations; ++g)
+	for (g = 0; g < ng; ++g)
 	{
 		// Mutate s0x into s1x
 		o0 = threadIdx;
