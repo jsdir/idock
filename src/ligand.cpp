@@ -440,6 +440,7 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 			sng = sinf(ang);
 			r0 = cosf(ang);
 //			sincosf(ang, &sng, &r0);
+//			sincospif(ang, &sng, &r0);
 			r1 = sng * a0;
 			r2 = sng * a1;
 			r3 = sng * a2;
@@ -758,6 +759,7 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 				sng = sinf(ang) / nrm;
 				pq0 = cosf(ang);
 //				sincosf(ang, &sng, &pq0);
+//				sincospif(ang, &sng, &pq0);
 //				sng /= nrm;
 				pq1 = sng * pr0;
 				pq2 = sng * pr1;
