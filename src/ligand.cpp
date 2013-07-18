@@ -839,7 +839,7 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 				o += blockDim;
 			}
 
-			// Move to the next iteration.
+			// Move to the next iteration, i.e. s1e = s2e, s1x = s2x, s1g = s2g.
 			o = threadIdx;
 			s1e[o] = s2e[o];
 			for (i = 1; i < 2 * (nv + 1); ++i)
