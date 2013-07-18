@@ -601,10 +601,10 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 	float* s2d = s2c + 3 * na * blockDim;
 	float* s2f = s2d + 3 * na * blockDim;
 	float* s2t = s2f + 3 * nf * blockDim;
-	float* h = s2t + 3 * nf * blockDim;
-	float* p = h + (nv*(nv+1)>>1) * blockDim;
-	float* y = p + nv * blockDim;
-	float* m = y + nv * blockDim;
+	float* bfh = s2t + 3 * nf * blockDim;
+	float* bfp = bfh + (nv*(nv+1)>>1) * blockDim;
+	float* bfy = bfp + nv * blockDim;
+	float* bfm = bfy + nv * blockDim;
 	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco, pi, pj, mi, pcopi;
 	int g, i, j, k, o, o1;
 	mt19937_64 rng(seed);
@@ -666,14 +666,14 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
 		// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
 		// See N&R for a recipe to find this initializer.
-		h[o = threadIdx] = 1.0f;
+		bfh[o = threadIdx] = 1.0f;
 		for (j = 1; j < nv; ++j)
 		{
 			for (i = 0; i < j; ++i)
 			{
-				h[o += blockDim] = 0.0f;
+				bfh[o += blockDim] = 0.0f;
 			}
-			h[o += blockDim] = 1.0f;
+			bfh[o += blockDim] = 1.0f;
 		}
 
 		// Given the mutated conformation c1, use BFGS to find a local minimum.
@@ -684,29 +684,29 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 		while (true)
 		{
 			// Calculate p = -h*g, where p is for descent direction, h for Hessian, and g for gradient.
-			sum = h[k = threadIdx] * s1g[o = threadIdx];
+			sum = bfh[k = threadIdx] * s1g[o = threadIdx];
 			for (j = 1; j < nv; ++j)
 			{
-				sum += h[k += j * blockDim] * s1g[o += blockDim];
+				sum += bfh[k += j * blockDim] * s1g[o += blockDim];
 			}
-			p[o1 = threadIdx] = -sum;
+			bfp[o1 = threadIdx] = -sum;
 			for (i = 1; i < nv; ++i)
 			{
-				sum = h[k = (i*(i+1)>>1) * blockDim + threadIdx] * s1g[o = threadIdx];
+				sum = bfh[k = (i*(i+1)>>1) * blockDim + threadIdx] * s1g[o = threadIdx];
 				for (j = 1; j < nv; ++j)
 				{
-					sum += h[k += j > i ? j * blockDim : blockDim] * s1g[o += blockDim];
+					sum += bfh[k += j > i ? j * blockDim : blockDim] * s1g[o += blockDim];
 				}
-				p[o1 += blockDim] = -sum;
+				bfp[o1 += blockDim] = -sum;
 			}
 
 			// Calculate pg = p*g = -h*g^2 < 0
 			o = threadIdx;
-			pg1 = p[o] * s1g[o];
+			pg1 = bfp[o] * s1g[o];
 			for (i = 1; i < nv; ++i)
 			{
 				o += blockDim;
-				pg1 += p[o] * s1g[o];
+				pg1 += bfp[o] * s1g[o];
 			}
 
 			// Perform a line search to find an appropriate alpha.
@@ -717,20 +717,20 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 			{
 				// Calculate c2 = c1 + ap.
 				o = threadIdx;
-				s2x[o] = s1x[o] + alpha * p[o];
+				s2x[o] = s1x[o] + alpha * bfp[o];
 				o += blockDim;
-				s2x[o] = s1x[o] + alpha * p[o];
+				s2x[o] = s1x[o] + alpha * bfp[o];
 				o += blockDim;
-				s2x[o] = s1x[o] + alpha * p[o];
+				s2x[o] = s1x[o] + alpha * bfp[o];
 				o += blockDim;
 				x1q0 = s1x[o];
-				po0 = p[o];
+				po0 = bfp[o];
 				o += blockDim;
 				x1q1 = s1x[o];
-				po1 = p[o];
+				po1 = bfp[o];
 				o += blockDim;
 				x1q2 = s1x[o];
-				po2 = p[o];
+				po2 = bfp[o];
 				o += blockDim;
 				x1q3 = s1x[o];
 				assert(fabs(x1q0*x1q0 + x1q1*x1q1 + x1q2*x1q2 + x1q3*x1q3 - 1.0f) < 1e-3f);
@@ -753,7 +753,7 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 				s2x[o += blockDim] = x2q3;
 				for (i = 6; i < nv; ++i)
 				{
-					u = p[o];
+					u = bfp[o];
 					o += blockDim;
 					s2x[o] = s1x[o] + alpha * u;
 				}
@@ -764,11 +764,11 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 				if (evaluate(s2x, s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, sf, rec, s1e[threadIdx] + 0.0001f * alpha * pg1, threadIdx, blockDim))
 				{
 					o = threadIdx;
-					pg2 = p[o] * s2g[o];
+					pg2 = bfp[o] * s2g[o];
 					for (i = 1; i < nv; ++i)
 					{
 						o += blockDim;
-						pg2 += p[o] * s2g[o];
+						pg2 += bfp[o] * s2g[o];
 					}
 					if (pg2 >= 0.9f * pg1)
 						break; // An appropriate alpha is found.
@@ -782,43 +782,43 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 
 			// Calculate y = g2 - g1.
 			o = threadIdx;
-			y[o] = s2g[o] - s1g[o];
+			bfy[o] = s2g[o] - s1g[o];
 			for (i = 1; i < nv; ++i)
 			{
 				o += blockDim;
-				y[o] = s2g[o] - s1g[o];
+				bfy[o] = s2g[o] - s1g[o];
 			}
 			// Calculate m = -h * y.
-			sum = h[k = threadIdx] * y[o = threadIdx];
+			sum = bfh[k = threadIdx] * bfy[o = threadIdx];
 			for (j = 1; j < nv; ++j)
 			{
-				sum += h[k += j * blockDim] * y[o += blockDim];
+				sum += bfh[k += j * blockDim] * bfy[o += blockDim];
 			}
-			m[o1 = threadIdx] = -sum;
+			bfm[o1 = threadIdx] = -sum;
 			for (i = 1; i < nv; ++i)
 			{
-				sum = h[k = (i*(i+1)>>1) * blockDim + threadIdx] * y[o = threadIdx];
+				sum = bfh[k = (i*(i+1)>>1) * blockDim + threadIdx] * bfy[o = threadIdx];
 				for (j = 1; j < nv; ++j)
 				{
-					sum += h[k += j > i ? j * blockDim : blockDim] * y[o += blockDim];
+					sum += bfh[k += j > i ? j * blockDim : blockDim] * bfy[o += blockDim];
 				}
-				m[o1 += blockDim] = -sum;
+				bfm[o1 += blockDim] = -sum;
 			}
 			// Calculate yhy = -y * mhy = -y * (-hy).
 			o = threadIdx;
-			yhy = -y[o] * m[o];
+			yhy = -bfy[o] * bfm[o];
 			for (i = 1; i < nv; ++i)
 			{
 				o += blockDim;
-				yhy -= y[o] * m[o];
+				yhy -= bfy[o] * bfm[o];
 			}
 			// Calculate yp = y * p.
 			o = threadIdx;
-			yp = y[o] * p[o];
+			yp = bfy[o] * bfp[o];
 			for (i = 1; i < nv; ++i)
 			{
 				o += blockDim;
-				yp += y[o] * p[o];
+				yp += bfy[o] * bfp[o];
 			}
 			// Update Hessian matrix h.
 			ryp = 1 / yp;
@@ -826,15 +826,15 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 			o = threadIdx;
 			for (i = 0; i < nv; ++i)
 			{
-				pi = p[o];
-				mi = m[o];
+				pi = bfp[o];
+				mi = bfm[o];
 				pcopi = pco * pi;
-				h[k = (i*(i+3)>>1) * blockDim + threadIdx] += ryp * (mi * pi + mi * pi) + pcopi * pi;
+				bfh[k = (i*(i+3)>>1) * blockDim + threadIdx] += ryp * (mi * pi + mi * pi) + pcopi * pi;
 				for (j = i + 1; j < nv; ++j)
 				{
 					o1 = j * blockDim + threadIdx;
-					pj = p[o1];
-					h[k += j * blockDim] += ryp * (mi * pj + m[o1] * pi) + pcopi * pj;
+					pj = bfp[o1];
+					bfh[k += j * blockDim] += ryp * (mi * pj + bfm[o1] * pi) + pcopi * pj;
 				}
 				o += blockDim;
 			}
