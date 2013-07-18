@@ -20,38 +20,35 @@ __constant__ int c_num_generations;
 extern __shared__ float shared[];
 
 __device__  __noinline__// __forceinline__
-bool evaluate(const float* x, float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float e_upper_bound)
+bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const float eub)
 {
 	return true;
 }
 
 __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
-void bfgs(float* __restrict__ s0e, float* __restrict__ s1e, float* __restrict__ s2e, const int* lig, const int nv, const int nf, const int na, const int np, const int seed)
+void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, const int na, const int np/*, const int seed*/)
 {
-	float h, s, c;
-	int i, j, z, o;
+	int i, n, z, o0;
 
 	// Load ligand into external shared memory.
-	z = 11 * nf + nf - 1 + 4 * na + 3 * np;
-	j = (z - 1) / blockDim.x;
-	o = threadIdx.x;
-	for (i = 0; i < j; ++i)
+	n = 11 * nf + nf - 1 + 4 * na + 3 * np;
+	o0 = threadIdx.x;
+	for (i = 0, z = (n - 1) / blockDim.x; i < z; ++i)
 	{
-		shared[o] = lig[o];
-		o += blockDim.x;
+		shared[o0] = lig[o0];
+		o0 += blockDim.x;
 	}
-	if (o < z)
+	if (o0 < n)
 	{
-		shared[o] = lig[o];
+		shared[o0] = lig[o0];
 	}
 	__syncthreads();
 
 //	i = blockIdx.x * blockDim.x + threadIdx.x;
-	sincosf(h, &s, &c);
 }
 
-kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const float* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int num_generations) : num_mc_tasks(num_mc_tasks), num_generations(num_generations)
+kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const float* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int ng) : num_mc_tasks(num_mc_tasks), ng(ng)
 {
 	// Initialize scoring function.
 	cudaMalloc(&d_sf_e, h_sf_ne);
@@ -100,15 +97,13 @@ void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv,
 	cudaMalloc(&d_lig, lig_bytes);
 	cudaMemcpy(d_lig, &h_lig.front(), lig_bytes, cudaMemcpyHostToDevice);
 
-	// Allocate device memory for solutions. 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
-	const size_t sln_bytes = sizeof(float) * (1 + (nv + 1) + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks;
-	float* d_s0, d_s1, d_s2;
-	cudaMalloc(&d_s0, sln_bytes);
-	cudaMalloc(&d_s1, sln_bytes);
-	cudaMalloc(&d_s2, sln_bytes);
+	// Allocate device memory for variables. 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
+	const size_t var_bytes = sizeof(float) * (1 + (nv + 1) + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks * 3 + (nv*(nv+1)>>1) * num_mc_tasks + nv * num_mc_tasks * 3;
+	float* d_s0;
+	cudaMalloc(&d_s0, var_bytes);
 
 	// Invoke CUDA kernel.
-	bfgs<<<num_mc_tasks / 128, 128, lig_bytes>>>(d_s0, d_s1, d_s2, d_lig, nv, nf, na, np);
+	bfgs<<<num_mc_tasks / 128, 128, lig_bytes>>>(d_s0, d_lig, nv, nf, na, np);
 
 	// Copy e and x from device memory to host memory.
 	const size_t ex_size = (1 + nv + 1) * num_mc_tasks;
@@ -118,8 +113,6 @@ void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv,
 
 	// Free device memory.
 	cudaFree(d_s0);
-	cudaFree(d_s1);
-	cudaFree(d_s2);
 	cudaFree(d_lig);
 }
 
