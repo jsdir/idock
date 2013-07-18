@@ -573,8 +573,8 @@ bool ligand::evaluate(const float* x, float* e, float* g, float* a, float* q, fl
 
 int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t num_generations, const unsigned int threadIdx, const unsigned int blockDim) const
 {
-	const size_t num_alphas = 5; // Number of alpha values for determining step size in BFGS
-	const float e_upper_bound = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
+	const int nls = 5; // Number of line search trials for determining step size in BFGS
+	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
 	float* s0x = s0e + blockDim;
 	float* s0g = s0x + (nv + 1) * blockDim;
 	float* s0a = s0g + nv * blockDim;
@@ -605,259 +605,271 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 	float* bfp = bfh + (nv*(nv+1)>>1) * blockDim;
 	float* bfy = bfp + nv * blockDim;
 	float* bfm = bfy + nv * blockDim;
-	float q0, q1, q2, q3, qni, sum, alpha, pg1, pg2, po0, po1, po2, pon, hn, u, pq0, pq1, pq2, pq3, x1q0, x1q1, x1q2, x1q3, x2q0, x2q1, x2q2, x2q3, yhy, yp, ryp, pco, pi, pj, mi, pcopi;
-	int g, i, j, k, o, o1;
+	float rd0, rd1, rd2, rd3, rst;
+	float sum, pg1, pga, pgc, alp, pg2, pr0, pr1, pr2, nrm, ang, sng, pq0, pq1, pq2, pq3, s1xq0, s1xq1, s1xq2, s1xq3, s2xq0, s2xq1, s2xq2, s2xq3, bpi;
+	float yhy, yps, ryp, pco, bpj, bmj, ppj;
+	int g, i, j, o0, o1, o2;
 	mt19937_64 rng(seed);
 	uniform_real_distribution<float> uniform_11(-1.0f, 1.0f);
 
-	// Randomize s0.x.
-	q0 = uniform_11(rng);
-	s0x[o = threadIdx] = 0.5f * ((1 + q0) * rec.corner1[0] + (1 - q0) * rec.corner0[0]);
-	q0 = uniform_11(rng);
-	s0x[o += blockDim] = 0.5f * ((1 + q0) * rec.corner1[1] + (1 - q0) * rec.corner0[1]);
-	q0 = uniform_11(rng);
-	s0x[o += blockDim] = 0.5f * ((1 + q0) * rec.corner1[2] + (1 - q0) * rec.corner0[2]);
-	q0 = uniform_11(rng);
-	q1 = uniform_11(rng);
-	q2 = uniform_11(rng);
-	q3 = uniform_11(rng);
-	qni = 1.0f / sqrt(q0*q0 + q1*q1 + q2*q2 + q3*q3);
-	s0x[o += blockDim] = q0 * qni;
-	s0x[o += blockDim] = q1 * qni;
-	s0x[o += blockDim] = q2 * qni;
-	s0x[o += blockDim] = q3 * qni;
+	// Randomize s0x.
+	rd0 = uniform_11(rng);
+	s0x[o0 = threadIdx] = 0.5f * ((1 + rd0) * rec.corner1[0] + (1 - rd0) * rec.corner0[0]);
+	rd0 = uniform_11(rng);
+	s0x[o0 += blockDim] = 0.5f * ((1 + rd0) * rec.corner1[1] + (1 - rd0) * rec.corner0[1]);
+	rd0 = uniform_11(rng);
+	s0x[o0 += blockDim] = 0.5f * ((1 + rd0) * rec.corner1[2] + (1 - rd0) * rec.corner0[2]);
+	rd0 = uniform_11(rng);
+	rd1 = uniform_11(rng);
+	rd2 = uniform_11(rng);
+	rd3 = uniform_11(rng);
+	rst = 1.0f / sqrt(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
+//	rst = rsqrtf(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
+	s0x[o0 += blockDim] = rd0 * rst;
+	s0x[o0 += blockDim] = rd1 * rst;
+	s0x[o0 += blockDim] = rd2 * rst;
+	s0x[o0 += blockDim] = rd3 * rst;
 	for (i = 6; i < nv; ++i)
 	{
-		s0x[o += blockDim] = uniform_11(rng);
+		s0x[o0 += blockDim] = uniform_11(rng);
 	}
 /*
-	s0.x[o = threadIdx] =  49.799f;
-	s0.x[o += blockDim] = -31.025f;
-	s0.x[o += blockDim] =  35.312f;
-	s0.x[o += blockDim] = 1.0f;
-	s0.x[o += blockDim] = 0.0f;
-	s0.x[o += blockDim] = 0.0f;
-	s0.x[o += blockDim] = 0.0f;
+	s0x[o = threadIdx] =  49.799f;
+	s0x[o += blockDim] = -31.025f;
+	s0x[o += blockDim] =  35.312f;
+	s0x[o += blockDim] = 1.0f;
+	s0x[o += blockDim] = 0.0f;
+	s0x[o += blockDim] = 0.0f;
+	s0x[o += blockDim] = 0.0f;
 	for (i = 6; i < nv; ++i)
 	{
-		s0.x[o += blockDim] = 0.0f;
+		s0x[o += blockDim] = 0.0f;
 	}
 */
-	evaluate(s0x, s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, sf, rec, e_upper_bound, threadIdx, blockDim);
+	evaluate(s0x, s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, sf, rec, eub, threadIdx, blockDim);
 
 	// Repeat for a number of generations.
 	for (g = 0; g < num_generations; ++g)
 	{
-		// Mutate s0.x into s1.x
-		o = threadIdx;
-		s1x[o] = s0x[o] + uniform_11(rng);
-		o += blockDim;
-		s1x[o] = s0x[o] + uniform_11(rng);
-		o += blockDim;
-		s1x[o] = s0x[o] + uniform_11(rng);
-		for (i = 3; i < nv + 1;  ++i)
+		// Mutate s0x into s1x
+		o0 = threadIdx;
+		s1x[o0] = s0x[o0] + uniform_11(rng);
+		o0 += blockDim;
+		s1x[o0] = s0x[o0] + uniform_11(rng);
+		o0 += blockDim;
+		s1x[o0] = s0x[o0] + uniform_11(rng);
+//		for (i = 2 - mv; i < 0; ++i)
+		for (i = 3; i < nv + 1; ++i)
 		{
-			o += blockDim;
-			s1x[o] = s0x[o];
+			o0 += blockDim;
+			s1x[o0] = s0x[o0];
 		}
-		evaluate(s1x, s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, sf, rec, e_upper_bound, threadIdx, blockDim);
+		evaluate(s1x, s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, sf, rec, eub, threadIdx, blockDim);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
 		// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
 		// See N&R for a recipe to find this initializer.
-		bfh[o = threadIdx] = 1.0f;
+		bfh[o0 = threadIdx] = 1.0f;
 		for (j = 1; j < nv; ++j)
 		{
 			for (i = 0; i < j; ++i)
 			{
-				bfh[o += blockDim] = 0.0f;
+				bfh[o0 += blockDim] = 0.0f;
 			}
-			bfh[o += blockDim] = 1.0f;
+			bfh[o0 += blockDim] = 1.0f;
 		}
 
-		// Given the mutated conformation c1, use BFGS to find a local minimum.
-		// The conformation of the local minimum is saved to c2, and its derivative is saved to g2.
+		// Use BFGS to optimize the mutated conformation s1x into local optimum s2x.
 		// http://en.wikipedia.org/wiki/BFGS_method
 		// http://en.wikipedia.org/wiki/Quasi-Newton_method
-		// The loop breaks when an appropriate alpha cannot be found.
+		// The loop breaks when no appropriate alpha can be found.
 		while (true)
 		{
-			// Calculate p = -h*g, where p is for descent direction, h for Hessian, and g for gradient.
-			sum = bfh[k = threadIdx] * s1g[o = threadIdx];
+			// Calculate p = -h * g, where p is for descent direction, h for Hessian, and g for gradient.
+			sum = bfh[o1 = threadIdx] * s1g[o0 = threadIdx];
+			for (i = 1; i < nv; ++i)
+			{
+				sum += bfh[o1 += i * blockDim] * s1g[o0 += blockDim];
+			}
+			bfp[o2 = threadIdx] = -sum;
 			for (j = 1; j < nv; ++j)
 			{
-				sum += bfh[k += j * blockDim] * s1g[o += blockDim];
-			}
-			bfp[o1 = threadIdx] = -sum;
-			for (i = 1; i < nv; ++i)
-			{
-				sum = bfh[k = (i*(i+1)>>1) * blockDim + threadIdx] * s1g[o = threadIdx];
-				for (j = 1; j < nv; ++j)
+				sum = bfh[o1 = (j*(j+1)>>1) * blockDim + threadIdx] * s1g[o0 = threadIdx];
+				for (i = 1; i < nv; ++i)
 				{
-					sum += bfh[k += j > i ? j * blockDim : blockDim] * s1g[o += blockDim];
+					sum += bfh[o1 += i > j ? i * blockDim : blockDim] * s1g[o0 += blockDim];
 				}
-				bfp[o1 += blockDim] = -sum;
+				bfp[o2 += blockDim] = -sum;
 			}
 
-			// Calculate pg = p*g = -h*g^2 < 0
-			o = threadIdx;
-			pg1 = bfp[o] * s1g[o];
+			// Calculate pg = p * g = -h * g^2 < 0
+			o0 = threadIdx;
+			pg1 = bfp[o0] * s1g[o0];
 			for (i = 1; i < nv; ++i)
 			{
-				o += blockDim;
-				pg1 += bfp[o] * s1g[o];
+				o0 += blockDim;
+				pg1 += bfp[o0] * s1g[o0];
 			}
+			pga = 0.0001f * pg1;
+			pgc = 0.9f * pg1;
 
 			// Perform a line search to find an appropriate alpha.
-			// Try different alpha values for num_alphas times.
-			// alpha starts with 1, and shrinks to alpha_factor of itself iteration by iteration.
-			alpha = 1.0;
-			for (j = 0; j < num_alphas; ++j)
+			// Try different alpha values for nls times.
+			// alpha starts with 1, and shrinks to 0.1 of itself iteration by iteration.
+			alp = 1.0f;
+			for (j = 0; j < nls; ++j)
 			{
-				// Calculate c2 = c1 + ap.
-				o = threadIdx;
-				s2x[o] = s1x[o] + alpha * bfp[o];
-				o += blockDim;
-				s2x[o] = s1x[o] + alpha * bfp[o];
-				o += blockDim;
-				s2x[o] = s1x[o] + alpha * bfp[o];
-				o += blockDim;
-				x1q0 = s1x[o];
-				po0 = bfp[o];
-				o += blockDim;
-				x1q1 = s1x[o];
-				po1 = bfp[o];
-				o += blockDim;
-				x1q2 = s1x[o];
-				po2 = bfp[o];
-				o += blockDim;
-				x1q3 = s1x[o];
-				assert(fabs(x1q0*x1q0 + x1q1*x1q1 + x1q2*x1q2 + x1q3*x1q3 - 1.0f) < 1e-3f);
-				pon = sqrt(po0*po0 + po1*po1 + po2*po2);
-				hn = 0.5f * alpha * pon;
-				u = sinf(hn) / pon;
-				pq0 = cosf(hn);
-				pq1 = u*po0;
-				pq2 = u*po1;
-				pq3 = u*po2;
+				// Calculate x2 = x1 + a * p.
+				o0 = threadIdx;
+				s2x[o0] = s1x[o0] + alp * bfp[o0];
+				o0 += blockDim;
+				s2x[o0] = s1x[o0] + alp * bfp[o0];
+				o0 += blockDim;
+				s2x[o0] = s1x[o0] + alp * bfp[o0];
+				o0 += blockDim;
+				s1xq0 = s1x[o0];
+				pr0 = bfp[o0];
+				o0 += blockDim;
+				s1xq1 = s1x[o0];
+				pr1 = bfp[o0];
+				o0 += blockDim;
+				s1xq2 = s1x[o0];
+				pr2 = bfp[o0];
+				o0 += blockDim;
+				s1xq3 = s1x[o0];
+				assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 1e-3f);
+				nrm = sqrt(pr0*pr0 + pr1*pr1 + pr2*pr2);
+				ang = 0.5f * alp * nrm;
+				sng = sinf(ang) / nrm;
+				pq0 = cosf(ang);
+//				sincosf(ang, &sng, &pq0);
+//				sng /= nrm;
+				pq1 = sng * pr0;
+				pq2 = sng * pr1;
+				pq3 = sng * pr2;
 				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 1e-3f);
-				x2q0 = pq0 * x1q0 - pq1 * x1q1 - pq2 * x1q2 - pq3 * x1q3;
-				x2q1 = pq0 * x1q1 + pq1 * x1q0 + pq2 * x1q3 - pq3 * x1q2;
-				x2q2 = pq0 * x1q2 - pq1 * x1q3 + pq2 * x1q0 + pq3 * x1q1;
-				x2q3 = pq0 * x1q3 + pq1 * x1q2 - pq2 * x1q1 + pq3 * x1q0;
-				assert(fabs(x2q0*x2q0 + x2q1*x2q1 + x2q2*x2q2 + x2q3*x2q3 - 1.0f) < 1e-3f);
-				s2x[o -= 3 * blockDim] = x2q0;
-				s2x[o += blockDim] = x2q1;
-				s2x[o += blockDim] = x2q2;
-				s2x[o += blockDim] = x2q3;
+				s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
+				s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
+				s2xq2 = pq0 * s1xq2 - pq1 * s1xq3 + pq2 * s1xq0 + pq3 * s1xq1;
+				s2xq3 = pq0 * s1xq3 + pq1 * s1xq2 - pq2 * s1xq1 + pq3 * s1xq0;
+				assert(fabs(s2xq0*s2xq0 + s2xq1*s2xq1 + s2xq2*s2xq2 + s2xq3*s2xq3 - 1.0f) < 1e-3f);
+				s2x[o0 -= 3 * blockDim] = s2xq0;
+				s2x[o0 += blockDim] = s2xq1;
+				s2x[o0 += blockDim] = s2xq2;
+				s2x[o0 += blockDim] = s2xq3;
 				for (i = 6; i < nv; ++i)
 				{
-					u = bfp[o];
-					o += blockDim;
-					s2x[o] = s1x[o] + alpha * u;
+					bpi = bfp[o0];
+					o0 += blockDim;
+					s2x[o0] = s1x[o0] + alp * bpi;
 				}
 
-				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
+				// Evaluate x2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(s2x, s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, sf, rec, s1e[threadIdx] + 0.0001f * alpha * pg1, threadIdx, blockDim))
+				if (evaluate(s2x, s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, sf, rec, s1e[threadIdx] + alp * pga, threadIdx, blockDim))
 				{
-					o = threadIdx;
-					pg2 = bfp[o] * s2g[o];
+					o0 = threadIdx;
+					pg2 = bfp[o0] * s2g[o0];
 					for (i = 1; i < nv; ++i)
 					{
-						o += blockDim;
-						pg2 += bfp[o] * s2g[o];
+						o0 += blockDim;
+						pg2 += bfp[o0] * s2g[o0];
 					}
-					if (pg2 >= 0.9f * pg1)
-						break; // An appropriate alpha is found.
+					if (pg2 >= pgc) break;
 				}
 
-				alpha *= 0.1f;
+				alp *= 0.1f;
 			}
 
-			// If an appropriate alpha cannot be found, exit the BFGS loop.
-			if (j == num_alphas) break;
+			// If no appropriate alpha can be found, exit the BFGS loop.
+			if (j == nls) break;
 
 			// Calculate y = g2 - g1.
-			o = threadIdx;
-			bfy[o] = s2g[o] - s1g[o];
+			o0 = threadIdx;
+			bfy[o0] = s2g[o0] - s1g[o0];
 			for (i = 1; i < nv; ++i)
 			{
-				o += blockDim;
-				bfy[o] = s2g[o] - s1g[o];
-			}
-			// Calculate m = -h * y.
-			sum = bfh[k = threadIdx] * bfy[o = threadIdx];
-			for (j = 1; j < nv; ++j)
-			{
-				sum += bfh[k += j * blockDim] * bfy[o += blockDim];
-			}
-			bfm[o1 = threadIdx] = -sum;
-			for (i = 1; i < nv; ++i)
-			{
-				sum = bfh[k = (i*(i+1)>>1) * blockDim + threadIdx] * bfy[o = threadIdx];
-				for (j = 1; j < nv; ++j)
-				{
-					sum += bfh[k += j > i ? j * blockDim : blockDim] * bfy[o += blockDim];
-				}
-				bfm[o1 += blockDim] = -sum;
-			}
-			// Calculate yhy = -y * mhy = -y * (-hy).
-			o = threadIdx;
-			yhy = -bfy[o] * bfm[o];
-			for (i = 1; i < nv; ++i)
-			{
-				o += blockDim;
-				yhy -= bfy[o] * bfm[o];
-			}
-			// Calculate yp = y * p.
-			o = threadIdx;
-			yp = bfy[o] * bfp[o];
-			for (i = 1; i < nv; ++i)
-			{
-				o += blockDim;
-				yp += bfy[o] * bfp[o];
-			}
-			// Update Hessian matrix h.
-			ryp = 1 / yp;
-			pco = ryp * (ryp * yhy + alpha);
-			o = threadIdx;
-			for (i = 0; i < nv; ++i)
-			{
-				pi = bfp[o];
-				mi = bfm[o];
-				pcopi = pco * pi;
-				bfh[k = (i*(i+3)>>1) * blockDim + threadIdx] += ryp * (mi * pi + mi * pi) + pcopi * pi;
-				for (j = i + 1; j < nv; ++j)
-				{
-					o1 = j * blockDim + threadIdx;
-					pj = bfp[o1];
-					bfh[k += j * blockDim] += ryp * (mi * pj + bfm[o1] * pi) + pcopi * pj;
-				}
-				o += blockDim;
+				o0 += blockDim;
+				bfy[o0] = s2g[o0] - s1g[o0];
 			}
 
-			// Move to the next iteration, i.e. s1e = s2e, s1x = s2x, s1g = s2g.
-			o = threadIdx;
-			s1e[o] = s2e[o];
+			// Calculate m = -h * y.
+			sum = bfh[o1 = threadIdx] * bfy[o0 = threadIdx];
+			for (i = 1; i < nv; ++i)
+			{
+				sum += bfh[o1 += i * blockDim] * bfy[o0 += blockDim];
+			}
+			bfm[o2 = threadIdx] = -sum;
+			for (j = 1; j < nv; ++j)
+			{
+				sum = bfh[o1 = (j*(j+1)>>1) * blockDim + threadIdx] * bfy[o0 = threadIdx];
+				for (i = 1; i < nv; ++i)
+				{
+					sum += bfh[o1 += i > j ? i * blockDim : blockDim] * bfy[o0 += blockDim];
+				}
+				bfm[o2 += blockDim] = -sum;
+			}
+
+			// Calculate yhy = -y * m = -y * (-h * y) = y * h * y.
+			o0 = threadIdx;
+			yhy = -bfy[o0] * bfm[o0];
+			for (i = 1; i < nv; ++i)
+			{
+				o0 += blockDim;
+				yhy -= bfy[o0] * bfm[o0];
+			}
+
+			// Calculate yps = y * p.
+			o0 = threadIdx;
+			yps = bfy[o0] * bfp[o0];
+			for (i = 1; i < nv; ++i)
+			{
+				o0 += blockDim;
+				yps += bfy[o0] * bfp[o0];
+			}
+
+			// Update Hessian matrix h.
+			ryp = 1 / yps;
+			pco = ryp * (ryp * yhy + alp);
+			o2 = threadIdx;
+			for (j = 0; j < nv; ++j)
+			{
+				bpj = bfp[o2];
+				bmj = bfm[o2];
+				ppj = pco * bpj;
+				bfh[o1 = (j*(j+3)>>1) * blockDim + threadIdx] += (ryp * 2 * bmj + ppj) * bpj;
+				for (i = j + 1; i < nv; ++i)
+				{
+					o0 = i * blockDim + threadIdx;
+					bpi = bfp[o0];
+					bfh[o1 += i * blockDim] += ryp * (bmj * bpi + bfm[o0] * bpj) + ppj * bpi;
+				}
+				o2 += blockDim;
+			}
+
+			// Move to the next iteration, i.e. e1 = e2, x1 = x2, g1 = g2.
+			o0 = threadIdx;
+			s1e[o0] = s2e[o0];
+//			for (i = -1 - 2 * nv; i < 0; ++i)
 			for (i = 1; i < 2 * (nv + 1); ++i)
 			{
-				o += blockDim;
-				s1e[o] = s2e[o];
+				o0 += blockDim;
+				s1e[o0] = s2e[o0];
 			}
 		}
 
-		// Accept c1 according to Metropolis criteria.
+		// Accept x1 according to Metropolis criteria.
 		if (s1e[threadIdx] < s0e[threadIdx])
 		{
-			o = threadIdx;
-			s0e[o] = s1e[o];
+			o0 = threadIdx;
+			s0e[o0] = s1e[o0];
+//			for (i = -1 - nv; i < 0; ++i)
 			for (i = 1; i < nv + 2; ++i)
 			{
-				o += blockDim;
-				s0e[o] = s1e[o];
+				o0 += blockDim;
+				s0e[o0] = s1e[o0];
 			}
 		}
 	}
