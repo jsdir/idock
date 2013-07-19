@@ -22,7 +22,311 @@ extern __shared__ float shared[];
 __device__  __noinline__// __forceinline__
 bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const float eub)
 {
-	return true;
+	const int gd3 = 3 * gds;
+	const int gd4 = 4 * gds;
+
+	const int* act = lig.data();
+	const int* beg = act + nf;
+	const int* end = beg + nf;
+	const int* nbr = end + nf;
+	const int* prn = nbr + nf;
+	const float* yy0 = (float*)(prn + nf);
+	const float* yy1 = yy0 + nf;
+	const float* yy2 = yy1 + nf;
+	const float* xy0 = yy2 + nf;
+	const float* xy1 = xy0 + nf;
+	const float* xy2 = xy1 + nf;
+	const int* brs = (int*)(xy2 + nf);
+	const float* cr0 = (float*)(brs + nf - 1);
+	const float* cr1 = cr0 + na;
+	const float* cr2 = cr1 + na;
+	const int* xst = (int*)(cr2 + na);
+	const int* ip0 = xst + na;
+	const int* ip1 = ip0 + np;
+	const int* ipp = ip1 + np;
+	assert(ipp + np == &lig.back() + 1);
+
+	float y, y0, y1, y2, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, ang, sng, r0, r1, r2, r3, vs, dr, f0, f1, f2, t0, t1, t2, d0, d1, d2;
+	float q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8;
+	int i, j, k, b, w, i0, i1, i2, k0, k1, k2, z;
+
+	// Apply position, orientation and torsions.
+	c[i  = gid] = x[k  = gid];
+	c[i += gds] = x[k += gds];
+	c[i += gds] = x[k += gds];
+	q[i  = gid] = x[k += gds];
+	q[i += gds] = x[k += gds];
+	q[i += gds] = x[k += gds];
+	q[i += gds] = x[k += gds];
+	y = 0.0f;
+	for (k = 0, b = 0, w = 6 * gds + gid; k < nf; ++k)
+	{
+		// Load rotorY from memory into registers.
+		y0 = c[i0  = beg[k] * gd3 + gid];
+		y1 = c[i0 += gds];
+		y2 = c[i0 += gds];
+
+		// Translate orientation of active frames from quaternion into 3x3 matrix.
+		if (act[k])
+		{
+			q0 = q[k0  = k * gd4 + gid];
+			q1 = q[k0 += gds];
+			q2 = q[k0 += gds];
+			q3 = q[k0 += gds];
+			assert(fabs(q0*q0 + q1*q1 + q2*q2 + q3*q3 - 1.0f) < 1e-3f);
+			q00 = q0 * q0;
+			q01 = q0 * q1;
+			q02 = q0 * q2;
+			q03 = q0 * q3;
+			q11 = q1 * q1;
+			q12 = q1 * q2;
+			q13 = q1 * q3;
+			q22 = q2 * q2;
+			q23 = q2 * q3;
+			q33 = q3 * q3;
+			m0 = q00 + q11 - q22 - q33;
+			m1 = 2 * (q12 - q03);
+			m2 = 2 * (q02 + q13);
+			m3 = 2 * (q03 + q12);
+			m4 = q00 - q11 + q22 - q33;
+			m5 = 2 * (q23 - q01);
+			m6 = 2 * (q13 - q02);
+			m7 = 2 * (q01 + q23);
+			m8 = q00 - q11 - q22 + q33;
+		}
+
+		// Evaluate c and d of frame atoms. Aggregate e into y.
+		for (i = beg[k], z = end[k]; i < z; ++i)
+		{
+			i0 = i * gd3 + gid;
+			i1 = i0 + gds;
+			i2 = i1 + gds;
+
+			// The first atom of a frame is assumed to be its rotor Y.
+			if (i == beg[k])
+			{
+				c0 = y0;
+				c1 = y1;
+				c2 = y2;
+			}
+			else
+			{
+				// Calculate coordinate from transformation matrix and offset.
+				v0 = cr0[i];
+				v1 = cr1[i];
+				v2 = cr2[i];
+				c0 = y0 + m0 * v0 + m1 * v1 + m2 * v2;
+				c1 = y1 + m3 * v0 + m4 * v1 + m5 * v2;
+				c2 = y2 + m6 * v0 + m7 * v1 + m8 * v2;
+
+				// Store coordinate from registers into memory.
+				c[i0] = c0;
+				c[i1] = c1;
+				c[i2] = c2;
+			}
+
+			// Penalize out-of-box case.
+			if (c0 < c_corner0[0] || c_corner1[0] <= c0 || c1 < c_corner0[1] || c_corner1[1] <= c1 || c2 < c_corner0[2] || c_corner1[2] <= c2)
+			{
+				y += 10.0f;
+				d[i0] = 0.0f;
+				d[i1] = 0.0f;
+				d[i2] = 0.0f;
+				continue;
+			}
+
+			// Find the index of the current coordinate
+			k0 = static_cast<size_t>((c0 - c_corner0.y) * c_granularity_inverse);
+			k1 = static_cast<size_t>((c1 - c_corner0.y) * c_granularity_inverse);
+			k2 = static_cast<size_t>((c2 - c_corner0.z) * c_ranularity_inverse);
+			assert(k0 + 1 < c_num_probes[0]);
+			assert(k1 + 1 < c_num_probes[1]);
+			assert(k2 + 1 < c_num_probes[2]);
+			k0 = c_num_probes.x * (c_num_probes.y * k2 + k1) + k0;
+
+			// Retrieve the grid map and lookup the value
+			const vector<float>& map = c_maps[xst[i]];
+			assert(map.size());
+			e000 = map[k0];
+			e100 = map[k0 + 1];
+			e010 = map[k0 + c_num_probes.x];
+			e001 = map[k0 + c_num_probes.x * c_num_probes.y];
+			y += e000;
+			d[i0] = (e100 - e000) * c_granularity_inverse;
+			d[i1] = (e010 - e000) * c_granularity_inverse;
+			d[i2] = (e001 - e000) * c_granularity_inverse;
+		}
+		for (j = 0, z = nbr[k]; j < z; ++j)
+		{
+			i = brs[b++];
+			i0 = beg[i] * gd3 + gid;
+			i1 = i0 + gds;
+			i2 = i1 + gds;
+			c[i0] = y0 + m0 * yy0[i] + m1 * yy1[i] + m2 * yy2[i];
+			c[i1] = y1 + m3 * yy0[i] + m4 * yy1[i] + m5 * yy2[i];
+			c[i2] = y2 + m6 * yy0[i] + m7 * yy1[i] + m8 * yy2[i];
+
+			// Skip inactive BRANCH frame
+			if (!act[i]) continue;
+
+			// Update a of BRANCH frame
+			a0 = m0 * xy0[i] + m1 * xy1[i] + m2 * xy2[i];
+			a1 = m3 * xy0[i] + m4 * xy1[i] + m5 * xy2[i];
+			a2 = m6 * xy0[i] + m7 * xy1[i] + m8 * xy2[i];
+			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 1e-3f);
+			a[k0  = i * gd3 + gid] = a0;
+			a[k0 += gds] = a1;
+			a[k0 += gds] = a2;
+
+			// Update q of BRANCH frame
+			ang = x[w += gds] * 0.5f;
+			sng = sinf(ang);
+			r0 = cosf(ang);
+//			sincosf(ang, &sng, &r0);
+//			sincospif(ang, &sng, &r0);
+			r1 = sng * a0;
+			r2 = sng * a1;
+			r3 = sng * a2;
+			q00 = r0 * q0 - r1 * q1 - r2 * q2 - r3 * q3;
+			q01 = r0 * q1 + r1 * q0 + r2 * q3 - r3 * q2;
+			q02 = r0 * q2 - r1 * q3 + r2 * q0 + r3 * q1;
+			q03 = r0 * q3 + r1 * q2 - r2 * q1 + r3 * q0;
+			assert(fabs(q00*q00 + q01*q01 + q02*q02 + q03*q03 - 1.0f) < 1e-3f);
+			q[k0  = i * gd4 + gid] = q00;
+			q[k0 += gds] = q01;
+			q[k0 += gds] = q02;
+			q[k0 += gds] = q03;
+		}
+	}
+	assert(b == nf - 1);
+	assert(w == nv * gds + gid);
+	assert(k == nf);
+
+	// Calculate intra-ligand free energy.
+	for (i = 0; i < np; ++i)
+	{
+		i0 = ip0[i] * gd3 + gid;
+		i1 = i0 + gds;
+		i2 = i1 + gds;
+		k0 = ip1[i] * gd3 + gid;
+		k1 = k0 + gds;
+		k2 = k1 + gds;
+		v0 = c[k0] - c[i0];
+		v1 = c[k1] - c[i1];
+		v2 = c[k2] - c[i2];
+		vs = v0*v0 + v1*v1 + v2*v2;
+		if (vs < 64.0)
+		{
+			j = ipp[i] + static_cast<size_t>(c_sf_ns * vs);
+			y += c_sf_e[j];
+			dr = c_sf_d[j];
+			d0 = dr * v0;
+			d1 = dr * v1;
+			d2 = dr * v2;
+			d[i0] -= d0;
+			d[i1] -= d1;
+			d[i2] -= d2;
+			d[k0] += d0;
+			d[k1] += d1;
+			d[k2] += d2;
+		}
+	}
+
+	// If the free energy is no better than the upper bound, refuse this conformation.
+	if (y >= eub) return false;
+
+	// Store e from register into memory.
+	e[gid] = y;
+
+	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
+	f[k0 = gid] = 0.0f;
+	t[k0] = 0.0f;
+	for (i = 1, z = 3 * nf; i < z; ++i)
+	{
+		f[k0 += gds] = 0.0f;
+		t[k0] = 0.0f;
+	}
+	assert(w == nv * gds + gid);
+	assert(k == nf);
+	while (true)
+	{
+		--k;
+
+		// Load f, t and rotorY from memory into register
+		k0 = k * gd3 + gid;
+		k1 = k0 + gds;
+		k2 = k1 + gds;
+		f0 = f[k0];
+		f1 = f[k1];
+		f2 = f[k2];
+		t0 = t[k0];
+		t1 = t[k1];
+		t2 = t[k2];
+		y0 = c[i0  = beg[k] * gd3 + gid];
+		y1 = c[i0 += gds];
+		y2 = c[i0 += gds];
+
+		// Aggregate frame atoms.
+		for (i = beg[k], z = end[k]; i < z; ++i)
+		{
+			i0 = i * gd3 + gid;
+			i1 = i0 + gds;
+			i2 = i1 + gds;
+			d0 = d[i0];
+			d1 = d[i1];
+			d2 = d[i2];
+
+			// The derivatives with respect to the position, orientation, and torsions
+			// would be the negative total force acting on the ligand,
+			// the negative total torque, and the negative torque projections, respectively,
+			// where the projections refer to the torque applied to the branch moved by the torsion,
+			// projected on its rotation axi
+			f0 += d0;
+			f1 += d1;
+			f2 += d2;
+			if (i == beg[k]) continue;
+
+			v0 = c[i0] - y0;
+			v1 = c[i1] - y1;
+			v2 = c[i2] - y2;
+			t0 += v1 * d2 - v2 * d1;
+			t1 += v2 * d0 - v0 * d2;
+			t2 += v0 * d1 - v1 * d0;
+		}
+
+		// Save the aggregated force and torque of ROOT frame to g.
+		if (k == 0)
+		{
+			g[i0  = gid] = f0;
+			g[i0 += gds] = f1;
+			g[i0 += gds] = f2;
+			g[i0 += gds] = t0;
+			g[i0 += gds] = t1;
+			g[i0 += gds] = t2;
+			return true;
+		}
+
+		// Save the aggregated torque of active BRANCH frames to g.
+		if (act[k])
+		{
+			g[w -= gds] = t0 * a[k0] + t1 * a[k1] + t2 * a[k2]; // dot product
+		}
+
+		// Aggregate the force and torque of current frame to its parent frame.
+		k0 = prn[k] * gd3 + gid;
+		k1 = k0 + gds;
+		k2 = k1 + gds;
+		f[k0] += f0;
+		f[k1] += f1;
+		f[k2] += f2;
+		v0 = y0 - c[i0  = beg[prn[k]] * gd3 + gid];
+		v1 = y1 - c[i0 += gds];
+		v2 = y2 - c[i0 += gds];
+		t[k0] += t0 + v1 * f2 - v2 * f1;
+		t[k1] += t1 + v2 * f0 - v0 * f2;
+		t[k2] += t2 + v0 * f1 - v1 * f0;
+	}
+	assert(w == 6 * gds + gid);
 }
 
 __global__
