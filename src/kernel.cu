@@ -12,7 +12,7 @@ __constant__ float* c_sf_d;
 __constant__ int c_sf_ns;
 __constant__ float3 c_corner0;
 __constant__ float3 c_corner1;
-__constant__ float3 c_num_probes;
+__constant__ int3 c_num_probes;
 __constant__ float c_granularity_inverse;
 __constant__ float* c_maps[sf_n];
 __constant__ int c_num_generations;
@@ -29,10 +29,12 @@ __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
 void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, const int na, const int np, const unsigned long long seed)
 {
+	const int gid = blockIdx.x * blockDim.x + threadIdx.x;
+	const int gds = blockDim.x * gridDim.x;
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
 
-	int gid, i, n, z, o0;
+	int i, n, z, o0;
 	curandState crs;
 
 	// Load ligand into external shared memory.
@@ -49,12 +51,11 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	}
 	__syncthreads();
 
-	gid = blockIdx.x * blockDim.x + threadIdx.x;
 	curand_init(seed, gid, 0, &crs);
 	curand_uniform(&crs);
 }
 
-kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const float* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int ng) : num_mc_tasks(num_mc_tasks), ng(ng)
+kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int ng) : num_mc_tasks(num_mc_tasks), ng(ng)
 {
 	// Initialize scoring function.
 	cudaMalloc(&d_sf_e, h_sf_ne);
@@ -71,7 +72,7 @@ kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, cons
 	// Initialize receptor.
 	assert(sizeof(c_corner0) == sizeof(float) * 3);
 	assert(sizeof(c_corner1) == sizeof(float) * 3);
-	assert(sizeof(c_num_probes) == sizeof(float) * 3);
+	assert(sizeof(c_num_probes) == sizeof(int) * 3);
 	assert(sizeof(c_granularity_inverse) == sizeof(h_granularity_inverse));
 	cudaMemcpyToSymbol(c_corner0, h_corner0, sizeof(c_corner0));
 	cudaMemcpyToSymbol(c_corner1, h_corner1, sizeof(c_corner1));
