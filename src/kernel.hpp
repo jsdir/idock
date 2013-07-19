@@ -11,7 +11,7 @@ class kernel
 {
 public:
 	// Initialize kernel.
-	explicit kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int ng);
+	explicit kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng);
 
 	// Update grid map pointers.
 	void update(const vector<vector<float> > h_maps, const size_t map_bytes, const vector<size_t>& xs);
