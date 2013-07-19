@@ -304,7 +304,7 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 	const int* ipp = ip1 + np;
 	assert(ipp + np == &lig.back() + 1);
 
-	float y, y0, y1, y2, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, ang, sng, r0, r1, r2, r3, vs, dor, f0, f1, f2, t0, t1, t2, d0, d1, d2;
+	float y, y0, y1, y2, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, ang, sng, r0, r1, r2, r3, vs, dr, f0, f1, f2, t0, t1, t2, d0, d1, d2;
 	float q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8;
 	int i, j, k, b, w, i0, i1, i2, k0, k1, k2, z;
 
@@ -477,10 +477,10 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 		{
 			j = ipp[i] + static_cast<size_t>(sf.ns * vs);
 			y += sf.e[j];
-			dor = sf.d[j];
-			d0 = dor * v0;
-			d1 = dor * v1;
-			d2 = dor * v2;
+			dr = sf.d[j];
+			d0 = dr * v0;
+			d1 = dr * v1;
+			d2 = dr * v2;
 			d[i0] -= d0;
 			d[i1] -= d1;
 			d[i2] -= d2;
