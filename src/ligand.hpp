@@ -8,16 +8,6 @@
 #include "receptor.hpp"
 using namespace boost::filesystem;
 
-/// Represents a result found by BFGS local optimization for later clustering.
-class solution
-{
-public:
-//	float e; ///< Free energy.
-//	vector<float> x; ///< Conformation vector.
-	vector<array<float, 4>> q; ///< Frame quaternions.
-	vector<array<float, 3>> c; ///< Heavy atom coordinates.
-};
-
 /// Represents a ROOT or a BRANCH in PDBQT structure.
 class frame
 {
@@ -63,11 +53,8 @@ public:
 	/// Task for running Monte Carlo Simulated Annealing algorithm to find local minimums of the scoring function.
 	int bfgs(float* s0e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t ng, const unsigned int threadIdx, const unsigned int blockDim) const;
 
-	/// Recovers q and c from x.
-	void recover(solution& s, const vector<float>& ex, const size_t offset, const size_t num_mc_tasks) const;
-
 	/// Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	void save(const path& output_ligand_path, const vector<solution>& solutions) const;
+	float save(const path& output_ligand_path, const vector<float>& ex, const size_t max_conformations, const size_t num_mc_tasks) const;
 
 private:
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.

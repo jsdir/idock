@@ -2,7 +2,6 @@
 #include <random>
 #include <iostream>
 #include <iomanip>
-#include <numeric>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
@@ -231,51 +230,12 @@ int main(int argc, char* argv[])
 		t.stop();
 		cout << " | " << flush;
 
-		// Sort solutions and output the top one.
-		vector<size_t> rank(num_mc_tasks);
-		iota(rank.begin(), rank.end(),  0);
-		sort(rank.begin(), rank.end(), [&ex](const size_t v0, const size_t v1)
-		{
-			return ex[v0] < ex[v1];
-		});
-		const float e = ex[rank.front()];
-		cout << setw(8) << e << " | " << flush;
-		summaries.push_back(new summary(stem, e));
-
-		// Cluster results. Ligands with RMSD < 2.0 will be clustered into the same cluster.
-		vector<solution> solutions;
-		solutions.reserve(max_conformations);
-		const float required_square_error = 4.0f * lig.na;
-		for (size_t k = 0; k < num_mc_tasks && solutions.size() < solutions.capacity(); ++k)
-		{
-			// Recover q and c from x.
-			solution s;
-			lig.recover(s, ex, rank[k], num_mc_tasks);
-			bool representative = true;
-			for (const solution& t : solutions)
-			{
-				float this_square_error = 0.0f;
-				for (size_t i = 0; i < lig.na; ++i)
-				{
-					this_square_error += distance_sqr(s.c[i], t.c[i]);
-				}
-				if (this_square_error < required_square_error)
-				{
-					representative = false;
-					break;
-				}
-			}
-			if (representative)
-			{
-				solutions.push_back(static_cast<solution&&>(s));
-			}
-		}
-		cout << setw(4) << solutions.size() << endl;
-		t.report();
-
-		// Write models to file.
+		// Cluster and save solutions to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		lig.save(output_ligand_path, solutions);
+		const float e = lig.save(output_ligand_path, ex, max_conformations, num_mc_tasks);
+		cout << setw(8) << e << " | " << endl;
+		summaries.push_back(new summary(stem, e));
+		t.report();
 	}
 
 	// Sort and write ligand summary to the log file.

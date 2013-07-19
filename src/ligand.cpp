@@ -1,5 +1,6 @@
 #include <iomanip>
 #include <random>
+#include <numeric>
 #include "utility.hpp"
 #include "ligand.hpp"
 
@@ -892,53 +893,85 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 	return 0;
 }
 
-void ligand::recover(solution& s, const vector<float>& ex, const size_t offset, const size_t num_mc_tasks) const
+/// Represents a result found by BFGS local optimization for later clustering.
+class solution
 {
-	// Apply position and orientation to ROOT frame.
-	size_t o;
-	s.q.resize(nf);
-	s.c.resize(na);
-	s.c[0][0] = ex[o = num_mc_tasks + offset];
-	s.c[0][1] = ex[o += num_mc_tasks];
-	s.c[0][2] = ex[o += num_mc_tasks];
-	s.q[0][0] = ex[o += num_mc_tasks];
-	s.q[0][1] = ex[o += num_mc_tasks];
-	s.q[0][2] = ex[o += num_mc_tasks];
-	s.q[0][3] = ex[o += num_mc_tasks];
+public:
+//	float e; ///< Free energy.
+//	vector<float> x; ///< Conformation vector.
+	vector<array<float, 4>> q; ///< Frame quaternions.
+	vector<array<float, 3>> c; ///< Heavy atom coordinates.
+};
 
-	// Apply torsions to frames.
-	for (size_t k = 0, w = 7; k < nf; ++k)
+float ligand::save(const path& output_ligand_path, const vector<float>& ex, const size_t max_conformations, const size_t num_mc_tasks) const
+{
+	// Sort solutions in ascending order of e.
+	vector<size_t> rank(num_mc_tasks);
+	iota(rank.begin(), rank.end(), 0);
+	sort(rank.begin(), rank.end(), [&ex](const size_t v0, const size_t v1)
 	{
-		const frame& f = frames[k];
-		if (!f.active) continue;
-		const array<float, 9> m = qtn4_to_mat3(s.q[k]);
-		for (size_t i = f.beg + 1; i < f.end; ++i)
-		{
-			s.c[i] = s.c[f.beg] + m * atoms[i].coord;
-		}
-		for (const size_t i : f.branches)
-		{
-			const frame& b = frames[i];
-			s.c[b.beg] = s.c[f.beg] + m * b.yy;
+		return ex[v0] < ex[v1];
+	});
 
-			// Skip inactive BRANCH frame
-			if (!b.active) continue;
-
-			const array<float, 3> a = m * b.xy;
-			assert(normalized(a));
-			s.q[i] = vec4_to_qtn4(a, ex[o += num_mc_tasks]) * s.q[k];
-			assert(normalized(s.q[i]));
-		}
-	}
-}
-
-void ligand::save(const path& output_ligand_path, const vector<solution>& solutions) const
-{
+	// Cluster solutions with RMSD of 2.0 and save them on the fly.
+	const float square_deviation_threshold = 4.0f * na;
+	vector<solution> solutions;
+	solutions.reserve(max_conformations);
 	boost::filesystem::ofstream ofs(output_ligand_path);
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
-	for (const solution& s : solutions)
+	for (const size_t r : rank)
 	{
+		// Recover q and c from x.
+		solution s;
+		size_t o;
+		s.q.resize(nf);
+		s.c.resize(na);
+		s.c[0][0] = ex[o = num_mc_tasks + r];
+		s.c[0][1] = ex[o += num_mc_tasks];
+		s.c[0][2] = ex[o += num_mc_tasks];
+		s.q[0][0] = ex[o += num_mc_tasks];
+		s.q[0][1] = ex[o += num_mc_tasks];
+		s.q[0][2] = ex[o += num_mc_tasks];
+		s.q[0][3] = ex[o += num_mc_tasks];
+		for (size_t k = 0; k < nf; ++k)
+		{
+			const frame& f = frames[k];
+			if (!f.active) continue;
+			const array<float, 9> m = qtn4_to_mat3(s.q[k]);
+			for (size_t i = f.beg + 1; i < f.end; ++i)
+			{
+				s.c[i] = s.c[f.beg] + m * atoms[i].coord;
+			}
+			for (const size_t i : f.branches)
+			{
+				const frame& b = frames[i];
+				s.c[b.beg] = s.c[f.beg] + m * b.yy;
+				if (!b.active) continue;
+				const array<float, 3> a = m * b.xy;
+				assert(normalized(a));
+				s.q[i] = vec4_to_qtn4(a, ex[o += num_mc_tasks]) * s.q[k];
+				assert(normalized(s.q[i]));
+			}
+		}
+
+		// Check if c forms a new cluster.
+		bool representative = true;
+		for (const solution& t : solutions)
+		{
+			float square_deviation = 0.0f;
+			for (size_t i = 0; i < na; ++i)
+			{
+				square_deviation += distance_sqr(s.c[i], t.c[i]);
+			}
+			if (square_deviation < square_deviation_threshold)
+			{
+				representative = false;
+				break;
+			}
+		}
+		if (!representative) continue;
+
 		// Dump the ROOT frame.
 		ofs << "ROOT\n";
 		{
@@ -998,5 +1031,10 @@ void ligand::save(const path& output_ligand_path, const vector<solution>& soluti
 			}
 		}
 		ofs << "TORSDOF " << nf - 1 << '\n';
+
+		solutions.push_back(static_cast<solution&&>(s));
+		if (solutions.size() == solutions.capacity()) break;
 	}
+
+	return ex[rank.front()];
 }
