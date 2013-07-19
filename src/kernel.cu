@@ -246,7 +246,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 		f[k0 += gds] = 0.0f;
 		t[k0] = 0.0f;
 	}
-	assert(w == nv * gds + gid);
+//	assert(w == nv * gds + gid);
 	assert(k == nf);
 	while (true)
 	{
@@ -327,7 +327,6 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 		t[k2] += t2 + v0 * f1 - v1 * f0;
 	}
 	assert(w == 6 * gds + gid);
-	return false;
 }
 
 __global__
