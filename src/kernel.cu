@@ -46,7 +46,6 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 	const int* ip0 = xst + na;
 	const int* ip1 = ip0 + np;
 	const int* ipp = ip1 + np;
-	assert(ipp + np == &lig.back() + 1);
 
 	float y, y0, y1, y2, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, ang, sng, r0, r1, r2, r3, vs, dr, f0, f1, f2, t0, t1, t2, d0, d1, d2;
 	float q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8;
@@ -141,9 +140,9 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			k0 = static_cast<size_t>((c0 - c_corner0.y) * c_granularity_inverse);
 			k1 = static_cast<size_t>((c1 - c_corner0.y) * c_granularity_inverse);
 			k2 = static_cast<size_t>((c2 - c_corner0.z) * c_granularity_inverse);
-			assert(k0 + 1 < c_num_probes[0]);
-			assert(k1 + 1 < c_num_probes[1]);
-			assert(k2 + 1 < c_num_probes[2]);
+			assert(k0 + 1 < c_num_probes.x);
+			assert(k1 + 1 < c_num_probes.y);
+			assert(k2 + 1 < c_num_probes.z);
 			k0 = c_num_probes.x * (c_num_probes.y * k2 + k1) + k0;
 
 			// Retrieve the grid map and lookup the value
@@ -200,7 +199,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 		}
 	}
 	assert(b == nf - 1);
-	assert(w == nv * gds + gid);
+//	assert(w == nv * gds + gid);
 	assert(k == nf);
 
 	// Calculate intra-ligand free energy.
@@ -328,6 +327,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 		t[k2] += t2 + v0 * f1 - v1 * f0;
 	}
 	assert(w == 6 * gds + gid);
+	return false;
 }
 
 __global__
