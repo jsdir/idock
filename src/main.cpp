@@ -260,7 +260,7 @@ int main(int argc, char* argv[])
 			// Solutions store e and x only. Recover q and c from x.
 			lig.recover(s);
 			bool representative = true;
-			for (size_t j = 0; j < k; ++j)
+			for (size_t j : representatives)
 			{
 				const solution& sj = solutions[j];
 				float this_square_error = 0.0f;
