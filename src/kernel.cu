@@ -17,15 +17,17 @@ __constant__ float c_granularity_inverse;
 __constant__ float* c_maps[sf_n];
 __constant__ int c_ng;
 
-extern __shared__ float shared[];
+extern __shared__ int shared[];
 
 __device__  __noinline__// __forceinline__
-bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const float eub)
+bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub)
 {
+	const int gid = blockIdx.x * blockDim.x + threadIdx.x;
+	const int gds = blockDim.x * gridDim.x;
 	const int gd3 = 3 * gds;
 	const int gd4 = 4 * gds;
 
-	const int* act = lig.data();
+	const int* act = shared;
 	const int* beg = act + nf;
 	const int* end = beg + nf;
 	const int* nbr = end + nf;
@@ -126,7 +128,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			}
 
 			// Penalize out-of-box case.
-			if (c0 < c_corner0[0] || c_corner1[0] <= c0 || c1 < c_corner0[1] || c_corner1[1] <= c1 || c2 < c_corner0[2] || c_corner1[2] <= c2)
+			if (c0 < c_corner0.x || c_corner1.x <= c0 || c1 < c_corner0.y || c_corner1.y <= c1 || c2 < c_corner0.z || c_corner1.z <= c2)
 			{
 				y += 10.0f;
 				d[i0] = 0.0f;
@@ -138,15 +140,14 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			// Find the index of the current coordinate
 			k0 = static_cast<size_t>((c0 - c_corner0.y) * c_granularity_inverse);
 			k1 = static_cast<size_t>((c1 - c_corner0.y) * c_granularity_inverse);
-			k2 = static_cast<size_t>((c2 - c_corner0.z) * c_ranularity_inverse);
+			k2 = static_cast<size_t>((c2 - c_corner0.z) * c_granularity_inverse);
 			assert(k0 + 1 < c_num_probes[0]);
 			assert(k1 + 1 < c_num_probes[1]);
 			assert(k2 + 1 < c_num_probes[2]);
 			k0 = c_num_probes.x * (c_num_probes.y * k2 + k1) + k0;
 
 			// Retrieve the grid map and lookup the value
-			const vector<float>& map = c_maps[xst[i]];
-			assert(map.size());
+			const float* map = c_maps[xst[i]];
 			e000 = map[k0];
 			e100 = map[k0 + 1];
 			e010 = map[k0 + c_num_probes.x];
@@ -409,7 +410,7 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	{
 		s0x[o0 += gds] = curand_uniform(&crs) * 2 - 1;
 	}
-	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, eub);
+	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub);
 
 	// Repeat for a number of generations.
 	for (g = 0; g < c_ng; ++g)
@@ -427,7 +428,7 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 			o0 += gds;
 			s1x[o0] = s0x[o0];
 		}
-		evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, eub);
+		evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
@@ -532,7 +533,7 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 				// Evaluate x2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, s1e[gid] + alp * pga))
+				if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, nf, na, np, s1e[gid] + alp * pga))
 				{
 					o0 = gid;
 					pg2 = bfp[o0] * s2g[o0];
