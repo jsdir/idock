@@ -86,11 +86,11 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	// Randomize s0x.
 	curand_init(seed, gid, 0, &crs);
 	rd0 = curand_uniform(&crs) * 2 - 1;
-	s0x[o0  = gid] = 0.5f * ((1 + rd0) * c_corner1[0] + (1 - rd0) * c_corner0[0]);
+	s0x[o0  = gid] = 0.5f * ((1 + rd0) * c_corner1.x + (1 - rd0) * c_corner0.x);
 	rd0 = curand_uniform(&crs) * 2 - 1;
-	s0x[o0 += gds] = 0.5f * ((1 + rd0) * c_corner1[1] + (1 - rd0) * c_corner0[1]);
+	s0x[o0 += gds] = 0.5f * ((1 + rd0) * c_corner1.y + (1 - rd0) * c_corner0.y);
 	rd0 = curand_uniform(&crs) * 2 - 1;
-	s0x[o0 += gds] = 0.5f * ((1 + rd0) * c_corner1[2] + (1 - rd0) * c_corner0[2]);
+	s0x[o0 += gds] = 0.5f * ((1 + rd0) * c_corner1.z + (1 - rd0) * c_corner0.z);
 	rd0 = curand_uniform(&crs) * 2 - 1;
 	rd1 = curand_uniform(&crs) * 2 - 1;
 	rd2 = curand_uniform(&crs) * 2 - 1;
@@ -108,7 +108,7 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, eub);
 
 	// Repeat for a number of generations.
-	for (g = 0; g < ng; ++g)
+	for (g = 0; g < c_ng; ++g)
 	{
 		// Mutate s0x into s1x
 		o0  = gid;
