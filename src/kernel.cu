@@ -33,19 +33,51 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	const int gds = blockDim.x * gridDim.x;
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
-
-	int i, n, z, o0;
+	float* s0x = s0e + gds;
+	float* s0g = s0x + (nv + 1) * gds;
+	float* s0a = s0g + nv * gds;
+	float* s0q = s0a + 3 * nf * gds;
+	float* s0c = s0q + 4 * nf * gds;
+	float* s0d = s0c + 3 * na * gds;
+	float* s0f = s0d + 3 * na * gds;
+	float* s0t = s0f + 3 * nf * gds;
+	float* s1e = s0t + 3 * nf * gds;
+	float* s1x = s1e + gds;
+	float* s1g = s1x + (nv + 1) * gds;
+	float* s1a = s1g + nv * gds;
+	float* s1q = s1a + 3 * nf * gds;
+	float* s1c = s1q + 4 * nf * gds;
+	float* s1d = s1c + 3 * na * gds;
+	float* s1f = s1d + 3 * na * gds;
+	float* s1t = s1f + 3 * nf * gds;
+	float* s2e = s1t + 3 * nf * gds;
+	float* s2x = s2e + gds;
+	float* s2g = s2x + (nv + 1) * gds;
+	float* s2a = s2g + nv * gds;
+	float* s2q = s2a + 3 * nf * gds;
+	float* s2c = s2q + 4 * nf * gds;
+	float* s2d = s2c + 3 * na * gds;
+	float* s2f = s2d + 3 * na * gds;
+	float* s2t = s2f + 3 * nf * gds;
+	float* bfh = s2t + 3 * nf * gds;
+	float* bfp = bfh + (nv*(nv+1)>>1) * gds;
+	float* bfy = bfp + nv * gds;
+	float* bfm = bfy + nv * gds;
+	float rd0, rd1, rd2, rd3, rst;
+	float sum, pg1, pga, pgc, alp, pg2, pr0, pr1, pr2, nrm, ang, sng, pq0, pq1, pq2, pq3, s1xq0, s1xq1, s1xq2, s1xq3, s2xq0, s2xq1, s2xq2, s2xq3, bpi;
+	float yhy, yps, ryp, pco, bpj, bmj, ppj;
+	int g, i, j, o0, o1, o2;
 	curandState crs;
 
 	// Load ligand into external shared memory.
-	n = 11 * nf + nf - 1 + 4 * na + 3 * np;
+	g = 11 * nf + nf - 1 + 4 * na + 3 * np;
 	o0 = threadIdx.x;
-	for (i = 0, z = (n - 1) / blockDim.x; i < z; ++i)
+	for (i = 0, j = (g - 1) / blockDim.x; i < j; ++i)
 	{
 		shared[o0] = lig[o0];
 		o0 += blockDim.x;
 	}
-	if (o0 < n)
+	if (o0 < g)
 	{
 		shared[o0] = lig[o0];
 	}
