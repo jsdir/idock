@@ -83,8 +83,28 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	}
 	__syncthreads();
 
+	// Randomize s0x.
 	curand_init(seed, gid, 0, &crs);
-	curand_uniform(&crs);
+	rd0 = curand_uniform(&crs) * 2 - 1;
+	s0x[o0  = gid] = 0.5f * ((1 + rd0) * rec.corner1[0] + (1 - rd0) * rec.corner0[0]);
+	rd0 = curand_uniform(&crs) * 2 - 1;
+	s0x[o0 += gds] = 0.5f * ((1 + rd0) * rec.corner1[1] + (1 - rd0) * rec.corner0[1]);
+	rd0 = curand_uniform(&crs) * 2 - 1;
+	s0x[o0 += gds] = 0.5f * ((1 + rd0) * rec.corner1[2] + (1 - rd0) * rec.corner0[2]);
+	rd0 = curand_uniform(&crs) * 2 - 1;
+	rd1 = curand_uniform(&crs) * 2 - 1;
+	rd2 = curand_uniform(&crs) * 2 - 1;
+	rd3 = curand_uniform(&crs) * 2 - 1;
+	rst = 1.0f / sqrt(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
+//	rst = rsqrtf(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
+	s0x[o0 += gds] = rd0 * rst;
+	s0x[o0 += gds] = rd1 * rst;
+	s0x[o0 += gds] = rd2 * rst;
+	s0x[o0 += gds] = rd3 * rst;
+	for (i = 6; i < nv; ++i)
+	{
+		s0x[o0 += gds] = curand_uniform(&crs) * 2 - 1;
+	}
 }
 
 kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int ng) : num_mc_tasks(num_mc_tasks), ng(ng)
