@@ -1,5 +1,5 @@
 #include <assert.h>
-#include <cuda_runtime_api.h>
+#include <curand_kernel.h>
 #include "kernel.hpp"
 
 #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
@@ -27,9 +27,10 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 
 __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
-void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, const int na, const int np/*, const int seed*/)
+void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, const int na, const int np, const unsigned long long seed)
 {
 	int i, n, z, o0;
+	curandState crs;
 
 	// Load ligand into external shared memory.
 	n = 11 * nf + nf - 1 + 4 * na + 3 * np;
@@ -45,7 +46,9 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	}
 	__syncthreads();
 
-//	i = blockIdx.x * blockDim.x + threadIdx.x;
+	gid = blockIdx.x * blockDim.x + threadIdx.x;
+	curand_init(seed, gid, 0, &crs);
+	curand_uniform(&crs);
 }
 
 kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const float* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int ng) : num_mc_tasks(num_mc_tasks), ng(ng)
@@ -89,7 +92,7 @@ void kernel::update(const vector<vector<float> > h_maps, const size_t map_bytes,
 	cudaMemcpyToSymbol(c_maps, d_maps, sizeof(c_maps));
 }
 
-void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv, const int nf, const int na, const int np, const size_t* seed)
+void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv, const int nf, const int na, const int np, const unsigned long long seed)
 {
 	// Copy ligand content from host memory to device memory.
 	const size_t lig_bytes = sizeof(int) * h_lig.size();
@@ -98,12 +101,12 @@ void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv,
 	cudaMemcpy(d_lig, &h_lig.front(), lig_bytes, cudaMemcpyHostToDevice);
 
 	// Allocate device memory for variables. 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
-	const size_t var_bytes = sizeof(float) * (1 + (nv + 1) + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks * 3 + (nv*(nv+1)>>1) * num_mc_tasks + nv * num_mc_tasks * 3;
+	const size_t var_bytes = sizeof(float) * (1 + (nv + 1) + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks * 3 + (nv * (nv + 1) >> 1) * num_mc_tasks + nv * num_mc_tasks * 3;
 	float* d_s0;
 	cudaMalloc(&d_s0, var_bytes);
 
 	// Invoke CUDA kernel.
-	bfgs<<<num_mc_tasks / 128, 128, lig_bytes>>>(d_s0, d_lig, nv, nf, na, np);
+	bfgs<<<num_mc_tasks / 128, 128, lig_bytes>>>(d_s0, d_lig, nv, nf, na, np, seed);
 
 	// Copy e and x from device memory to host memory.
 	const size_t ex_size = (1 + nv + 1) * num_mc_tasks;

@@ -225,7 +225,8 @@ int main(int argc, char* argv[])
 			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), ex.data(), cref(sf), cref(rec), rng(), num_generations, static_cast<unsigned int>(i), static_cast<unsigned int>(num_mc_tasks))));
 		}
 		boost::timer::auto_cpu_timer t;
-//		knl.launch(s0, lig.content, lig.nv, lig.nf, lig.na, lig.np, seeds);
+//		vector<float> ex;
+//		knl.launch(ex, lig.lig, lig.nv, lig.nf, lig.na, lig.np, seed);
 		tp.sync(25);
 		t.stop();
 		cout << " | " << flush;
