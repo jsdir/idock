@@ -3,27 +3,19 @@
 #define IDOCK_LIGAND_HPP
 
 #include <boost/filesystem/fstream.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include "atom.hpp"
 #include "scoring_function.hpp"
 #include "receptor.hpp"
 using namespace boost::filesystem;
-using boost::ptr_vector;
 
 /// Represents a result found by BFGS local optimization for later clustering.
 class solution
 {
 public:
-	float e; ///< Free energy.
-	vector<float> x; ///< Conformation vector.
+//	float e; ///< Free energy.
+//	vector<float> x; ///< Conformation vector.
 	vector<array<float, 4>> q; ///< Frame quaternions.
 	vector<array<float, 3>> c; ///< Heavy atom coordinates.
-
-	/// For sorting ptr_vector<solution>.
-	bool operator<(const solution& s) const
-	{
-		return e < s.e;
-	}
 };
 
 /// Represents a ROOT or a BRANCH in PDBQT structure.
@@ -72,10 +64,10 @@ public:
 	int bfgs(float* s0e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t ng, const unsigned int threadIdx, const unsigned int blockDim) const;
 
 	/// Recovers q and c from x.
-	void recover(solution& s) const;
+	void recover(solution& s, const vector<float>& ex, const size_t offset, const size_t num_mc_tasks) const;
 
 	/// Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	void save(const path& output_ligand_path, const ptr_vector<solution>& solutions, const vector<size_t>& representatives) const;
+	void save(const path& output_ligand_path, const vector<solution>& solutions) const;
 
 private:
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.

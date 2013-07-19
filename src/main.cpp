@@ -2,8 +2,10 @@
 #include <random>
 #include <iostream>
 #include <iomanip>
+#include <numeric>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/timer/timer.hpp>
 #include "thread_pool.hpp"
 #include "receptor.hpp"
@@ -168,7 +170,7 @@ int main(int argc, char* argv[])
 //	kernel knl(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations);
 
 	// Perform docking for each file in the ligand folder.
-	ptr_vector<summary> summaries;
+	boost::ptr_vector<summary> summaries;
 	size_t num_ligands = 0; // Ligand counter.
 	cout.setf(ios::fixed, ios::floatfield);
 	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand in parallel" << endl;
@@ -218,10 +220,10 @@ int main(int argc, char* argv[])
 		cout << setw(8) << ++num_ligands << " | " << setw(15) << stem << " | " << flush;
 
 		// Run the Monte Carlo tasks in parallel
-		vector<float> s0((1 + (lig.nv + 1) + lig.nv + 3 * lig.nf + 4 * lig.nf + 3 * lig.na + 3 * lig.na + 3 * lig.nf + 3 * lig.nf) * num_mc_tasks * 3 + (lig.nv*(lig.nv+1)>>1) * num_mc_tasks + lig.nv * num_mc_tasks * 3);
+		vector<float> ex((1 + (lig.nv + 1) + lig.nv + 3 * lig.nf + 4 * lig.nf + 3 * lig.na + 3 * lig.na + 3 * lig.nf + 3 * lig.nf) * num_mc_tasks * 3 + (lig.nv*(lig.nv+1)>>1) * num_mc_tasks + lig.nv * num_mc_tasks * 3);
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
-			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), s0.data(), cref(sf), cref(rec), rng(), num_generations, static_cast<unsigned int>(i), static_cast<unsigned int>(num_mc_tasks))));
+			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), ex.data(), cref(sf), cref(rec), rng(), num_generations, static_cast<unsigned int>(i), static_cast<unsigned int>(num_mc_tasks))));
 		}
 		boost::timer::auto_cpu_timer t;
 //		knl.launch(s0, lig.content, lig.nv, lig.nf, lig.na, lig.np, seeds);
@@ -229,44 +231,33 @@ int main(int argc, char* argv[])
 		t.stop();
 		cout << " | " << flush;
 
-		// Translate the s0 buffer into structured solutions.
-		ptr_vector<solution> solutions;
-		solutions.resize(num_mc_tasks);
-		for (size_t i = 0; i < num_mc_tasks; ++i)
-		{
-			solution& s = solutions[i];
-			s.e = s0[i];
-			size_t o;
-			s.x.resize(lig.nv + 1);
-			s.x[0] = s0[o = num_mc_tasks + i];
-			for (size_t j = 1; j < lig.nv + 1; ++j)
-			{
-				s.x[j] = s0[o += num_mc_tasks];
-			}
-		}
-
 		// Sort solutions and output the top one.
-		solutions.sort();
-		cout << setw(8) << solutions.front().e << " | " << flush;
-		summaries.push_back(new summary(stem, solutions.front().e));
+		vector<size_t> rank(num_mc_tasks);
+		iota(rank.begin(), rank.end(),  0);
+		sort(rank.begin(), rank.end(), [&ex](const size_t v0, const size_t v1)
+		{
+			return ex[v0] < ex[v1];
+		});
+		const float e = ex[rank.front()];
+		cout << setw(8) << e << " | " << flush;
+		summaries.push_back(new summary(stem, e));
 
 		// Cluster results. Ligands with RMSD < 2.0 will be clustered into the same cluster.
+		vector<solution> solutions;
+		solutions.reserve(max_conformations);
 		const float required_square_error = 4.0f * lig.na;
-		vector<size_t> representatives;
-		representatives.reserve(max_conformations);
-		for (size_t k = 0; k < num_mc_tasks && representatives.size() < representatives.capacity(); ++k)
+		for (size_t k = 0; k < num_mc_tasks && solutions.size() < solutions.capacity(); ++k)
 		{
-			solution& s = solutions[k];
-			// Solutions store e and x only. Recover q and c from x.
-			lig.recover(s);
+			// Recover q and c from x.
+			solution s;
+			lig.recover(s, ex, rank[k], num_mc_tasks);
 			bool representative = true;
-			for (size_t j : representatives)
+			for (const solution& t : solutions)
 			{
-				const solution& sj = solutions[j];
 				float this_square_error = 0.0f;
 				for (size_t i = 0; i < lig.na; ++i)
 				{
-					this_square_error += distance_sqr(s.c[i], sj.c[i]);
+					this_square_error += distance_sqr(s.c[i], t.c[i]);
 				}
 				if (this_square_error < required_square_error)
 				{
@@ -276,15 +267,15 @@ int main(int argc, char* argv[])
 			}
 			if (representative)
 			{
-				representatives.push_back(k);
+				solutions.push_back(static_cast<solution&&>(s));
 			}
 		}
-		cout << setw(4) << representatives.size() << endl;
+		cout << setw(4) << solutions.size() << endl;
 		t.report();
 
 		// Write models to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		lig.save(output_ligand_path, solutions, representatives);
+		lig.save(output_ligand_path, solutions);
 	}
 
 	// Sort and write ligand summary to the log file.

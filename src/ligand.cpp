@@ -892,18 +892,19 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 	return 0;
 }
 
-void ligand::recover(solution& s) const
+void ligand::recover(solution& s, const vector<float>& ex, const size_t offset, const size_t num_mc_tasks) const
 {
 	// Apply position and orientation to ROOT frame.
+	size_t o;
 	s.q.resize(nf);
 	s.c.resize(na);
-	s.c[0][0] = s.x[0];
-	s.c[0][1] = s.x[1];
-	s.c[0][2] = s.x[2];
-	s.q[0][0] = s.x[3];
-	s.q[0][1] = s.x[4];
-	s.q[0][2] = s.x[5];
-	s.q[0][3] = s.x[6];
+	s.c[0][0] = ex[o = num_mc_tasks + offset];
+	s.c[0][1] = ex[o += num_mc_tasks];
+	s.c[0][2] = ex[o += num_mc_tasks];
+	s.q[0][0] = ex[o += num_mc_tasks];
+	s.q[0][1] = ex[o += num_mc_tasks];
+	s.q[0][2] = ex[o += num_mc_tasks];
+	s.q[0][3] = ex[o += num_mc_tasks];
 
 	// Apply torsions to frames.
 	for (size_t k = 0, w = 7; k < nf; ++k)
@@ -925,23 +926,19 @@ void ligand::recover(solution& s) const
 
 			const array<float, 3> a = m * b.xy;
 			assert(normalized(a));
-			s.q[i] = vec4_to_qtn4(a, s.x[w++]) * s.q[k];
+			s.q[i] = vec4_to_qtn4(a, ex[o += num_mc_tasks]) * s.q[k];
 			assert(normalized(s.q[i]));
 		}
 	}
 }
 
-void ligand::save(const path& output_ligand_path, const ptr_vector<solution>& solutions, const vector<size_t>& representatives) const
+void ligand::save(const path& output_ligand_path, const vector<solution>& solutions) const
 {
-	assert(representatives.size());
-	assert(representatives.size() <= solutions.size());
 	boost::filesystem::ofstream ofs(output_ligand_path);
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
-	for (size_t k = 0; k < representatives.size(); ++k)
+	for (const solution& s : solutions)
 	{
-		const solution& s = solutions[representatives[k]];
-
 		// Dump the ROOT frame.
 		ofs << "ROOT\n";
 		{
