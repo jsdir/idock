@@ -848,7 +848,7 @@ int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, co
 			}
 
 			// Update Hessian matrix h.
-			ryp = 1 / yps;
+			ryp = 1.0f / yps;
 			pco = ryp * (ryp * yhy + alp);
 			o2 = gid;
 			for (j = 0; j < nv; ++j)
