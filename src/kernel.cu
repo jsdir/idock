@@ -29,7 +29,10 @@ __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
 void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, const int na, const int np, const unsigned long long seed)
 {
-	int i, n, z, o0;
+	const int nls = 5; // Number of line search trials for determining step size in BFGS
+	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
+
+	int gid, i, n, z, o0;
 	curandState crs;
 
 	// Load ligand into external shared memory.
