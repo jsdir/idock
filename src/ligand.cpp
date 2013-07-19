@@ -280,8 +280,8 @@ ligand::ligand(const path& p) : nv(6)
 
 bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const scoring_function& sf, const receptor& rec, const float eub, const unsigned int gid, const unsigned int gds) const
 {
-	const int bd3 = 3 * gds;
-	const int bd4 = 4 * gds;
+	const int gd3 = 3 * gds;
+	const int gd4 = 4 * gds;
 
 	const int* act = lig.data();
 	const int* beg = act + nf;
@@ -320,14 +320,14 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 	for (k = 0, b = 0, w = 6 * gds + gid; k < nf; ++k)
 	{
 		// Load rotorY from memory into registers.
-		y0 = c[i0  = beg[k] * bd3 + gid];
+		y0 = c[i0  = beg[k] * gd3 + gid];
 		y1 = c[i0 += gds];
 		y2 = c[i0 += gds];
 
 		// Translate orientation of active frames from quaternion into 3x3 matrix.
 		if (act[k])
 		{
-			q0 = q[k0  = k * bd4 + gid];
+			q0 = q[k0  = k * gd4 + gid];
 			q1 = q[k0 += gds];
 			q2 = q[k0 += gds];
 			q3 = q[k0 += gds];
@@ -356,7 +356,7 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 		// Evaluate c and d of frame atoms. Aggregate e into y.
 		for (i = beg[k], z = end[k]; i < z; ++i)
 		{
-			i0 = i * bd3 + gid;
+			i0 = i * gd3 + gid;
 			i1 = i0 + gds;
 			i2 = i1 + gds;
 
@@ -417,7 +417,7 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 		for (j = 0, z = nbr[k]; j < z; ++j)
 		{
 			i = brs[b++];
-			i0 = beg[i] * bd3 + gid;
+			i0 = beg[i] * gd3 + gid;
 			i1 = i0 + gds;
 			i2 = i1 + gds;
 			c[i0] = y0 + m0 * yy0[i] + m1 * yy1[i] + m2 * yy2[i];
@@ -432,7 +432,7 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 			a1 = m3 * xy0[i] + m4 * xy1[i] + m5 * xy2[i];
 			a2 = m6 * xy0[i] + m7 * xy1[i] + m8 * xy2[i];
 			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 1e-3f);
-			a[k0  = i * bd3 + gid] = a0;
+			a[k0  = i * gd3 + gid] = a0;
 			a[k0 += gds] = a1;
 			a[k0 += gds] = a2;
 
@@ -450,7 +450,7 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 			q02 = r0 * q2 - r1 * q3 + r2 * q0 + r3 * q1;
 			q03 = r0 * q3 + r1 * q2 - r2 * q1 + r3 * q0;
 			assert(fabs(q00*q00 + q01*q01 + q02*q02 + q03*q03 - 1.0f) < 1e-3f);
-			q[k0  = i * bd4 + gid] = q00;
+			q[k0  = i * gd4 + gid] = q00;
 			q[k0 += gds] = q01;
 			q[k0 += gds] = q02;
 			q[k0 += gds] = q03;
@@ -463,10 +463,10 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 	// Calculate intra-ligand free energy.
 	for (i = 0; i < np; ++i)
 	{
-		i0 = ip0[i] * bd3 + gid;
+		i0 = ip0[i] * gd3 + gid;
 		i1 = i0 + gds;
 		i2 = i1 + gds;
-		k0 = ip1[i] * bd3 + gid;
+		k0 = ip1[i] * gd3 + gid;
 		k1 = k0 + gds;
 		k2 = k1 + gds;
 		v0 = c[k0] - c[i0];
@@ -511,7 +511,7 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 		--k;
 
 		// Load f, t and rotorY from memory into register
-		k0 = k * bd3 + gid;
+		k0 = k * gd3 + gid;
 		k1 = k0 + gds;
 		k2 = k1 + gds;
 		f0 = f[k0];
@@ -520,14 +520,14 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 		t0 = t[k0];
 		t1 = t[k1];
 		t2 = t[k2];
-		y0 = c[i0  = beg[k] * bd3 + gid];
+		y0 = c[i0  = beg[k] * gd3 + gid];
 		y1 = c[i0 += gds];
 		y2 = c[i0 += gds];
 
 		// Aggregate frame atoms.
 		for (i = beg[k], z = end[k]; i < z; ++i)
 		{
-			i0 = i * bd3 + gid;
+			i0 = i * gd3 + gid;
 			i1 = i0 + gds;
 			i2 = i1 + gds;
 			d0 = d[i0];
@@ -571,13 +571,13 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		k0 = prn[k] * bd3 + gid;
+		k0 = prn[k] * gd3 + gid;
 		k1 = k0 + gds;
 		k2 = k1 + gds;
 		f[k0] += f0;
 		f[k1] += f1;
 		f[k2] += f2;
-		v0 = y0 - c[i0  = beg[prn[k]] * bd3 + gid];
+		v0 = y0 - c[i0  = beg[prn[k]] * gd3 + gid];
 		v1 = y1 - c[i0 += gds];
 		v2 = y2 - c[i0 += gds];
 		t[k0] += t0 + v1 * f2 - v2 * f1;
