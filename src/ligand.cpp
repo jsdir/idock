@@ -506,7 +506,7 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 	}
 	assert(w == nv * gds + gid);
 	assert(k == nf);
-	while (true)
+	while (k)
 	{
 		--k;
 
@@ -552,39 +552,39 @@ bool ligand::evaluate(float* e, float* g, float* a, float* q, float* c, float* d
 			t2 += v0 * d1 - v1 * d0;
 		}
 
-		// Save the aggregated force and torque of ROOT frame to g.
-		if (k == 0)
+		if (k)
 		{
-			g[i0  = gid] = f0;
-			g[i0 += gds] = f1;
-			g[i0 += gds] = f2;
-			g[i0 += gds] = t0;
-			g[i0 += gds] = t1;
-			g[i0 += gds] = t2;
-			return true;
-		}
+			// Save the aggregated torque of active BRANCH frames to g.
+			if (act[k])
+			{
+				g[w -= gds] = t0 * a[k0] + t1 * a[k1] + t2 * a[k2]; // dot product
+			}
 
-		// Save the aggregated torque of active BRANCH frames to g.
-		if (act[k])
-		{
-			g[w -= gds] = t0 * a[k0] + t1 * a[k1] + t2 * a[k2]; // dot product
+			// Aggregate the force and torque of current frame to its parent frame.
+			k0 = prn[k] * gd3 + gid;
+			k1 = k0 + gds;
+			k2 = k1 + gds;
+			f[k0] += f0;
+			f[k1] += f1;
+			f[k2] += f2;
+			v0 = y0 - c[i0  = beg[prn[k]] * gd3 + gid];
+			v1 = y1 - c[i0 += gds];
+			v2 = y2 - c[i0 += gds];
+			t[k0] += t0 + v1 * f2 - v2 * f1;
+			t[k1] += t1 + v2 * f0 - v0 * f2;
+			t[k2] += t2 + v0 * f1 - v1 * f0;
 		}
-
-		// Aggregate the force and torque of current frame to its parent frame.
-		k0 = prn[k] * gd3 + gid;
-		k1 = k0 + gds;
-		k2 = k1 + gds;
-		f[k0] += f0;
-		f[k1] += f1;
-		f[k2] += f2;
-		v0 = y0 - c[i0  = beg[prn[k]] * gd3 + gid];
-		v1 = y1 - c[i0 += gds];
-		v2 = y2 - c[i0 += gds];
-		t[k0] += t0 + v1 * f2 - v2 * f1;
-		t[k1] += t1 + v2 * f0 - v0 * f2;
-		t[k2] += t2 + v0 * f1 - v1 * f0;
 	}
 	assert(w == 6 * gds + gid);
+
+	// Save the aggregated force and torque of ROOT frame to g.
+	g[i0  = gid] = f0;
+	g[i0 += gds] = f1;
+	g[i0 += gds] = f2;
+	g[i0 += gds] = t0;
+	g[i0 += gds] = t1;
+	g[i0 += gds] = t2;
+	return true;
 }
 
 int ligand::bfgs(float* s0e, const scoring_function& sf, const receptor& rec, const size_t seed, const size_t ng, const unsigned int gid, const unsigned int gds) const
