@@ -170,13 +170,17 @@ int main(int argc, char* argv[])
 	size_t num_ligands = 0; // Ligand counter.
 	cout.setf(ios::fixed, ios::floatfield);
 	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand in parallel" << endl;
-	cout << "   Index |          Ligand |                  Progress | kcal/mol | Conf" << endl << setprecision(2);
+	cout << "   Index |          Ligand | kcal/mol" << endl << setprecision(2);
 	const directory_iterator const_dir_iter; // A default constructed directory_iterator acts as the end iterator.
 	for (directory_iterator dir_iter(input_folder_path); dir_iter != const_dir_iter; ++dir_iter)
 	{
 		// Parse the ligand.
 		const path input_ligand_path = dir_iter->path();
 		const ligand lig(input_ligand_path);
+
+		// Output the ligand file stem.
+		const string stem = input_ligand_path.stem().string();
+		cout << setw(8) << ++num_ligands << " | " << setw(15) << stem << " | " << flush;
 
 		// Create grid maps on the fly if necessary.
 		vector<size_t> xs;
@@ -191,7 +195,6 @@ int main(int argc, char* argv[])
 		}
 		if (xs.size())
 		{
-			cout << "Creating " << setw(2) << xs.size() << " grid map" << (xs.size() == 1 ? ' ' : 's') << "        " << flush;
 			for (size_t t1 = 0; t1 < sf.n; ++t1)
 			{
 				vector<size_t>& p = rec.p_offset[t1];
@@ -206,24 +209,18 @@ int main(int argc, char* argv[])
 			{
 				tp.push_back(packaged_task<int()>(bind(&receptor::populate, ref(rec), cref(sf), cref(xs), z)));
 			}
-			tp.sync(25);
-			cout << '\r' << setw(55) << '\r';
+			tp.sync();
 			knl.update(rec.maps, xs);
 		}
-
-		// Output the ligand file stem.
-		const string stem = input_ligand_path.stem().string();
-		cout << setw(8) << ++num_ligands << " | " << setw(15) << stem << " | " << flush;
 
 		// Run the Monte Carlo tasks in parallel
 		vector<float> ex;
 		knl.launch(ex, lig.lig, lig.nv, lig.nf, lig.na, lig.np);
-		cout << setw(28) << " | " << flush;
 
 		// Cluster and save solutions to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 		const float e = lig.save(output_ligand_path, ex, max_conformations, num_mc_tasks);
-		cout << setw(8) << e << " | " << endl;
+		cout << setw(8) << e << endl;
 		summaries.push_back(new summary(stem, e));
 
 		for (size_t i = 0; i < 20; ++i)

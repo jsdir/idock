@@ -10,7 +10,7 @@ class thread_pool : public vector<packaged_task<int()>>
 {
 public:
 	explicit thread_pool(const size_t num_threads);
-	void sync(const size_t num_bars = 0);
+	void sync();
 	~thread_pool();
 private:
 	vector<thread> threads;

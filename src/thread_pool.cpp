@@ -1,4 +1,3 @@
-#include <iostream>
 #include "thread_pool.hpp"
 
 thread_pool::thread_pool(const size_t num_threads) : num_scheduled_tasks(0), num_completed_tasks(0), exiting(false)
@@ -37,17 +36,13 @@ thread_pool::thread_pool(const size_t num_threads) : num_scheduled_tasks(0), num
 	}
 }
 
-void thread_pool::sync(const size_t num_bars)
+void thread_pool::sync()
 {
 	task_incoming.notify_all();
 	unique_lock<mutex> lock(m);
-	for (size_t i = 0; num_completed_tasks < size();)
+	while (num_completed_tasks < size())
 	{
 		task_completion.wait(lock);
-		for (; num_completed_tasks * num_bars >= size() * (i + 1); ++i)
-		{
-			cout << '#' << flush;
-		}
 	}
 	for (auto& t : *this)
 	{
