@@ -17,6 +17,7 @@ ligand::ligand(const path& p) : nv(6)
 	atoms.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 
 	// Initialize helper variables for parsing.
+	vector<atom> hydrogens; ///< Unsaved hydrogens of ROOT frame.
 	vector<vector<size_t>> bonds; ///< Covalent bonds.
 	bonds.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 	size_t current = 0; // Index of current frame, initialized to ROOT frame.
@@ -41,12 +42,14 @@ ligand::ligand(const path& p) : nv(6)
 
 			if (a.is_hydrogen()) // Current atom is a hydrogen.
 			{
+				bool unsaved = true;
 				for (size_t i = atoms.size(); i > f->beg;)
 				{
 					atom& b = atoms[--i];
 					if (a.has_covalent_bond(b))
 					{
 						// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
+						assert(!b.is_hydrogen());
 						if (a.is_polar_hydrogen())
 						{
 							assert(b.is_hetero());
@@ -58,8 +61,13 @@ ligand::ligand(const path& p) : nv(6)
 						}
 						// Save the hydrogen.
 						b.hydrogens.push_back(a);
+						unsaved = false;
 						break;
 					}
+				}
+				if (unsaved)
+				{
+					hydrogens.push_back(a);
 				}
 			}
 			else // Current atom is a heavy atom.
@@ -167,6 +175,33 @@ ligand::ligand(const path& p) : nv(6)
 
 			// Update the pointer to the current frame.
 			f = &frames[current];
+		}
+		else if (record == "ENDROO")
+		{
+			for (const atom& a : hydrogens)
+			{
+				for (size_t i = atoms.size(); i > f->beg;)
+				{
+					atom& b = atoms[--i];
+					if (a.has_covalent_bond(b))
+					{
+						// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
+						assert(!b.is_hydrogen());
+						if (a.is_polar_hydrogen())
+						{
+							assert(b.is_hetero());
+							b.donorize();
+						}
+						else
+						{
+							assert(!b.is_hetero());
+						}
+						// Save the hydrogen.
+						b.hydrogens.push_back(a);
+						break;
+					}
+				}
+			}
 		}
 	}
 	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
