@@ -25,7 +25,7 @@ public:
 	vector<size_t> branches; ///< Indexes to child branches.
 
 	/// Constructs an active frame, and relates it to its parent frame.
-	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t beg) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), beg(beg), active(true) {}
+	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t beg) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), beg(beg), rotorYidx(beg), active(true) {}
 
 	/// Outputs a BRANCH line in PDBQT format.
 	void output(boost::filesystem::ofstream& ofs) const;
