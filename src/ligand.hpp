@@ -17,15 +17,14 @@ public:
 	size_t rotorYsrn; ///< Serial atom number of the current frame atom which forms a rotatable bond with the rotorX atom of parent frame.
 	size_t rotorXidx; ///< Index pointing to the parent frame atom which forms a rotatable bond with the rotorY atom of current frame.
 	size_t rotorYidx; ///< Index pointing to the current frame atom which forms a rotatable bond with the rotorX atom of parent frame.
-	size_t beg; ///< The inclusive beginning index to the heavy atoms of the current frame.
-	size_t end; ///< The exclusive ending index to the heavy atoms of the current frame.
+	size_t childYidx; ///< The exclusive ending index to the heavy atoms of the current frame.
 	bool active; ///< Indicates if the current frame is active.
 	array<float, 3> yy; ///< Vector pointing from the origin of parent frame to the origin of current frame.
 	array<float, 3> xy; ///< Normalized vector pointing from rotor X of parent frame to rotor Y of current frame.
 	vector<size_t> branches; ///< Indexes to child branches.
 
 	/// Constructs an active frame, and relates it to its parent frame.
-	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t beg) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), beg(beg), rotorYidx(beg), active(true) {}
+	explicit frame(const size_t parent, const size_t rotorXsrn, const size_t rotorYsrn, const size_t rotorXidx, const size_t rotorYidx) : parent(parent), rotorXsrn(rotorXsrn), rotorYsrn(rotorYsrn), rotorXidx(rotorXidx), rotorYidx(rotorYidx), active(true) {}
 
 	/// Outputs a BRANCH line in PDBQT format.
 	void output(boost::filesystem::ofstream& ofs) const;
@@ -41,7 +40,7 @@ public:
 	size_t nf; ///< Number of frames.
 	size_t na; ///< Number of atoms.
 	size_t np; ///< Number of interacting pairs.
-	vector<int> lig;
+	vector<int> lig; ///< Encoded ligand content.
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.
 	/// @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.

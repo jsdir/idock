@@ -13,7 +13,7 @@ ligand::ligand(const path& p) : nv(6)
 {
 	// Initialize necessary variables for constructing a ligand.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
-	frames.push_back(frame(0, 0, 1, 0, 0)); // ROOT is also treated as a frame. The parent and rotorX of ROOT frame are dummy.
+	frames.push_back(frame(0, 0, 0, 0, 0)); // ROOT is also treated as a frame. The parent, rotorXsrn, rotorYsrn, rotorXidx of ROOT frame are dummy.
 	atoms.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 
 	// Initialize helper variables for parsing.
@@ -43,7 +43,7 @@ ligand::ligand(const path& p) : nv(6)
 			if (a.is_hydrogen()) // Current atom is a hydrogen.
 			{
 				bool unsaved = true;
-				for (size_t i = atoms.size(); i > f->beg;)
+				for (size_t i = atoms.size(); i > f->rotorYidx;)
 				{
 					atom& b = atoms[--i];
 					if (a.has_covalent_bond(b))
@@ -76,7 +76,7 @@ ligand::ligand(const path& p) : nv(6)
 				assert(bonds.size() == atoms.size());
 				bonds.push_back(vector<size_t>());
 				bonds.back().reserve(4); // An atom typically consists of <= 4 bonds.
-				for (size_t i = atoms.size(); i > f->beg;)
+				for (size_t i = atoms.size(); i > f->rotorYidx;)
 				{
 					atom& b = atoms[--i];
 					if (a.has_covalent_bond(b))
@@ -97,13 +97,6 @@ ligand::ligand(const path& p) : nv(6)
 					}
 				}
 
-				// Set rotorYidx if the serial number of current atom is rotorYsrn.
-				if (a.serial == f->rotorYsrn)
-				{
-					f->rotorYidx = atoms.size();
-					assert(f->rotorYidx == f->beg);
-				}
-
 				// Save the heavy atom.
 				atoms.push_back(a);
 			}
@@ -115,7 +108,7 @@ ligand::ligand(const path& p) : nv(6)
 			const size_t rotorYsrn = stoul(line.substr(10, 4));
 
 			// Find the corresponding heavy atom with x as its atom serial number in the current frame.
-			for (size_t i = f->beg; true; ++i)
+			for (size_t i = f->rotorYidx; true; ++i)
 			{
 				if (atoms[i].serial == rotorXsrn)
 				{
@@ -136,17 +129,17 @@ ligand::ligand(const path& p) : nv(6)
 			f = &frames[current];
 
 			// The ending index of atoms of previous frame is the starting index of atoms of current frame.
-			frames[current - 1].end = f->beg;
+			frames[current - 1].childYidx = f->rotorYidx;
 		}
 		else if (record == "ENDBRA")
 		{
 			// A frame may be empty, e.g. "BRANCH   4   9" is immediately followed by "ENDBRANCH   4   9".
 			// This emptiness is likely to be caused by invalid input structure, especially when all the atoms are located in the same plane.
-			if (f->beg == atoms.size()) throw domain_error("Error parsing " + p.filename().string() + ": an empty BRANCH has been detected, indicating the input ligand structure is probably invalid.");
+			if (f->rotorYidx == atoms.size()) throw domain_error("Error parsing " + p.filename().string() + ": an empty BRANCH has been detected, indicating the input ligand structure is probably invalid.");
 
 			// If the current frame consists of rotor Y and a few hydrogens only, e.g. -OH, -NH2 or -CH3,
 			// the torsion of this frame will have no effect on scoring and is thus redundant.
-			if (current + 1 == frames.size() && f->beg + 1 == atoms.size())
+			if (current + 1 == frames.size() && f->rotorYidx + 1 == atoms.size())
 			{
 				f->active = false;
 			}
@@ -180,7 +173,7 @@ ligand::ligand(const path& p) : nv(6)
 		{
 			for (const atom& a : hydrogens)
 			{
-				for (size_t i = atoms.size(); i > f->beg;)
+				for (size_t i = atoms.size(); i > f->rotorYidx;)
 				{
 					atom& b = atoms[--i];
 					if (a.has_covalent_bond(b))
@@ -206,7 +199,7 @@ ligand::ligand(const path& p) : nv(6)
 	}
 	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
-	frames.back().end = na = atoms.size();
+	frames.back().childYidx = na = atoms.size();
 	nf = frames.size();
 	assert(nf >= 1 + nv - 6);
 
@@ -214,7 +207,7 @@ ligand::ligand(const path& p) : nv(6)
 	for (const frame& f : frames)
 	{
 		const array<float, 3> origin = atoms[f.rotorYidx].coord;
-		for (size_t i = f.beg; i < f.end; ++i)
+		for (size_t i = f.rotorYidx; i < f.childYidx; ++i)
 		{
 			atom& a = atoms[i];
 			a.coord -= origin;
@@ -232,7 +225,7 @@ ligand::ligand(const path& p) : nv(6)
 	for (size_t k1 = 0; k1 < nf; ++k1)
 	{
 		const frame& f1 = frames[k1];
-		for (size_t i = f1.beg; i < f1.end; ++i)
+		for (size_t i = f1.rotorYidx; i < f1.childYidx; ++i)
 		{
 			// Find neighbor atoms within 3 consecutive covalent bonds.
 			for (const size_t b1 : bonds[i])
@@ -263,7 +256,7 @@ ligand::ligand(const path& p) : nv(6)
 			{
 				const frame& f2 = frames[k2];
 				const frame& f3 = frames[f2.parent];
-				for (size_t j = f2.beg; j < f2.end; ++j)
+				for (size_t j = f2.rotorYidx; j < f2.childYidx; ++j)
 				{
 					if (k1 == f2.parent && (i == f2.rotorXidx || j == f2.rotorYidx)) continue;
 					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue;
@@ -282,8 +275,8 @@ ligand::ligand(const path& p) : nv(6)
 	lig.resize(11 * nf + nf - 1 + 4 * na + 3 * np);
 	int* c = lig.data();
 	for (const frame& f : frames) *c++ = f.active;
-	for (const frame& f : frames) *c++ = f.beg;
-	for (const frame& f : frames) *c++ = f.end;
+	for (const frame& f : frames) *c++ = f.rotorYidx;
+	for (const frame& f : frames) *c++ = f.childYidx;
 	for (const frame& f : frames) *c++ = f.branches.size();
 	for (const frame& f : frames) *c++ = f.parent;
 	for (const frame& f : frames) *(float*)c++ = f.yy[0];
@@ -359,14 +352,14 @@ float ligand::save(const path& output_ligand_path, const vector<float>& ex, cons
 			const frame& f = frames[k];
 			if (!f.active) continue;
 			const array<float, 9> m = qtn4_to_mat3(s.q[k]);
-			for (size_t i = f.beg + 1; i < f.end; ++i)
+			for (size_t i = f.rotorYidx + 1; i < f.childYidx; ++i)
 			{
-				s.c[i] = s.c[f.beg] + m * atoms[i].coord;
+				s.c[i] = s.c[f.rotorYidx] + m * atoms[i].coord;
 			}
 			for (const size_t i : f.branches)
 			{
 				const frame& b = frames[i];
-				s.c[b.beg] = s.c[f.beg] + m * b.yy;
+				s.c[b.rotorYidx] = s.c[f.rotorYidx] + m * b.yy;
 				if (!b.active) continue;
 				const array<float, 3> a = m * b.xy;
 				assert(normalized(a));
@@ -397,13 +390,13 @@ float ligand::save(const path& output_ligand_path, const vector<float>& ex, cons
 		{
 			const frame& f = frames.front();
 			const array<float, 9> m = qtn4_to_mat3(s.q[0]);
-			for (size_t i = f.beg; i < f.end; ++i)
+			for (size_t i = f.rotorYidx; i < f.childYidx; ++i)
 			{
 				const atom& a = atoms[i];
 				a.output(ofs, s.c[i]);
 				for (const atom& h : a.hydrogens)
 				{
-					h.output(ofs, s.c[f.beg] + m * h.coord);
+					h.output(ofs, s.c[f.rotorYidx] + m * h.coord);
 				}
 			}
 		}
@@ -434,13 +427,13 @@ float ligand::save(const path& output_ligand_path, const vector<float>& ex, cons
 			{
 				f.output(ofs);
 				const array<float, 9> m = qtn4_to_mat3(s.q[f.active ? fn : f.parent]);
-				for (size_t i = f.beg; i < f.end; ++i)
+				for (size_t i = f.rotorYidx; i < f.childYidx; ++i)
 				{
 					const atom& a = atoms[i];
 					a.output(ofs, s.c[i]);
 					for (const atom& h : a.hydrogens)
 					{
-						h.output(ofs, s.c[f.beg] + m * h.coord);
+						h.output(ofs, s.c[f.rotorYidx] + m * h.coord);
 					}
 				}
 				dumped[fn] = true;
