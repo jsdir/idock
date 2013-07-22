@@ -218,10 +218,6 @@ int main(int argc, char* argv[])
 		// Run the Monte Carlo tasks in parallel
 		vector<float> ex;
 		knl.launch(ex, lig.lig, lig.nv, lig.nf, lig.na, lig.np);
-		for (size_t i = 0; i < 20; ++i)
-		{
-			cout << ex[i] << '\n';
-		}
 		cout << setw(28) << " | " << flush;
 
 		// Cluster and save solutions to file.
@@ -229,6 +225,11 @@ int main(int argc, char* argv[])
 		const float e = lig.save(output_ligand_path, ex, max_conformations, num_mc_tasks);
 		cout << setw(8) << e << " | " << endl;
 		summaries.push_back(new summary(stem, e));
+
+		for (size_t i = 0; i < 20; ++i)
+		{
+			cout << ex[i] << '\n';
+		}
 	}
 
 	// Sort and write ligand summary to the log file.
