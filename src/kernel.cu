@@ -1,5 +1,6 @@
-#include <assert.h>
+#include <cassert>
 #include <curand_kernel.h>
+#include "helper_cuda.h"
 #include "kernel.hpp"
 
 #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
@@ -16,6 +17,7 @@ __constant__ int3 c_num_probes;
 __constant__ float c_granularity_inverse;
 __constant__ float* c_maps[sf_n];
 __constant__ int c_ng;
+__constant__ unsigned long long c_seed;
 
 extern __shared__ int shared[];
 
@@ -331,7 +333,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 
 __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
-void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, const int na, const int np, const unsigned long long seed)
+void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, const int na, const int np)
 {
 	const int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	const int gds = blockDim.x * gridDim.x;
@@ -388,7 +390,7 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	__syncthreads();
 
 	// Randomize s0x.
-	curand_init(seed, gid, 0, &crs);
+	curand_init(c_seed, gid, 0, &crs);
 	rd0 = curand_uniform(&crs) * 2 - 1;
 	s0x[o0  = gid] = 0.5f * ((1 + rd0) * c_corner1.x + (1 - rd0) * c_corner0.x);
 	rd0 = curand_uniform(&crs) * 2 - 1;
@@ -399,8 +401,7 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	rd1 = curand_uniform(&crs) * 2 - 1;
 	rd2 = curand_uniform(&crs) * 2 - 1;
 	rd3 = curand_uniform(&crs) * 2 - 1;
-	rst = 1.0f / sqrt(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
-//	rst = rsqrtf(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
+	rst = rsqrtf(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
 	s0x[o0 += gds] = rd0 * rst;
 	s0x[o0 += gds] = rd1 * rst;
 	s0x[o0 += gds] = rd2 * rst;
@@ -639,19 +640,19 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	}
 }
 
-kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng) : num_mc_tasks(num_mc_tasks)
+kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng, const unsigned long long h_seed) : num_mc_tasks(num_mc_tasks)
 {
 	// Initialize scoring function.
-	cudaMalloc(&d_sf_e, h_sf_ne);
-	cudaMalloc(&d_sf_d, h_sf_ne);
-	cudaMemcpy(d_sf_e, h_sf_e, sizeof(float) * h_sf_ne, cudaMemcpyHostToDevice);
-	cudaMemcpy(d_sf_d, h_sf_d, sizeof(float) * h_sf_ne, cudaMemcpyHostToDevice);
+	checkCudaErrors(cudaMalloc(&d_sf_e, sizeof(float) * h_sf_ne));
+	checkCudaErrors(cudaMalloc(&d_sf_d, sizeof(float) * h_sf_ne));
+	checkCudaErrors(cudaMemcpy(d_sf_e, h_sf_e, sizeof(float) * h_sf_ne, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(d_sf_d, h_sf_d, sizeof(float) * h_sf_ne, cudaMemcpyHostToDevice));
 	assert(sizeof(c_sf_e)  == sizeof(d_sf_e));
 	assert(sizeof(c_sf_d)  == sizeof(d_sf_d));
 	assert(sizeof(c_sf_ns) == sizeof(h_sf_ns));
-	cudaMemcpyToSymbol(c_sf_e,  &d_sf_e,  sizeof(c_sf_e));
-	cudaMemcpyToSymbol(c_sf_d,  &d_sf_d,  sizeof(c_sf_d));
-	cudaMemcpyToSymbol(c_sf_ns, &h_sf_ns, sizeof(c_sf_ns));
+	checkCudaErrors(cudaMemcpyToSymbol(c_sf_e,  &d_sf_e,  sizeof(c_sf_e )));
+	checkCudaErrors(cudaMemcpyToSymbol(c_sf_d,  &d_sf_d,  sizeof(c_sf_d )));
+	checkCudaErrors(cudaMemcpyToSymbol(c_sf_ns, &h_sf_ns, sizeof(c_sf_ns)));
 
 	// Initialize receptor.
 	assert(sizeof(c_corner0) == sizeof(float) * 3);
@@ -659,54 +660,61 @@ kernel::kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, cons
 	assert(sizeof(c_num_probes) == sizeof(int) * 3);
 	assert(sizeof(c_granularity_inverse) == sizeof(h_granularity_inverse));
 	assert(sizeof(c_ng) == sizeof(h_ng));
-	cudaMemcpyToSymbol(c_corner0, h_corner0, sizeof(c_corner0));
-	cudaMemcpyToSymbol(c_corner1, h_corner1, sizeof(c_corner1));
-	cudaMemcpyToSymbol(c_num_probes, h_num_probes, sizeof(c_num_probes));
-	cudaMemcpyToSymbol(c_granularity_inverse, &h_granularity_inverse, sizeof(c_granularity_inverse));
-	cudaMemcpyToSymbol(c_ng, &h_ng, sizeof(c_ng));
+	checkCudaErrors(cudaMemcpyToSymbol(c_corner0, h_corner0, sizeof(c_corner0)));
+	checkCudaErrors(cudaMemcpyToSymbol(c_corner1, h_corner1, sizeof(c_corner1)));
+	checkCudaErrors(cudaMemcpyToSymbol(c_num_probes, h_num_probes, sizeof(c_num_probes)));
+	checkCudaErrors(cudaMemcpyToSymbol(c_granularity_inverse, &h_granularity_inverse, sizeof(c_granularity_inverse)));
+	checkCudaErrors(cudaMemcpyToSymbol(c_ng, &h_ng, sizeof(c_ng)));
 	assert(sizeof(d_maps) == sizeof(float*) * sf_n);
 	memset(d_maps, 0, sizeof(d_maps));
+
+	// Initialize seed.
+	assert(sizeof(c_seed) == sizeof(h_seed));
+	checkCudaErrors(cudaMemcpyToSymbol(c_seed, &h_seed, sizeof(c_seed)));
 }
 
-void kernel::update(const vector<vector<float> > h_maps, const size_t map_bytes, const vector<size_t>& xs)
+void kernel::update(const vector<vector<float> > h_maps, const vector<size_t>& xs)
 {
+	const size_t map_bytes = sizeof(float) * h_maps[xs.front()].size();
 	for (int i = 0; i < xs.size(); ++i)
 	{
 		const size_t t = xs[i];
 		float* d_m;
-		cudaMalloc(&d_m, map_bytes);
-		cudaMemcpy(d_m, &h_maps[t].front(), map_bytes, cudaMemcpyHostToDevice);
+		checkCudaErrors(cudaMalloc(&d_m, map_bytes));
+		checkCudaErrors(cudaMemcpy(d_m, &h_maps[t].front(), map_bytes, cudaMemcpyHostToDevice));
 		d_maps[t] = d_m;
 	}
 	assert(sizeof(c_maps) == sizeof(d_maps));
-	cudaMemcpyToSymbol(c_maps, d_maps, sizeof(c_maps));
+	checkCudaErrors(cudaMemcpyToSymbol(c_maps, d_maps, sizeof(c_maps)));
 }
 
-void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv, const int nf, const int na, const int np, const unsigned long long seed)
+void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv, const int nf, const int na, const int np)
 {
 	// Copy ligand content from host memory to device memory.
 	const size_t lig_bytes = sizeof(int) * h_lig.size();
 	int* d_lig;
-	cudaMalloc(&d_lig, lig_bytes);
-	cudaMemcpy(d_lig, &h_lig.front(), lig_bytes, cudaMemcpyHostToDevice);
+	checkCudaErrors(cudaMalloc(&d_lig, lig_bytes));
+	checkCudaErrors(cudaMemcpy(d_lig, &h_lig.front(), lig_bytes, cudaMemcpyHostToDevice));
 
 	// Allocate device memory for variables. 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
 	const size_t var_bytes = sizeof(float) * (1 + (nv + 1) + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks * 3 + (nv * (nv + 1) >> 1) * num_mc_tasks + nv * num_mc_tasks * 3;
 	float* d_s0;
-	cudaMalloc(&d_s0, var_bytes);
+	checkCudaErrors(cudaMalloc(&d_s0, var_bytes));
 
 	// Invoke CUDA kernel.
-	bfgs<<<num_mc_tasks / 128, 128, lig_bytes>>>(d_s0, d_lig, nv, nf, na, np, seed);
+	bfgs<<<(num_mc_tasks - 1) / 32 + 1, 32, lig_bytes>>>(d_s0, d_lig, nv, nf, na, np);
+	checkCudaErrors(cudaGetLastError());
+	checkCudaErrors(cudaDeviceSynchronize());
 
 	// Copy e and x from device memory to host memory.
 	const size_t ex_size = (1 + nv + 1) * num_mc_tasks;
 	const size_t ex_bytes = sizeof(float) * ex_size;
 	h_ex.resize(ex_size);
-	cudaMemcpy(&h_ex.front(), d_s0, ex_bytes, cudaMemcpyDeviceToHost);
+	checkCudaErrors(cudaMemcpy(&h_ex.front(), d_s0, ex_bytes, cudaMemcpyDeviceToHost));
 
 	// Free device memory.
-	cudaFree(d_s0);
-	cudaFree(d_lig);
+	checkCudaErrors(cudaFree(d_s0));
+	checkCudaErrors(cudaFree(d_lig));
 }
 
 kernel::~kernel()
@@ -714,10 +722,9 @@ kernel::~kernel()
 	for (size_t t = 0; t < sf_n; ++t)
 	{
 		float* const d_m = d_maps[t];
-		if (d_m) cudaFree(d_m);
+		if (d_m) checkCudaErrors(cudaFree(d_m));
 	}
-	cudaFree(d_sf_d);
-	cudaFree(d_sf_e);
+	checkCudaErrors(cudaFree(d_sf_d));
+	checkCudaErrors(cudaFree(d_sf_e));
+	checkCudaErrors(cudaDeviceReset());
 }
-
-// -arch=sm_13 -maxrregcount=N -Xptxas=-v -ftz=true -prec-div=false -prec-sqrt=false -use_fast_math

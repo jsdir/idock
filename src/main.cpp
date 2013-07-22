@@ -5,11 +5,11 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/timer/timer.hpp>
 #include "thread_pool.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "utility.hpp"
+#include "kernel.hpp"
 using namespace std;
 using namespace boost::filesystem;
 
@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 		const path default_log_path = "log.csv";
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
-		const size_t default_num_mc_tasks = 2048;
+		const size_t default_num_mc_tasks = 256;
 		const size_t default_num_generations = 100;
 		const size_t default_max_conformations = 9;
 		const float default_granularity = 0.15625f;
@@ -162,11 +162,8 @@ int main(int argc, char* argv[])
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
 
-	cout << "Using random seed " << seed << endl;
-	mt19937_64 rng(seed);
-
-//	cout << "Setting up CUDA kernel" << endl;
-//	kernel knl(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations);
+	cout << "Setting up CUDA kernel with random seed " << seed << endl;
+	kernel knl(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed);
 
 	// Perform docking for each file in the ligand folder.
 	boost::ptr_vector<summary> summaries;
@@ -211,7 +208,7 @@ int main(int argc, char* argv[])
 			}
 			tp.sync(25);
 			cout << '\r' << setw(55) << '\r';
-//			knl.update(rec.maps, sizeof(float) * rec.num_probes_product, xs);
+			knl.update(rec.maps, xs);
 		}
 
 		// Output the ligand file stem.
@@ -219,24 +216,19 @@ int main(int argc, char* argv[])
 		cout << setw(8) << ++num_ligands << " | " << setw(15) << stem << " | " << flush;
 
 		// Run the Monte Carlo tasks in parallel
-		vector<float> ex((1 + (lig.nv + 1) + lig.nv + 3 * lig.nf + 4 * lig.nf + 3 * lig.na + 3 * lig.na + 3 * lig.nf + 3 * lig.nf) * num_mc_tasks * 3 + (lig.nv*(lig.nv+1)>>1) * num_mc_tasks + lig.nv * num_mc_tasks * 3);
-		for (size_t i = 0; i < num_mc_tasks; ++i)
+		vector<float> ex;
+		knl.launch(ex, lig.lig, lig.nv, lig.nf, lig.na, lig.np);
+		for (size_t i = 0; i < 20; ++i)
 		{
-			tp.push_back(packaged_task<int()>(bind(&ligand::bfgs, cref(lig), ex.data(), cref(sf), cref(rec), rng(), num_generations, static_cast<unsigned int>(i), static_cast<unsigned int>(num_mc_tasks))));
+			cout << ex[i] << '\n';
 		}
-		boost::timer::auto_cpu_timer t;
-//		vector<float> ex;
-//		knl.launch(ex, lig.lig, lig.nv, lig.nf, lig.na, lig.np, seed);
-		tp.sync(25);
-		t.stop();
-		cout << " | " << flush;
+		cout << setw(28) << " | " << flush;
 
 		// Cluster and save solutions to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 		const float e = lig.save(output_ligand_path, ex, max_conformations, num_mc_tasks);
 		cout << setw(8) << e << " | " << endl;
 		summaries.push_back(new summary(stem, e));
-		t.report();
 	}
 
 	// Sort and write ligand summary to the log file.

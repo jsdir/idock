@@ -19,7 +19,7 @@ public:
 	const array<float, 3> corner1; ///< Box boundary corner with largest values of all the 3 dimensions.
 	const float granularity; ///< 1D size of grids.
 	const float granularity_inverse; ///< 1 / granularity.
-	array<size_t, 3> num_probes; ///< Number of probes.
+	array<int, 3> num_probes; ///< Number of probes.
 	size_t num_probes_product; ///< Product of num_probes[0,1,2]
 	vector<vector<size_t>> p_offset;
 	vector<vector<float>> maps;
