@@ -392,16 +392,16 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 
 	// Randomize s0x.
 	curand_init(c_seed, gid, 0, &crs);
-	rd0 = curand_uniform(&crs) * 2 - 1;
-	s0x[o0  = gid] = 0.5f * ((1 + rd0) * c_corner1.x + (1 - rd0) * c_corner0.x);
-	rd0 = curand_uniform(&crs) * 2 - 1;
-	s0x[o0 += gds] = 0.5f * ((1 + rd0) * c_corner1.y + (1 - rd0) * c_corner0.y);
-	rd0 = curand_uniform(&crs) * 2 - 1;
-	s0x[o0 += gds] = 0.5f * ((1 + rd0) * c_corner1.z + (1 - rd0) * c_corner0.z);
-	rd0 = curand_uniform(&crs) * 2 - 1;
-	rd1 = curand_uniform(&crs) * 2 - 1;
-	rd2 = curand_uniform(&crs) * 2 - 1;
-	rd3 = curand_uniform(&crs) * 2 - 1;
+	rd0 = curand_uniform(&crs);
+	s0x[o0  = gid] = rd0 * c_corner1.x + (1 - rd0) * c_corner0.x;
+	rd0 = curand_uniform(&crs);
+	s0x[o0 += gds] = rd0 * c_corner1.y + (1 - rd0) * c_corner0.y;
+	rd0 = curand_uniform(&crs);
+	s0x[o0 += gds] = rd0 * c_corner1.z + (1 - rd0) * c_corner0.z;
+	rd0 = curand_uniform(&crs);
+	rd1 = curand_uniform(&crs);
+	rd2 = curand_uniform(&crs);
+	rd3 = curand_uniform(&crs);
 	rst = rsqrtf(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
 	s0x[o0 += gds] = rd0 * rst;
 	s0x[o0 += gds] = rd1 * rst;
@@ -409,7 +409,7 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	s0x[o0 += gds] = rd3 * rst;
 	for (i = 6; i < nv; ++i)
 	{
-		s0x[o0 += gds] = curand_uniform(&crs) * 2 - 1;
+		s0x[o0 += gds] = curand_uniform(&crs);
 	}
 /*
 	s0x[o0  = gid] =  49.799f;
@@ -430,11 +430,11 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	{
 		// Mutate s0x into s1x
 		o0  = gid;
-		s1x[o0] = s0x[o0] + curand_uniform(&crs) * 2 - 1;
+		s1x[o0] = s0x[o0] + curand_uniform(&crs);
 		o0 += gds;
-		s1x[o0] = s0x[o0] + curand_uniform(&crs) * 2 - 1;
+		s1x[o0] = s0x[o0] + curand_uniform(&crs);
 		o0 += gds;
-		s1x[o0] = s0x[o0] + curand_uniform(&crs) * 2 - 1;
+		s1x[o0] = s0x[o0] + curand_uniform(&crs);
 //		for (i = 3; i < nv + 1; ++i)
 		for (i = 2 - nv; i < 0; ++i)
 		{
