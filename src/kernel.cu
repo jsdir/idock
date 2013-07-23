@@ -713,6 +713,7 @@ void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv,
 	const size_t var_bytes = sizeof(float) * (1 + nv + 1 + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks * 3 + (nv * (nv + 1) >> 1) * num_mc_tasks + nv * num_mc_tasks * 3;
 	float* d_s0;
 	checkCudaErrors(cudaMalloc(&d_s0, var_bytes));
+	checkCudaErrors(cudaMemset(d_s0, 0, var_bytes));
 
 	// Invoke CUDA kernel.
 	bfgs<<<(num_mc_tasks - 1) / 32 + 1, 32, lig_bytes>>>(d_s0, d_lig, nv, nf, na, np);
