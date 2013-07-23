@@ -52,6 +52,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 	float y, y0, y1, y2, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, ang, sng, r0, r1, r2, r3, vs, dr, f0, f1, f2, t0, t1, t2, d0, d1, d2;
 	float q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8;
 	int i, j, k, b, w, i0, i1, i2, k0, k1, k2, z;
+	float* map;
 
 	// Apply position, orientation and torsions.
 	c[i  = gid] = x[k  = gid];
@@ -139,16 +140,16 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			}
 
 			// Find the index of the current coordinate
-			k0 = static_cast<size_t>((c0 - c_corner0.y) * c_granularity_inverse);
-			k1 = static_cast<size_t>((c1 - c_corner0.y) * c_granularity_inverse);
-			k2 = static_cast<size_t>((c2 - c_corner0.z) * c_granularity_inverse);
+			k0 = static_cast<int>((c0 - c_corner0.x) * c_granularity_inverse);
+			k1 = static_cast<int>((c1 - c_corner0.y) * c_granularity_inverse);
+			k2 = static_cast<int>((c2 - c_corner0.z) * c_granularity_inverse);
 			assert(k0 + 1 < c_num_probes.x);
 			assert(k1 + 1 < c_num_probes.y);
 			assert(k2 + 1 < c_num_probes.z);
 			k0 = c_num_probes.x * (c_num_probes.y * k2 + k1) + k0;
 
 			// Retrieve the grid map and lookup the value
-			const float* map = c_maps[xst[i]];
+			map = c_maps[xst[i]];
 			e000 = map[k0];
 			e100 = map[k0 + 1];
 			e010 = map[k0 + c_num_probes.x];
@@ -219,7 +220,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 		vs = v0*v0 + v1*v1 + v2*v2;
 		if (vs < 64.0)
 		{
-			j = ipp[i] + static_cast<size_t>(c_sf_ns * vs);
+			j = ipp[i] + static_cast<int>(c_sf_ns * vs);
 			y += c_sf_e[j];
 			dr = c_sf_d[j];
 			d0 = dr * v0;
@@ -410,8 +411,20 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	{
 		s0x[o0 += gds] = curand_uniform(&crs) * 2 - 1;
 	}
-	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub);
-
+/*
+	s0x[o0  = gid] =  49.799f;
+	s0x[o0 += gds] = -31.025f;
+	s0x[o0 += gds] =  35.312f;
+	s0x[o0 += gds] = 1.0f;
+	s0x[o0 += gds] = 0.0f;
+	s0x[o0 += gds] = 0.0f;
+	s0x[o0 += gds] = 0.0f;
+	for (i = 6; i < nv; ++i)
+	{
+		s0x[o0 += gds] = 0.0f;
+	}
+	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, e000s);
+*/
 	// Repeat for a number of generations.
 	for (g = 0; g < c_ng; ++g)
 	{
@@ -697,7 +710,7 @@ void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv,
 	checkCudaErrors(cudaMemcpy(d_lig, &h_lig.front(), lig_bytes, cudaMemcpyHostToDevice));
 
 	// Allocate device memory for variables. 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
-	const size_t var_bytes = sizeof(float) * (1 + (nv + 1) + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks * 3 + (nv * (nv + 1) >> 1) * num_mc_tasks + nv * num_mc_tasks * 3;
+	const size_t var_bytes = sizeof(float) * (1 + nv + 1 + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks * 3 + (nv * (nv + 1) >> 1) * num_mc_tasks + nv * num_mc_tasks * 3;
 	float* d_s0;
 	checkCudaErrors(cudaMalloc(&d_s0, var_bytes));
 
