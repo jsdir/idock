@@ -1,6 +1,6 @@
 #include <cassert>
 #include <curand_kernel.h>
-#include "helper_cuda.h"
+#include <helper_cuda.h>
 #include "kernel.hpp"
 
 #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
@@ -423,8 +423,9 @@ void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, c
 	{
 		s0x[o0 += gds] = 0.0f;
 	}
-	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, e000s);
 */
+	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub);
+
 	// Repeat for a number of generations.
 	for (g = 0; g < c_ng; ++g)
 	{
@@ -710,7 +711,7 @@ void kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv,
 	checkCudaErrors(cudaMemcpy(d_lig, &h_lig.front(), lig_bytes, cudaMemcpyHostToDevice));
 
 	// Allocate device memory for variables. 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
-	const size_t var_bytes = sizeof(float) * (1 + nv + 1 + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * num_mc_tasks * 3 + (nv * (nv + 1) >> 1) * num_mc_tasks + nv * num_mc_tasks * 3;
+	const size_t var_bytes = sizeof(float) * ((1 + nv + 1 + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * 3 + (nv * (nv + 1) >> 1) + nv * 3) * num_mc_tasks;
 	float* d_s0;
 	checkCudaErrors(cudaMalloc(&d_s0, var_bytes));
 	checkCudaErrors(cudaMemset(d_s0, 0, var_bytes));
