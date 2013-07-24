@@ -10,6 +10,7 @@
 #include "ligand.hpp"
 #include "utility.hpp"
 #include "kernel.hpp"
+#include "random_forest.hpp"
 using namespace std;
 using namespace boost::filesystem;
 
@@ -32,7 +33,7 @@ int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	array<float, 3> center, size;
-	size_t num_threads, seed, num_mc_tasks, num_generations, max_conformations;
+	size_t seed, num_threads, num_trees, num_mc_tasks, num_generations, max_conformations;
 	float granularity;
 
 	// Parse program options in a try/catch block.
@@ -41,8 +42,9 @@ int main(int argc, char* argv[])
 		// Initialize the default values of optional arguments.
 		const path default_output_folder_path = "output";
 		const path default_log_path = "log.csv";
-		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
+		const size_t default_num_threads = thread::hardware_concurrency();
+		const size_t default_num_trees = 128;
 		const size_t default_num_mc_tasks = 256;
 		const size_t default_num_generations = 100;
 		const size_t default_max_conformations = 9;
@@ -68,8 +70,9 @@ int main(int argc, char* argv[])
 			;
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
-			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
+			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
+			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
 			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
 			("generations", value<size_t>(&num_generations)->default_value(default_num_generations), "number of generations in BFGS")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
@@ -162,15 +165,25 @@ int main(int argc, char* argv[])
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
 
-	cout << "Setting up CUDA kernel with random seed " << seed << endl;
+	cout << "Initializing CUDA kernel with random seed " << seed << endl;
 	kernel knl(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed);
+
+	cout << "Building a random forest of " << num_trees << " trees in parallel" << endl;
+	mt19937_64 rng(seed);
+	forest f(num_trees);
+	for (tree& t : f)
+	{
+		tp.push_back(packaged_task<int()>(bind(&tree::grow, ref(t), 5, rng())));
+	}
+	tp.sync();
+	f.clear();
 
 	// Perform docking for each file in the ligand folder.
 	boost::ptr_vector<summary> summaries;
 	size_t num_ligands = 0; // Ligand counter.
 	cout.setf(ios::fixed, ios::floatfield);
 	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand in parallel" << endl;
-	cout << "   Index |          Ligand | kcal/mol" << endl << setprecision(2);
+	cout << "   Index |       Ligand | pKd  1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	const directory_iterator const_dir_iter; // A default constructed directory_iterator acts as the end iterator.
 	for (directory_iterator dir_iter(input_folder_path); dir_iter != const_dir_iter; ++dir_iter)
 	{
@@ -180,7 +193,7 @@ int main(int argc, char* argv[])
 
 		// Output the ligand file stem.
 		const string stem = input_ligand_path.stem().string();
-		cout << setw(8) << ++num_ligands << " | " << setw(15) << stem << " | " << flush;
+		cout << setw(8) << ++num_ligands << " | " << setw(12) << stem << " | " << flush;
 
 		// Create grid maps on the fly if necessary.
 		vector<size_t> xs;
@@ -219,9 +232,13 @@ int main(int argc, char* argv[])
 
 		// Cluster and save solutions to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		const float e = lig.save(output_ligand_path, ex, max_conformations, num_mc_tasks);
-		cout << setw(8) << e << endl;
-		summaries.push_back(new summary(stem, e));
+		const vector<float> affinities = lig.save(output_ligand_path, ex, max_conformations, num_mc_tasks, rec, f);
+		summaries.push_back(new summary(stem, affinities.front()));
+		for (const float a : affinities)
+		{
+			cout << setw(6) << a;
+		}
+		cout << endl;
 	}
 
 	// Sort and write ligand summary to the log file.

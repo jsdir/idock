@@ -316,7 +316,7 @@ public:
 	vector<array<float, 3>> c; ///< Heavy atom coordinates.
 };
 
-float ligand::save(const path& output_ligand_path, const vector<float>& ex, const size_t max_conformations, const size_t num_mc_tasks) const
+vector<float> ligand::save(const path& output_ligand_path, const vector<float>& ex, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f) const
 {
 	// Sort solutions in ascending order of e.
 	vector<size_t> rank(num_mc_tasks);
@@ -330,6 +330,8 @@ float ligand::save(const path& output_ligand_path, const vector<float>& ex, cons
 	const float square_deviation_threshold = 4.0f * na;
 	vector<solution> solutions;
 	solutions.reserve(max_conformations);
+	vector<float> affinities;
+	affinities.reserve(max_conformations);
 	boost::filesystem::ofstream ofs(output_ligand_path);
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
@@ -384,6 +386,23 @@ float ligand::save(const path& output_ligand_path, const vector<float>& ex, cons
 			}
 		}
 		if (!representative) continue;
+
+		// Rescore conformations with random forest.
+		array<float, tree::nv> x;
+		x.fill(0);
+		for (size_t i = 0; i < na; ++i)
+		{
+			const atom& la = atoms[i];
+			if (la.rf_unsupported()) continue;
+			for (const atom& ra : rec.atoms)
+			{
+				if (ra.rf_unsupported()) continue;
+				if (distance_sqr(s.c[i], ra.coord) >= 144) continue;
+				++x[la.rf * 4 + ra.rf];
+			}
+		}
+		affinities.push_back(ex[r]);
+//		affinities.push_back(f.predict(x));
 
 		// Dump the ROOT frame.
 		ofs << "ROOT\n";
@@ -448,6 +467,5 @@ float ligand::save(const path& output_ligand_path, const vector<float>& ex, cons
 		solutions.push_back(static_cast<solution&&>(s));
 		if (solutions.size() == solutions.capacity()) break;
 	}
-
-	return ex[rank.front()];
+	return affinities;
 }
