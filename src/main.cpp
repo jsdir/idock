@@ -19,14 +19,14 @@ class summary
 {
 public:
 	const string stem;
-	const float energy;
-	explicit summary(const string& stem, const float energy) : stem(stem), energy(energy) {}
+	const vector<float> affinities;
+	explicit summary(const string& stem, const vector<float>& affinities) : stem(stem), affinities(affinities) {}
 };
 
 /// For sorting ptr_vector<summary>.
-inline bool operator<(const summary& a, const summary& b)
+inline bool operator<(const summary& s0, const summary& s1)
 {
-	return a.energy < b.energy;
+	return s0.affinities.front() < s1.affinities.front();
 }
 
 int main(int argc, char* argv[])
@@ -233,12 +233,14 @@ int main(int argc, char* argv[])
 		// Cluster and save solutions to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 		const vector<float> affinities = lig.save(output_ligand_path, ex, max_conformations, num_mc_tasks, rec, f);
-		summaries.push_back(new summary(stem, affinities.front()));
-		for (const float a : affinities)
+		for_each(affinities.cbegin(), affinities.cbegin() + min<size_t>(affinities.size(), 9), [](const float a)
 		{
 			cout << setw(6) << a;
-		}
+		});
 		cout << endl;
+
+		// Save ligand stem and predicted affinities for subsequent sorting.
+		summaries.push_back(new summary(stem, affinities));
 	}
 
 	// Sort and write ligand summary to the log file.
@@ -246,10 +248,20 @@ int main(int argc, char* argv[])
 	summaries.sort();
 	boost::filesystem::ofstream log(log_path);
 	log.setf(ios::fixed, ios::floatfield);
-	log << "Ligand,kcal/mol\n" << setprecision(2);
+	log << "Ligand";
+	for (size_t i = 1; i <= max_conformations; ++i)
+	{
+		log << ",pKd" << i;
+	}
+	log << '\n' << setprecision(2);
 	for (size_t i = 0; i < num_ligands; ++i)
 	{
 		const summary& s = summaries[i];
-		log << s.stem << ',' << s.energy << '\n';
+		log << s.stem;
+		for (const float a : s.affinities)
+		{
+			log << ',' << a;
+		}
+		log << '\n';
 	}
 }
