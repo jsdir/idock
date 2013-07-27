@@ -8,8 +8,8 @@
 #define assert(arg)
 #endif
 
-__constant__ float* c_sf_e;
-__constant__ float* c_sf_d;
+__constant__ const float* c_sf_e;
+__constant__ const float* c_sf_d;
 __constant__ int c_sf_ns;
 __constant__ float3 c_corner0;
 __constant__ float3 c_corner1;
@@ -334,7 +334,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 
 __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
-void bfgs(float* __restrict__ s0e, const int* lig, const int nv, const int nf, const int na, const int np)
+void bfgs(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, const int nf, const int na, const int np)
 {
 	const int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	const int gds = blockDim.x * gridDim.x;
