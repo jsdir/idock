@@ -183,9 +183,9 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 
 			// Update q of BRANCH frame
 			ang = x[w += gds] * 0.5f;
-			sng = sinf(ang);
-			r0 = cosf(ang);
-//			sincosf(ang, &sng, &r0);
+//			sng = sinf(ang);
+//			r0 = cosf(ang);
+			sincosf(ang, &sng, &r0);
 //			sincospif(ang, &sng, &r0);
 			r1 = sng * a0;
 			r2 = sng * a1;
@@ -519,11 +519,11 @@ void bfgs(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, co
 				assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 1e-3f);
 				nrm = sqrt(pr0*pr0 + pr1*pr1 + pr2*pr2);
 				ang = 0.5f * alp * nrm;
-				sng = sinf(ang) / nrm;
-				pq0 = cosf(ang);
-//				sincosf(ang, &sng, &pq0);
+//				sng = sinf(ang) / nrm;
+//				pq0 = cosf(ang);
+				sincosf(ang, &sng, &pq0);
 //				sincospif(ang, &sng, &pq0);
-//				sng /= nrm;
+				sng /= nrm;
 				pq1 = sng * pr0;
 				pq2 = sng * pr1;
 				pq3 = sng * pr2;
