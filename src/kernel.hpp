@@ -26,7 +26,6 @@ private:
 	float* d_sf_d;
 	float* d_maps[sf_n];
 	int num_mc_tasks;
-	int ng;
 };
 
 #endif
