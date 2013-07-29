@@ -10,6 +10,7 @@
 #include "ligand.hpp"
 #include "utility.hpp"
 #include "cu_mc_kernel.hpp"
+#include "cl_mc_kernel.hpp"
 #include "random_forest.hpp"
 using namespace std;
 using namespace boost::filesystem;
@@ -35,6 +36,7 @@ int main(int argc, char* argv[])
 	array<float, 3> center, size;
 	size_t seed, num_threads, num_trees, num_mc_tasks, num_generations, max_conformations;
 	float granularity;
+	string engine;
 
 	// Parse program options in a try/catch block.
 	try
@@ -49,6 +51,7 @@ int main(int argc, char* argv[])
 		const size_t default_num_generations = 100;
 		const size_t default_max_conformations = 9;
 		const float default_granularity = 0.15625f;
+		const string default_engine = "CUDA";
 
 		// Set up options description.
 		using namespace boost::program_options;
@@ -77,6 +80,7 @@ int main(int argc, char* argv[])
 			("generations", value<size_t>(&num_generations)->default_value(default_num_generations), "number of generations in BFGS")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
 			("granularity", value<float>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
+			("engine", value<string>(&engine)->default_value(default_engine), "CUDA or OpenCL")
 			("help", "help information")
 			("version", "version information")
 			("config", value<path>(), "options can be loaded from a configuration file")
@@ -143,6 +147,13 @@ int main(int argc, char* argv[])
 				return 1;
 			}
 		}
+
+		// Validate engine.
+		if (engine != "CUDA" && engine != "OpenCL")
+		{
+			cerr << "Engine must be either CUDA or OpenCL" << endl;
+			return 1;
+		}
 	}
 	catch (const exception& e)
 	{
@@ -166,7 +177,15 @@ int main(int argc, char* argv[])
 	receptor rec(receptor_path, center, size, granularity);
 
 	cout << "Initializing Monte Carlo kernel with random seed " << seed << endl;
-	unique_ptr<mc_kernel> knl(new cu_mc_kernel(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed));
+	unique_ptr<mc_kernel> knl;
+	if (engine == "CUDA")
+	{
+		knl.reset(new cu_mc_kernel(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed));
+	}
+	else
+	{
+		knl.reset(new cl_mc_kernel(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed));
+	}
 
 	cout << "Building a random forest of " << num_trees << " trees in parallel" << endl;
 	mt19937_64 rng(seed);
