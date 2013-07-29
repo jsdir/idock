@@ -9,7 +9,7 @@
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "utility.hpp"
-#include "kernel.hpp"
+#include "cu_kernel.hpp"
 #include "random_forest.hpp"
 using namespace std;
 using namespace boost::filesystem;

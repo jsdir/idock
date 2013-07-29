@@ -1,7 +1,7 @@
 #include <cassert>
 #include <curand_kernel.h>
 #include <helper_cuda.h>
-#include "kernel.hpp"
+#include "cu_kernel.hpp"
 
 #if defined(__CUDA_ARCH__) && (__CUDA_ARCH__ < 200)
 #undef  assert

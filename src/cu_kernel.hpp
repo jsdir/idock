@@ -1,6 +1,6 @@
 #pragma once
-#ifndef IDOCK_KERNEL_HPP
-#define IDOCK_KERNEL_HPP
+#ifndef IDOCK_CU_KERNEL_HPP
+#define IDOCK_CU_KERNEL_HPP
 
 #include <vector>
 using namespace std;
