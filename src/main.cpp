@@ -9,7 +9,7 @@
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "utility.hpp"
-#include "cu_kernel.hpp"
+#include "cu_mc_kernel.hpp"
 #include "random_forest.hpp"
 using namespace std;
 using namespace boost::filesystem;
@@ -165,8 +165,8 @@ int main(int argc, char* argv[])
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
 
-	cout << "Initializing CUDA kernel with random seed " << seed << endl;
-	kernel knl(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed);
+	cout << "Initializing Monte Carlo kernel with random seed " << seed << endl;
+	unique_ptr<mc_kernel> knl(new cu_mc_kernel(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed));
 
 	cout << "Building a random forest of " << num_trees << " trees in parallel" << endl;
 	mt19937_64 rng(seed);
@@ -223,12 +223,12 @@ int main(int argc, char* argv[])
 				tp.push_back(packaged_task<int()>(bind(&receptor::populate, ref(rec), cref(sf), cref(xs), z)));
 			}
 			tp.sync();
-			knl.update(rec.maps, xs);
+			knl->update(rec.maps, xs);
 		}
 
 		// Run the Monte Carlo tasks in parallel
 		vector<float> ex;
-		knl.launch(ex, lig.lig, lig.nv, lig.nf, lig.na, lig.np);
+		knl->launch(ex, lig.lig, lig.nv, lig.nf, lig.na, lig.np);
 
 		// Cluster and save solutions to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
