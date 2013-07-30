@@ -1,6 +1,6 @@
 #pragma once
-#ifndef IDOCK_CL_KERNEL_HPP
-#define IDOCK_CL_KERNEL_HPP
+#ifndef IDOCK_CL_MC_KERNEL_HPP
+#define IDOCK_CL_MC_KERNEL_HPP
 
 #include <CL/cl.h>
 #include "mc_kernel.hpp"
