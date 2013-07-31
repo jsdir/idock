@@ -4,7 +4,7 @@
 #include "cl_mc_kernel.hpp"
 using namespace std;
 
-cl_mc_kernel::cl_mc_kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng, const unsigned long long h_seed) : num_mc_tasks(num_mc_tasks)
+cl_mc_kernel::cl_mc_kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng, const unsigned long h_seed) : num_mc_tasks(num_mc_tasks)
 {
 	// Find an appropriate platform.
 	cl_uint num_platforms;
@@ -23,9 +23,9 @@ cl_mc_kernel::cl_mc_kernel(const float* h_sf_e, const float* h_sf_d, const int h
 	{
 		// 0 AMD Accelerated Parallel Processing
 		// 1 NVIDIA CUDA
-		char chBuffer[1024];
-		checkOclErrors(clGetPlatformInfo(platform_ids[i], CL_PLATFORM_NAME, 1024, chBuffer, NULL));
-		if (!strcmp(chBuffer, "NVIDIA CUDA"))
+		char buffer[1024];
+		checkOclErrors(clGetPlatformInfo(platform_ids[i], CL_PLATFORM_NAME, sizeof(buffer), buffer, NULL));
+		if (!strcmp(buffer, "NVIDIA CUDA"))
 		{
 			platform_id = platform_ids[i];
 			break;

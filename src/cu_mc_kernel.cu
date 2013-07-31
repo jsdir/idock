@@ -17,7 +17,7 @@ __constant__ int3 c_num_probes;
 __constant__ float c_granularity_inverse;
 __constant__ const float* c_maps[sf_n];
 __constant__ int c_ng;
-__constant__ unsigned long long c_seed;
+__constant__ unsigned long c_seed;
 
 extern __shared__ int shared[];
 
@@ -654,7 +654,7 @@ void bfgs(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, co
 	}
 }
 
-cu_mc_kernel::cu_mc_kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng, const unsigned long long h_seed) : num_mc_tasks(num_mc_tasks)
+cu_mc_kernel::cu_mc_kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng, const unsigned long h_seed) : num_mc_tasks(num_mc_tasks)
 {
 	// Initialize scoring function.
 	checkCudaErrors(cudaMalloc(&d_sf_e, sizeof(float) * h_sf_ne));
