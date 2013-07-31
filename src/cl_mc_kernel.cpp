@@ -8,37 +8,38 @@ cl_mc_kernel::cl_mc_kernel(const float* h_sf_e, const float* h_sf_d, const int h
 {
 	// Find an appropriate platform.
 	cl_uint num_platforms;
-	cl_platform_id* platform_ids;
-	cl_platform_id platform_id;
-	cl_device_id device_id;
+	cl_platform_id* platforms;
+	cl_platform_id platform;
+	cl_device_id device;
 	checkOclErrors(clGetPlatformIDs(0, NULL, &num_platforms));
 //	if (num_platforms == 0)
 //	{
 //		cerr << "No OpenCL platform found" << endl;
 //		return 1;
 //	}
-	platform_ids = (cl_platform_id*)malloc(sizeof(cl_platform_id) * num_platforms);
-	checkOclErrors(clGetPlatformIDs(num_platforms, platform_ids, NULL));
+	platforms = (cl_platform_id*)malloc(sizeof(cl_platform_id) * num_platforms);
+	checkOclErrors(clGetPlatformIDs(num_platforms, platforms, NULL));
 	for (cl_uint i = 0; i < num_platforms; ++i)
 	{
 		// 0 AMD Accelerated Parallel Processing
 		// 1 NVIDIA CUDA
+		// 2 Intel(R) OpenCL
 		char buffer[1024];
-		checkOclErrors(clGetPlatformInfo(platform_ids[i], CL_PLATFORM_NAME, sizeof(buffer), buffer, NULL));
+		checkOclErrors(clGetPlatformInfo(platforms[i], CL_PLATFORM_NAME, sizeof(buffer), buffer, NULL));
 		if (!strcmp(buffer, "NVIDIA CUDA"))
 		{
-			platform_id = platform_ids[i];
+			platform = platforms[i];
 			break;
 		}
 	}
-	free(platform_ids);
+	free(platforms);
 
 	// Find a GPU device.
-	checkOclErrors(clGetDeviceIDs(platform_id, CL_DEVICE_TYPE_GPU, 1, &device_id, NULL));
-	cl_context_properties context_properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform_id, 0};
-	context = clCreateContext(context_properties, 1, &device_id, NULL, NULL, &err);
+	checkOclErrors(clGetDeviceIDs(platform, CL_DEVICE_TYPE_GPU, 1, &device, NULL));
+	cl_context_properties context_properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platform, 0};
+	context = clCreateContext(context_properties, 1, &device, NULL, NULL, &err);
 	checkOclErrors(err);
-	command_queue = clCreateCommandQueue(context, device_id, 0, &err);
+	command_queue = clCreateCommandQueue(context, device, 0, &err);
 	checkOclErrors(err);
 
 	// JIT OpenCL kernel source.
@@ -53,11 +54,11 @@ cl_mc_kernel::cl_mc_kernel(const float* h_sf_e, const float* h_sf_d, const int h
 	checkOclErrors(err);
 	free(cSourceString);
 	checkOclErrors(clBuildProgram(program, 0, NULL, "-cl-fast-relaxed-math -cl-denorms-are-zero", NULL, NULL));
-	size_t logSize;
-	checkOclErrors(clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, 0, NULL, &logSize));
-	char* log = (char *)malloc(logSize);
-	checkOclErrors(clGetProgramBuildInfo(program, device_id, CL_PROGRAM_BUILD_LOG, logSize, log, NULL));
-//	cout << log << endl;
+	size_t build_log_size;
+	checkOclErrors(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, 0, NULL, &build_log_size));
+	char* build_log = (char *)malloc(build_log_size);
+	checkOclErrors(clGetProgramBuildInfo(program, device, CL_PROGRAM_BUILD_LOG, build_log_size, build_log, NULL));
+//	cout << build << endl;
 	kernel = clCreateKernel(program, "bfgs", &err);
 	checkOclErrors(err);
 
@@ -119,10 +120,11 @@ void cl_mc_kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const i
 	checkOclErrors(clEnqueueWriteBuffer(command_queue, d_lig, CL_FALSE, 0, lig_bytes, &h_lig.front(), 0, NULL, NULL));
 
 	// Allocate device memory for variables. 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
-	const size_t var_bytes = sizeof(float) * ((1 + nv + 1 + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * 3 + (nv * (nv + 1) >> 1) + nv * 3) * num_mc_tasks;
-	cl_mem d_s0  = clCreateBuffer(context, CL_MEM_READ_WRITE, var_bytes, NULL, &err);
+	vector<float> h_s0(((1 + nv + 1 + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * 3 + (nv * (nv + 1) >> 1) + nv * 3) * num_mc_tasks, 0);
+	const size_t s0_bytes = sizeof(float) * h_s0.size();
+	cl_mem d_s0 = clCreateBuffer(context, CL_MEM_READ_WRITE, s0_bytes, NULL, &err);
 	checkOclErrors(err);
-//	checkOclErrors(cudaMemset(d_s0, 0, var_bytes));
+	checkOclErrors(clEnqueueWriteBuffer(command_queue, d_s0, CL_FALSE, 0, s0_bytes, h_s0.data(), 0, NULL, NULL));
 
 	// Invoke OpenCL kernel.
 	checkOclErrors(clSetKernelArg(kernel, 0, sizeof(cl_mem), &d_s0));
@@ -136,8 +138,6 @@ void cl_mc_kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const i
 	const size_t gws = num_mc_tasks / lws;
 //	checkOclErrors(clGetKernelWorkGroupInfo(kernel, device_id, CL_KERNEL_WORK_GROUP_SIZE, sizeof(size_t), &szMaxWorkgroupSize, NULL));
 	checkOclErrors(clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &gws, &lws, 0, NULL, NULL));
-//	checkOclErrors(cudaGetLastError());
-//	checkOclErrors(cudaDeviceSynchronize());
 
 	// Copy e and x from device memory to host memory.
 	const size_t ex_size = (1 + nv + 1) * num_mc_tasks;
@@ -163,5 +163,4 @@ cl_mc_kernel::~cl_mc_kernel()
 	checkOclErrors(clReleaseProgram(program));
 	checkOclErrors(clReleaseCommandQueue(command_queue));
 	checkOclErrors(clReleaseContext(context));
-//	checkOclErrors(cudaDeviceReset());
 }
