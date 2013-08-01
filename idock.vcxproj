@@ -1,5 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <CUDAPropsPath Condition="'$(CUDAPropsPath)'==''">$(VCTargetsPath)\BuildCustomizations</CUDAPropsPath>
+  </PropertyGroup>
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -23,8 +26,13 @@
   </PropertyGroup>
   <ItemGroup>
     <ClInclude Include="src\atom.hpp" />
+    <ClInclude Include="src\cl_helper.h" />
+    <ClInclude Include="src\cl_mc_kernel.hpp" />
+    <ClInclude Include="src\cu_mc_kernel.hpp" />
     <ClInclude Include="src\kernel.hpp" />
     <ClInclude Include="src\ligand.hpp" />
+    <ClInclude Include="src\mc_kernel.hpp" />
+    <ClInclude Include="src\random_forest.hpp" />
     <ClInclude Include="src\scoring_function.hpp" />
     <ClInclude Include="src\receptor.hpp" />
     <ClInclude Include="src\thread_pool.hpp" />
@@ -32,15 +40,17 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\atom.cpp" />
+    <CudaCompile Include="src\cu_mc_kernel.cu" />
+    <ClCompile Include="src\cl_mc_kernel.cpp" />
     <ClCompile Include="src\ligand.cpp" />
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\random_forest.cpp" />
+    <ClCompile Include="src\random_forest_x.cpp" />
+    <ClCompile Include="src\random_forest_y.cpp" />
     <ClCompile Include="src\scoring_function.cpp" />
     <ClCompile Include="src\receptor.cpp" />
     <ClCompile Include="src\thread_pool.cpp" />
     <ClCompile Include="src\utility.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="src\kernel.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -66,6 +76,9 @@
     <PlatformToolset>v110</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(CUDAPropsPath)\CUDA 5.5.props" />
+  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
@@ -103,28 +116,43 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_VARIADIC_MAX=10;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(BOOST_ROOT)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_ROOT);$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <CompileAsManaged>false</CompileAsManaged>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform);$(CUDA_PATH)\lib\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CudaCompile>
+      <Include>$(NVCUDASAMPLES_ROOT)\common\inc</Include>
+      <CodeGeneration>compute_11,sm_11</CodeGeneration>
+      <PtxAsOptionV>true</PtxAsOptionV>
+      <FastMath>true</FastMath>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;_VARIADIC_MAX=10;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(BOOST_ROOT)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_ROOT);$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform);$(CUDA_PATH)\lib\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CudaCompile>
+      <Include>$(NVCUDASAMPLES_ROOT)\common\inc</Include>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CodeGeneration>compute_11,sm_11</CodeGeneration>
+      <PtxAsOptionV>true</PtxAsOptionV>
+      <FastMath>true</FastMath>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -133,7 +161,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_VARIADIC_MAX=10;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(BOOST_ROOT)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_ROOT);$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <EnableEnhancedInstructionSet>NotSet</EnableEnhancedInstructionSet>
     </ClCompile>
@@ -141,8 +169,15 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform);$(CUDA_PATH)\lib\$(Platform);$(AMDAPPSDKROOT)\lib\x86</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CudaCompile>
+      <Include>$(NVCUDASAMPLES_ROOT)\common\inc</Include>
+      <CodeGeneration>compute_11,sm_11</CodeGeneration>
+      <PtxAsOptionV>true</PtxAsOptionV>
+      <FastMath>true</FastMath>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -151,17 +186,26 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;_VARIADIC_MAX=10;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(BOOST_ROOT)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(BOOST_ROOT);$(AMDAPPSDKROOT)\include</AdditionalIncludeDirectories>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform);$(CUDA_PATH)\lib\$(Platform);$(AMDAPPSDKROOT)\lib\x86_64</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cudart_static.lib;OpenCL.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+    <CudaCompile>
+      <Include>$(NVCUDASAMPLES_ROOT)\common\inc</Include>
+      <TargetMachinePlatform>64</TargetMachinePlatform>
+      <CodeGeneration>compute_11,sm_11</CodeGeneration>
+      <PtxAsOptionV>true</PtxAsOptionV>
+      <FastMath>true</FastMath>
+    </CudaCompile>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(CUDAPropsPath)\CUDA 5.5.targets" />
   </ImportGroup>
 </Project>
