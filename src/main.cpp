@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 128;
 		const size_t default_num_mc_tasks = 256;
-		const size_t default_num_generations = 100;
+		const size_t default_num_generations = 300;
 		const size_t default_max_conformations = 9;
 		const float default_granularity = 0.15625f;
 		const string default_engine = "CUDA";
