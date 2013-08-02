@@ -426,145 +426,184 @@ void bfgs(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, co
 */
 	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub);
 
+	// Mutate s0x into s1x
+	o0  = gid;
+	s1x[o0] = s0x[o0] + curand_uniform(&crs);
+	o0 += gds;
+	s1x[o0] = s0x[o0] + curand_uniform(&crs);
+	o0 += gds;
+	s1x[o0] = s0x[o0] + curand_uniform(&crs);
+//	for (i = 3; i < nv + 1; ++i)
+	for (i = 2 - nv; i < 0; ++i)
+	{
+		o0 += gds;
+		s1x[o0] = s0x[o0];
+	}
+	evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub);
+
+	// Initialize the inverse Hessian matrix to identity matrix.
+	// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
+	// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
+	// See N&R for a recipe to find this initializer.
+	bfh[o0 = gid] = 1.0f;
+	for (j = 1; j < nv; ++j)
+	{
+		for (i = 0; i < j; ++i)
+		{
+			bfh[o0 += gds] = 0.0f;
+		}
+		bfh[o0 += gds] = 1.0f;
+	}
+
 	// Repeat for a number of generations.
 	for (g = 0; g < c_ng; ++g)
 	{
-		// Mutate s0x into s1x
-		o0  = gid;
-		s1x[o0] = s0x[o0] + curand_uniform(&crs);
-		o0 += gds;
-		s1x[o0] = s0x[o0] + curand_uniform(&crs);
-		o0 += gds;
-		s1x[o0] = s0x[o0] + curand_uniform(&crs);
-//		for (i = 3; i < nv + 1; ++i)
-		for (i = 2 - nv; i < 0; ++i)
-		{
-			o0 += gds;
-			s1x[o0] = s0x[o0];
-		}
-		evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub);
-
-		// Initialize the inverse Hessian matrix to identity matrix.
-		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
-		// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
-		// See N&R for a recipe to find this initializer.
-		bfh[o0 = gid] = 1.0f;
-		for (j = 1; j < nv; ++j)
-		{
-			for (i = 0; i < j; ++i)
-			{
-				bfh[o0 += gds] = 0.0f;
-			}
-			bfh[o0 += gds] = 1.0f;
-		}
-
 		// Use BFGS to optimize the mutated conformation s1x into local optimum s2x.
 		// http://en.wikipedia.org/wiki/BFGS_method
 		// http://en.wikipedia.org/wiki/Quasi-Newton_method
-		// The loop breaks when no appropriate alpha can be found.
-		while (true)
+
+		// Calculate p = -h * g, where p is for descent direction, h for Hessian, and g for gradient.
+		sum = bfh[o1 = gid] * s1g[o0 = gid];
+		for (i = 1; i < nv; ++i)
 		{
-			// Calculate p = -h * g, where p is for descent direction, h for Hessian, and g for gradient.
-			sum = bfh[o1 = gid] * s1g[o0 = gid];
+			sum += bfh[o1 += i * gds] * s1g[o0 += gds];
+		}
+		bfp[o2 = gid] = -sum;
+		for (j = 1; j < nv; ++j)
+		{
+			sum = bfh[o1 = (j*(j+1)>>1) * gds + gid] * s1g[o0 = gid];
 			for (i = 1; i < nv; ++i)
 			{
-				sum += bfh[o1 += i * gds] * s1g[o0 += gds];
+				sum += bfh[o1 += i > j ? i * gds : gds] * s1g[o0 += gds];
 			}
-			bfp[o2 = gid] = -sum;
-			for (j = 1; j < nv; ++j)
+			bfp[o2 += gds] = -sum;
+		}
+
+		// Calculate pg = p * g = -h * g^2 < 0
+		o0 = gid;
+		pg1 = bfp[o0] * s1g[o0];
+		for (i = 1; i < nv; ++i)
+		{
+			o0 += gds;
+			pg1 += bfp[o0] * s1g[o0];
+		}
+		pga = 0.0001f * pg1;
+		pgc = 0.9f * pg1;
+
+		// Perform a line search to find an appropriate alpha.
+		// Try different alpha values for nls times.
+		// alpha starts with 1, and shrinks to 0.1 of itself iteration by iteration.
+		alp = 1.0f;
+		for (j = 0; j < nls; ++j)
+		{
+			// Calculate x2 = x1 + a * p.
+			o0  = gid;
+			s2x[o0] = s1x[o0] + alp * bfp[o0];
+			o0 += gds;
+			s2x[o0] = s1x[o0] + alp * bfp[o0];
+			o0 += gds;
+			s2x[o0] = s1x[o0] + alp * bfp[o0];
+			o0 += gds;
+			s1xq0 = s1x[o0];
+			pr0 = bfp[o0];
+			o0 += gds;
+			s1xq1 = s1x[o0];
+			pr1 = bfp[o0];
+			o0 += gds;
+			s1xq2 = s1x[o0];
+			pr2 = bfp[o0];
+			o0 += gds;
+			s1xq3 = s1x[o0];
+			assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 1e-3f);
+			nrm = sqrt(pr0*pr0 + pr1*pr1 + pr2*pr2);
+			ang = 0.5f * alp * nrm;
+//			sng = sinf(ang) / nrm;
+//			pq0 = cosf(ang);
+			sincosf(ang, &sng, &pq0);
+//			sincospif(ang, &sng, &pq0);
+			sng /= nrm;
+			pq1 = sng * pr0;
+			pq2 = sng * pr1;
+			pq3 = sng * pr2;
+			assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 1e-3f);
+			s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
+			s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
+			s2xq2 = pq0 * s1xq2 - pq1 * s1xq3 + pq2 * s1xq0 + pq3 * s1xq1;
+			s2xq3 = pq0 * s1xq3 + pq1 * s1xq2 - pq2 * s1xq1 + pq3 * s1xq0;
+			assert(fabs(s2xq0*s2xq0 + s2xq1*s2xq1 + s2xq2*s2xq2 + s2xq3*s2xq3 - 1.0f) < 1e-3f);
+			s2x[o0 -= 3 * gds] = s2xq0;
+			s2x[o0 += gds] = s2xq1;
+			s2x[o0 += gds] = s2xq2;
+			s2x[o0 += gds] = s2xq3;
+			for (i = 6; i < nv; ++i)
 			{
-				sum = bfh[o1 = (j*(j+1)>>1) * gds + gid] * s1g[o0 = gid];
+				bpi = bfp[o0];
+				o0 += gds;
+				s2x[o0] = s1x[o0] + alp * bpi;
+			}
+
+			// Evaluate x2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
+			// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
+			// 2) The curvature condition ensures that the slope has been reduced sufficiently.
+			if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, nf, na, np, s1e[gid] + alp * pga))
+			{
+				o0 = gid;
+				pg2 = bfp[o0] * s2g[o0];
 				for (i = 1; i < nv; ++i)
 				{
-					sum += bfh[o1 += i > j ? i * gds : gds] * s1g[o0 += gds];
-				}
-				bfp[o2 += gds] = -sum;
-			}
-
-			// Calculate pg = p * g = -h * g^2 < 0
-			o0 = gid;
-			pg1 = bfp[o0] * s1g[o0];
-			for (i = 1; i < nv; ++i)
-			{
-				o0 += gds;
-				pg1 += bfp[o0] * s1g[o0];
-			}
-			pga = 0.0001f * pg1;
-			pgc = 0.9f * pg1;
-
-			// Perform a line search to find an appropriate alpha.
-			// Try different alpha values for nls times.
-			// alpha starts with 1, and shrinks to 0.1 of itself iteration by iteration.
-			alp = 1.0f;
-			for (j = 0; j < nls; ++j)
-			{
-				// Calculate x2 = x1 + a * p.
-				o0  = gid;
-				s2x[o0] = s1x[o0] + alp * bfp[o0];
-				o0 += gds;
-				s2x[o0] = s1x[o0] + alp * bfp[o0];
-				o0 += gds;
-				s2x[o0] = s1x[o0] + alp * bfp[o0];
-				o0 += gds;
-				s1xq0 = s1x[o0];
-				pr0 = bfp[o0];
-				o0 += gds;
-				s1xq1 = s1x[o0];
-				pr1 = bfp[o0];
-				o0 += gds;
-				s1xq2 = s1x[o0];
-				pr2 = bfp[o0];
-				o0 += gds;
-				s1xq3 = s1x[o0];
-				assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 1e-3f);
-				nrm = sqrt(pr0*pr0 + pr1*pr1 + pr2*pr2);
-				ang = 0.5f * alp * nrm;
-//				sng = sinf(ang) / nrm;
-//				pq0 = cosf(ang);
-				sincosf(ang, &sng, &pq0);
-//				sincospif(ang, &sng, &pq0);
-				sng /= nrm;
-				pq1 = sng * pr0;
-				pq2 = sng * pr1;
-				pq3 = sng * pr2;
-				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 1e-3f);
-				s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
-				s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
-				s2xq2 = pq0 * s1xq2 - pq1 * s1xq3 + pq2 * s1xq0 + pq3 * s1xq1;
-				s2xq3 = pq0 * s1xq3 + pq1 * s1xq2 - pq2 * s1xq1 + pq3 * s1xq0;
-				assert(fabs(s2xq0*s2xq0 + s2xq1*s2xq1 + s2xq2*s2xq2 + s2xq3*s2xq3 - 1.0f) < 1e-3f);
-				s2x[o0 -= 3 * gds] = s2xq0;
-				s2x[o0 += gds] = s2xq1;
-				s2x[o0 += gds] = s2xq2;
-				s2x[o0 += gds] = s2xq3;
-				for (i = 6; i < nv; ++i)
-				{
-					bpi = bfp[o0];
 					o0 += gds;
-					s2x[o0] = s1x[o0] + alp * bpi;
+					pg2 += bfp[o0] * s2g[o0];
 				}
-
-				// Evaluate x2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
-				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
-				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, nf, na, np, s1e[gid] + alp * pga))
-				{
-					o0 = gid;
-					pg2 = bfp[o0] * s2g[o0];
-					for (i = 1; i < nv; ++i)
-					{
-						o0 += gds;
-						pg2 += bfp[o0] * s2g[o0];
-					}
-					if (pg2 >= pgc) break;
-				}
-
-				alp *= 0.1f;
+				if (pg2 >= pgc) break;
 			}
 
-			// If no appropriate alpha can be found, exit the BFGS loop.
-			if (j == nls) break;
+			alp *= 0.1f;
+		}
 
+		// If no appropriate alpha can be found, restart the BFGS loop.
+		if (j == nls)
+		{
+			// Accept x1 according to Metropolis criteria.
+			if (s1e[gid] < s0e[gid])
+			{
+				o0 = gid;
+				s0e[o0] = s1e[o0];
+//				for (i = 1; i < nv + 2; ++i)
+				for (i = -1 - nv; i < 0; ++i)
+				{
+					o0 += gds;
+					s0e[o0] = s1e[o0];
+				}
+			}
+
+			// Mutate s0x into s1x
+			o0  = gid;
+			s1x[o0] = s0x[o0] + curand_uniform(&crs);
+			o0 += gds;
+			s1x[o0] = s0x[o0] + curand_uniform(&crs);
+			o0 += gds;
+			s1x[o0] = s0x[o0] + curand_uniform(&crs);
+//			for (i = 3; i < nv + 1; ++i)
+			for (i = 2 - nv; i < 0; ++i)
+			{
+				o0 += gds;
+				s1x[o0] = s0x[o0];
+			}
+			evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub);
+
+			// Initialize the inverse Hessian matrix to identity matrix.
+			bfh[o0 = gid] = 1.0f;
+			for (j = 1; j < nv; ++j)
+			{
+				for (i = 0; i < j; ++i)
+				{
+					bfh[o0 += gds] = 0.0f;
+				}
+				bfh[o0 += gds] = 1.0f;
+			}
+		}
+		else
+		{
 			// Calculate y = g2 - g1.
 			o0 = gid;
 			bfy[o0] = s2g[o0] - s1g[o0];
@@ -638,18 +677,18 @@ void bfgs(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, co
 				s1e[o0] = s2e[o0];
 			}
 		}
+	}
 
-		// Accept x1 according to Metropolis criteria.
-		if (s1e[gid] < s0e[gid])
+	// Accept x1 according to Metropolis criteria.
+	if (s1e[gid] < s0e[gid])
+	{
+		o0 = gid;
+		s0e[o0] = s1e[o0];
+//		for (i = 1; i < nv + 2; ++i)
+		for (i = -1 - nv; i < 0; ++i)
 		{
-			o0 = gid;
+			o0 += gds;
 			s0e[o0] = s1e[o0];
-//			for (i = 1; i < nv + 2; ++i)
-			for (i = -1 - nv; i < 0; ++i)
-			{
-				o0 += gds;
-				s0e[o0] = s1e[o0];
-			}
 		}
 	}
 }
