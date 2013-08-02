@@ -4,7 +4,7 @@
 #include "cl_mc_kernel.hpp"
 using namespace std;
 
-cl_mc_kernel::cl_mc_kernel(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng, const unsigned long h_seed) : num_mc_tasks(num_mc_tasks)
+void cl_mc_kernel::initialize(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng, const unsigned long h_seed)
 {
 	// Find an appropriate platform.
 	cl_uint num_platforms;
@@ -61,6 +61,8 @@ cl_mc_kernel::cl_mc_kernel(const float* h_sf_e, const float* h_sf_d, const int h
 //	cout << build << endl;
 	kernel = clCreateKernel(program, "bfgs", &err);
 	checkOclErrors(err);
+
+	this->num_mc_tasks = num_mc_tasks;
 
 	// Initialize scoring function.
 	d_sf_e = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(float) * h_sf_ne, NULL, &err);

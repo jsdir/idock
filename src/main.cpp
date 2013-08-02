@@ -180,12 +180,13 @@ int main(int argc, char* argv[])
 	unique_ptr<mc_kernel> knl;
 	if (engine == "CUDA")
 	{
-		knl.reset(new cu_mc_kernel(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed));
+		knl.reset(new cu_mc_kernel);
 	}
 	else
 	{
-		knl.reset(new cl_mc_kernel(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed));
+		knl.reset(new cl_mc_kernel);
 	}
+	knl->initialize(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed);
 
 	cout << "Building a random forest of " << num_trees << " trees in parallel" << endl;
 	mt19937_64 rng(seed);
