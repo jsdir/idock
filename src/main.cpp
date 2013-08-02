@@ -169,9 +169,9 @@ int main(int argc, char* argv[])
 	for (size_t t2 = 0; t2 < sf.n; ++t2)
 	for (size_t t1 = 0; t1 <=  t2; ++t1)
 	{
-		tp.push_back(packaged_task<int()>(bind(&scoring_function::precalculate, ref(sf), t1, t2)));
+		tp.enqueue(packaged_task<int()>(bind(&scoring_function::precalculate, ref(sf), t1, t2)));
 	}
-	tp.sync();
+	tp.synchronize();
 
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
@@ -193,9 +193,9 @@ int main(int argc, char* argv[])
 	forest f(num_trees);
 	for (tree& t : f)
 	{
-		tp.push_back(packaged_task<int()>(bind(&tree::grow, ref(t), 5, rng())));
+		tp.enqueue(packaged_task<int()>(bind(&tree::grow, ref(t), 5, rng())));
 	}
-	tp.sync();
+	tp.synchronize();
 	f.clear();
 
 	// Perform docking for each file in the ligand folder.
@@ -240,9 +240,9 @@ int main(int argc, char* argv[])
 			}
 			for (size_t z = 0; z < rec.num_probes[2]; ++z)
 			{
-				tp.push_back(packaged_task<int()>(bind(&receptor::populate, ref(rec), cref(sf), cref(xs), z)));
+				tp.enqueue(packaged_task<int()>(bind(&receptor::populate, ref(rec), cref(sf), cref(xs), z)));
 			}
-			tp.sync();
+			tp.synchronize();
 			knl->update(rec.maps, xs);
 		}
 
