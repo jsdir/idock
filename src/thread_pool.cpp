@@ -25,7 +25,7 @@ thread_pool::thread_pool(const size_t num_threads) : num_scheduled_tasks(0), num
 						if (num_scheduled_tasks == tasks.size()) break;
 						task_id = num_scheduled_tasks++;
 					}
-					tasks[task_id].operator()();
+					tasks[task_id].operator()(thread_id);
 					{
 						unique_lock<mutex> lock(m);
 						++num_completed_tasks;
@@ -37,10 +37,10 @@ thread_pool::thread_pool(const size_t num_threads) : num_scheduled_tasks(0), num
 	}
 }
 
-void thread_pool::enqueue(packaged_task<int()>&& task)
+void thread_pool::enqueue(packaged_task<int(int)>&& task)
 {
 	unique_lock<mutex> lock(m);
-	tasks.push_back(static_cast<packaged_task<int()>&&>(task));
+	tasks.push_back(static_cast<packaged_task<int(int)>&&>(task));
 	task_incoming.notify_one();
 }
 
@@ -51,9 +51,9 @@ void thread_pool::synchronize()
 	{
 		task_completion.wait(lock);
 	}
-	for (auto& t : tasks)
+	for (auto& task : tasks)
 	{
-		t.get_future().get();
+		task.get_future().get();
 	}
 	tasks.clear();
 	num_scheduled_tasks = 0;
@@ -64,8 +64,8 @@ thread_pool::~thread_pool()
 {
 	exiting = true;
 	task_incoming.notify_all();
-	for (auto& t : *this)
+	for (auto& thread : *this)
 	{
-		t.join();
+		thread.join();
 	}
 }

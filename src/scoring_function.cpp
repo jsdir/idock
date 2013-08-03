@@ -55,7 +55,7 @@ scoring_function::scoring_function() : e(ne), d(ne), rs(nr)
 	}
 }
 
-int scoring_function::precalculate(const size_t t1, const size_t t2)
+int scoring_function::precalculate(const int tid, const size_t t1, const size_t t2)
 {
 	assert(t1 <= t2);
 	const size_t offset = nr * ((t2*(t2+1)>>1) + t1);

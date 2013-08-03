@@ -21,7 +21,7 @@ public:
 	scoring_function();
 
 	/// Precalculates the scoring function values of sample points for the type combination of t1 and t2.
-	int precalculate(const size_t t1, const size_t t2);
+	int precalculate(const int tid, const size_t t1, const size_t t2);
 
 	vector<float> e;
 	vector<float> d;

@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
 	for (size_t t2 = 0; t2 < sf.n; ++t2)
 	for (size_t t1 = 0; t1 <=  t2; ++t1)
 	{
-		tp.enqueue(packaged_task<int()>(bind(&scoring_function::precalculate, ref(sf), t1, t2)));
+		tp.enqueue(packaged_task<int(int)>(bind(&scoring_function::precalculate, ref(sf), placeholders::_1, t1, t2)));
 	}
 	tp.synchronize();
 
@@ -193,7 +193,7 @@ int main(int argc, char* argv[])
 	forest f(num_trees);
 	for (tree& t : f)
 	{
-		tp.enqueue(packaged_task<int()>(bind(&tree::grow, ref(t), 5, rng())));
+		tp.enqueue(packaged_task<int(int)>(bind(&tree::grow, ref(t), placeholders::_1, 5, rng())));
 	}
 	tp.synchronize();
 	f.clear();
@@ -240,7 +240,7 @@ int main(int argc, char* argv[])
 			}
 			for (size_t z = 0; z < rec.num_probes[2]; ++z)
 			{
-				tp.enqueue(packaged_task<int()>(bind(&receptor::populate, ref(rec), cref(sf), cref(xs), z)));
+				tp.enqueue(packaged_task<int(int)>(bind(&receptor::populate, ref(rec), placeholders::_1, cref(sf), cref(xs), z)));
 			}
 			tp.synchronize();
 			knl->update(rec.maps, xs);

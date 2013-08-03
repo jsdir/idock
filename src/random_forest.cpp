@@ -3,7 +3,7 @@
 #include <algorithm>
 #include "random_forest.hpp"
 
-int tree::grow(const size_t mtry, const size_t seed)
+int tree::grow(const int tid, const size_t mtry, const size_t seed)
 {
 	// Create bootstrap samples with replacement
 	mt19937_64 rng(seed);

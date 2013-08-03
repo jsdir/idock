@@ -29,7 +29,7 @@ public:
 	static const size_t nv = 36;
 
 	/// Grows an empty tree from bootstrap samples
-	int grow(const size_t mtry, const size_t seed);
+	int grow(const int tid, const size_t mtry, const size_t seed);
 
 	/// Predict the y value of the given sample x
 	float predict(const array<float, nv>& x) const;
