@@ -26,9 +26,12 @@
   </PropertyGroup>
   <ItemGroup>
     <ClInclude Include="src\atom.hpp" />
+    <ClInclude Include="src\cl_engine.hpp" />
     <ClInclude Include="src\cl_helper.h" />
     <ClInclude Include="src\cl_mc_kernel.hpp" />
+    <ClInclude Include="src\cu_engine.hpp" />
     <ClInclude Include="src\cu_mc_kernel.hpp" />
+    <ClInclude Include="src\engine.hpp" />
     <ClInclude Include="src\kernel.hpp" />
     <ClInclude Include="src\ligand.hpp" />
     <ClInclude Include="src\mc_kernel.hpp" />
@@ -41,7 +44,14 @@
   <ItemGroup>
     <ClCompile Include="src\atom.cpp" />
     <CudaCompile Include="src\cu_mc_kernel.cu" />
+    <ClCompile Include="src\cl_engine.cpp" />
     <ClCompile Include="src\cl_mc_kernel.cpp" />
+    <ClCompile Include="src\cu_engine.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(BOOST_ROOT);$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include;$(NVCUDASAMPLES_ROOT)\common\inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(BOOST_ROOT);$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include;$(NVCUDASAMPLES_ROOT)\common\inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(BOOST_ROOT);$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include;$(NVCUDASAMPLES_ROOT)\common\inc</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BOOST_ROOT);$(AMDAPPSDKROOT)\include;$(CUDA_PATH)\include;$(NVCUDASAMPLES_ROOT)\common\inc</AdditionalIncludeDirectories>
+    </ClCompile>
     <ClCompile Include="src\ligand.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\random_forest.cpp" />
