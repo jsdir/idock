@@ -87,3 +87,10 @@ int scoring_function::precalculate(const int tid, const size_t t1, const size_t 
 	}
 	return 0;
 }
+
+void scoring_function::clear()
+{
+	d.clear();
+	e.clear();
+	rs.clear();
+}

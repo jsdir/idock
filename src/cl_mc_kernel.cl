@@ -311,7 +311,7 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 }
 */
 __kernel //__attribute__((reqd_work_group_size(X, Y, Z)))
-void bfgs(__global float* __restrict__ s0e, __global const int* __restrict__ lig, const int nv, const int nf, const int na, const int np, __local int* shared, __constant const float* c_sf_e, __constant const float* c_sf_d, __constant int c_sf_ns, __constant float3 c_corner0, __constant float3 c_corner1, __constant int3 c_num_probes, __constant float c_granularity_inverse, __constant float* c_maps[15], __constant int c_ng, __constant unsigned long c_seed)
+void mc(__global float* __restrict__ s0e, __global const int* __restrict__ lig, const int nv, const int nf, const int na, const int np, __local int* shared, __constant const float* c_sf_e, __constant const float* c_sf_d, __constant int c_sf_ns, __constant float3 c_corner0, __constant float3 c_corner1, __constant int3 c_num_probes, __constant float c_granularity_inverse, __constant float* c_maps[15], __constant int c_ng, __constant unsigned long c_seed)
 {
 	const int gid = get_global_id(0);
 	const int gds = get_global_size(0);

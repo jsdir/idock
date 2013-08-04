@@ -2,12 +2,24 @@
 #ifndef IDOCK_LIGAND_HPP
 #define IDOCK_LIGAND_HPP
 
+#include <mutex>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include "atom.hpp"
 #include "scoring_function.hpp"
 #include "receptor.hpp"
 #include "random_forest.hpp"
+#include "mc_kernel.hpp"
 using namespace boost::filesystem;
+
+/// Represents a summary of docking results of a ligand.
+class summary
+{
+public:
+	const string stem;
+	const vector<float> affinities;
+	explicit summary(const string& stem, const vector<float>& affinities) : stem(stem), affinities(affinities) {}
+};
 
 /// Represents a ROOT or a BRANCH in PDBQT structure.
 class frame
@@ -35,6 +47,7 @@ public:
 class ligand
 {
 public:
+	path p; ///< Path to the input ligand.
 	vector<frame> frames; ///< ROOT and BRANCH frames.
 	vector<atom> atoms; ///< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
 	size_t nv; ///< Number of variables to optimize.
@@ -45,10 +58,9 @@ public:
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.
 	/// @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.
-	ligand(const path& p);
+	explicit ligand(const path p);
 
-	/// Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	vector<float> save(const path& output_ligand_path, const vector<float>& ex, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f) const;
+	int mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& summaries, boost::ptr_vector<mc_kernel>& mc_kernels, const path& output_ligand_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, mutex& m) const;
 
 private:
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.

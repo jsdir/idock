@@ -334,7 +334,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 
 __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
-void bfgs(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, const int nf, const int na, const int np)
+void mc(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, const int nf, const int na, const int np)
 {
 	const int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	const int gds = blockDim.x * gridDim.x;
@@ -693,18 +693,20 @@ void bfgs(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, co
 	}
 }
 
-void cu_mc_kernel::initialize(const float* h_sf_e, const float* h_sf_d, const int h_sf_ns, const int h_sf_ne, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng, const unsigned long h_seed)
+int cu_mc_kernel::initialize(const int tid, const vector<float>& h_sf_e, const vector<float>& h_sf_d, const size_t h_sf_ns, const float* h_corner0, const float* h_corner1, const int* h_num_probes, const float h_granularity_inverse, const int num_mc_tasks, const int h_ng, const unsigned long h_seed)
 {
+	cudaSetDevice(device_id);
 	this->num_mc_tasks = num_mc_tasks;
 
 	// Initialize scoring function.
-	checkCudaErrors(cudaMalloc(&d_sf_e, sizeof(float) * h_sf_ne));
-	checkCudaErrors(cudaMalloc(&d_sf_d, sizeof(float) * h_sf_ne));
-	checkCudaErrors(cudaMemcpy(d_sf_e, h_sf_e, sizeof(float) * h_sf_ne, cudaMemcpyHostToDevice));
-	checkCudaErrors(cudaMemcpy(d_sf_d, h_sf_d, sizeof(float) * h_sf_ne, cudaMemcpyHostToDevice));
+	const size_t sf_bytes = sizeof(float) * h_sf_e.size();
+	checkCudaErrors(cudaMalloc(&d_sf_e, sf_bytes));
+	checkCudaErrors(cudaMalloc(&d_sf_d, sf_bytes));
+	checkCudaErrors(cudaMemcpy(d_sf_e, &h_sf_e.front(), sf_bytes, cudaMemcpyHostToDevice));
+	checkCudaErrors(cudaMemcpy(d_sf_d, &h_sf_d.front(), sf_bytes, cudaMemcpyHostToDevice));
 	assert(sizeof(c_sf_e)  == sizeof(d_sf_e));
 	assert(sizeof(c_sf_d)  == sizeof(d_sf_d));
-	assert(sizeof(c_sf_ns) == sizeof(h_sf_ns));
+//	assert(sizeof(c_sf_ns) == sizeof(h_sf_ns));
 	checkCudaErrors(cudaMemcpyToSymbol(c_sf_e,  &d_sf_e,  sizeof(c_sf_e )));
 	checkCudaErrors(cudaMemcpyToSymbol(c_sf_d,  &d_sf_d,  sizeof(c_sf_d )));
 	checkCudaErrors(cudaMemcpyToSymbol(c_sf_ns, &h_sf_ns, sizeof(c_sf_ns)));
@@ -726,10 +728,12 @@ void cu_mc_kernel::initialize(const float* h_sf_e, const float* h_sf_d, const in
 	// Initialize seed.
 	assert(sizeof(c_seed) == sizeof(h_seed));
 	checkCudaErrors(cudaMemcpyToSymbol(c_seed, &h_seed, sizeof(c_seed)));
+	return 0;
 }
 
-void cu_mc_kernel::update(const vector<vector<float> > h_maps, const vector<size_t>& xs)
+int cu_mc_kernel::update(const int tid, const vector<vector<float> > h_maps, const vector<size_t>& xs)
 {
+	cudaSetDevice(device_id);
 	const size_t map_bytes = sizeof(float) * h_maps[xs.front()].size();
 	for (int i = 0; i < xs.size(); ++i)
 	{
@@ -741,10 +745,12 @@ void cu_mc_kernel::update(const vector<vector<float> > h_maps, const vector<size
 	}
 	assert(sizeof(c_maps) == sizeof(d_maps));
 	checkCudaErrors(cudaMemcpyToSymbol(c_maps, d_maps, sizeof(c_maps)));
+	return 0;
 }
 
 void cu_mc_kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const int nv, const int nf, const int na, const int np)
 {
+	cudaSetDevice(device_id);
 	// Copy ligand content from host memory to device memory.
 	const size_t lig_bytes = sizeof(int) * h_lig.size();
 	int* d_lig;
@@ -758,7 +764,7 @@ void cu_mc_kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const i
 	checkCudaErrors(cudaMemset(d_s0, 0, var_bytes));
 
 	// Invoke CUDA kernel.
-	bfgs<<<(num_mc_tasks - 1) / 32 + 1, 32, lig_bytes>>>(d_s0, d_lig, nv, nf, na, np);
+	mc<<<(num_mc_tasks - 1) / 32 + 1, 32, lig_bytes>>>(d_s0, d_lig, nv, nf, na, np);
 	checkCudaErrors(cudaGetLastError());
 	checkCudaErrors(cudaDeviceSynchronize());
 
@@ -775,6 +781,7 @@ void cu_mc_kernel::launch(vector<float>& h_ex, const vector<int>& h_lig, const i
 
 cu_mc_kernel::~cu_mc_kernel()
 {
+	cudaSetDevice(device_id);
 	for (size_t t = 0; t < sf_n; ++t)
 	{
 		float* const d_m = d_maps[t];

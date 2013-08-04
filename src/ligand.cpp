@@ -1,3 +1,4 @@
+#include <iostream>
 #include <iomanip>
 #include <random>
 #include <numeric>
@@ -9,7 +10,7 @@ void frame::output(boost::filesystem::ofstream& ofs) const
 	ofs << "BRANCH"    << setw(4) << rotorXsrn << setw(4) << rotorYsrn << '\n';
 }
 
-ligand::ligand(const path& p) : nv(6)
+ligand::ligand(const path p) : p(p), nv(6)
 {
 	// Initialize necessary variables for constructing a ligand.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
@@ -316,8 +317,12 @@ public:
 	vector<array<float, 3>> c; ///< Heavy atom coordinates.
 };
 
-vector<float> ligand::save(const path& output_ligand_path, const vector<float>& ex, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f) const
+int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& summaries, boost::ptr_vector<mc_kernel>& mc_kernels, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, mutex& m) const
 {
+	// Launch Monte Carlo kernel.
+	vector<float> ex;
+	mc_kernels[tid].launch(ex, lig, nv, nf, na, np);
+
 	// Sort solutions in ascending order of e.
 	vector<size_t> rank(num_mc_tasks);
 	iota(rank.begin(), rank.end(), 0);
@@ -332,7 +337,7 @@ vector<float> ligand::save(const path& output_ligand_path, const vector<float>& 
 	solutions.reserve(max_conformations);
 	vector<float> affinities;
 	affinities.reserve(max_conformations);
-	boost::filesystem::ofstream ofs(output_ligand_path);
+	boost::filesystem::ofstream ofs(output_folder_path / p.filename());
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
 	for (const size_t r : rank)
@@ -467,5 +472,18 @@ vector<float> ligand::save(const path& output_ligand_path, const vector<float>& 
 		solutions.push_back(static_cast<solution&&>(s));
 		if (solutions.size() == solutions.capacity()) break;
 	}
-	return affinities;
+
+	// Output and save ligand stem and predicted affinities.
+	const string stem = p.stem().string();
+	{
+		unique_lock<mutex> lock(m);
+		cout << setw(1) << tid << setw(7) << ++num_ligands << " | " << setw(12) << stem << " | ";
+		for_each(affinities.cbegin(), affinities.cbegin() + min<size_t>(affinities.size(), 9), [](const float a)
+		{
+			cout << setw(6) << a;
+		});
+		cout << endl;
+		summaries.push_back(new summary(stem, affinities));
+	}
+	return 0;
 }

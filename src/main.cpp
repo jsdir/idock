@@ -4,25 +4,17 @@
 #include <iomanip>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include "thread_pool.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "utility.hpp"
+#include "cu_engine.hpp"
+#include "cl_engine.hpp"
 #include "cu_mc_kernel.hpp"
 #include "cl_mc_kernel.hpp"
 #include "random_forest.hpp"
 using namespace std;
 using namespace boost::filesystem;
-
-/// Represents a summary of docking results of a ligand.
-class summary
-{
-public:
-	const string stem;
-	const vector<float> affinities;
-	explicit summary(const string& stem, const vector<float>& affinities) : stem(stem), affinities(affinities) {}
-};
 
 /// For sorting ptr_vector<summary>.
 inline bool operator<(const summary& s0, const summary& s1)
@@ -34,9 +26,9 @@ int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	array<float, 3> center, size;
-	size_t seed, num_threads, num_trees, num_mc_tasks, num_generations, max_conformations;
+	size_t seed, num_threads, num_trees, num_mc_tasks, num_bfgs_iterations, max_conformations;
 	float granularity;
-	string engine;
+	string engine_string;
 
 	// Parse program options in a try/catch block.
 	try
@@ -48,10 +40,10 @@ int main(int argc, char* argv[])
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 128;
 		const size_t default_num_mc_tasks = 256;
-		const size_t default_num_generations = 300;
+		const size_t default_num_bfgs_iterations = 300;
 		const size_t default_max_conformations = 9;
 		const float default_granularity = 0.15625f;
-		const string default_engine = "CUDA";
+		const string default_engine_string = "CUDA";
 
 		// Set up options description.
 		using namespace boost::program_options;
@@ -77,10 +69,10 @@ int main(int argc, char* argv[])
 			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
 			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
 			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
-			("generations", value<size_t>(&num_generations)->default_value(default_num_generations), "number of generations in BFGS")
+			("generations", value<size_t>(&num_bfgs_iterations)->default_value(default_num_bfgs_iterations), "number of generations in BFGS")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
 			("granularity", value<float>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
-			("engine", value<string>(&engine)->default_value(default_engine), "CUDA or OpenCL")
+			("engine", value<string>(&engine_string)->default_value(default_engine_string), "CUDA or OpenCL")
 			("help", "help information")
 			("version", "version information")
 			("config", value<path>(), "options can be loaded from a configuration file")
@@ -149,7 +141,7 @@ int main(int argc, char* argv[])
 		}
 
 		// Validate engine.
-		if (engine != "CUDA" && engine != "OpenCL")
+		if (engine_string != "CUDA" && engine_string != "OpenCL")
 		{
 			cerr << "Engine must be either CUDA or OpenCL" << endl;
 			return 1;
@@ -161,7 +153,10 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	cout << "Creating a thread pool of " << num_threads << " worker thread" << (num_threads == 1 ? "" : "s") << endl;
+	cout << "Using random seed " << seed << endl;
+	mt19937_64 rng(seed);
+
+	cout << "Creating a thread pool of " << num_threads << " worker threads" << endl;
 	thread_pool tp(num_threads);
 
 	cout << "Precalculating a scoring function of " << scoring_function::n << " atom types in parallel" << endl;
@@ -173,23 +168,7 @@ int main(int argc, char* argv[])
 	}
 	tp.synchronize();
 
-	cout << "Parsing receptor " << receptor_path << endl;
-	receptor rec(receptor_path, center, size, granularity);
-
-	cout << "Initializing Monte Carlo kernel with random seed " << seed << endl;
-	unique_ptr<mc_kernel> knl;
-	if (engine == "CUDA")
-	{
-		knl.reset(new cu_mc_kernel);
-	}
-	else
-	{
-		knl.reset(new cl_mc_kernel);
-	}
-	knl->initialize(sf.e.data(), sf.d.data(), sf.ns, sf.ne, rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_generations, seed);
-
 	cout << "Building a random forest of " << num_trees << " trees in parallel" << endl;
-	mt19937_64 rng(seed);
 	forest f(num_trees);
 	for (tree& t : f)
 	{
@@ -198,22 +177,64 @@ int main(int argc, char* argv[])
 	tp.synchronize();
 	f.clear();
 
+	cout << "Parsing receptor " << receptor_path << endl;
+	receptor rec(receptor_path, center, size, granularity);
+
+	cout << "Detecting " << engine_string << " devices" << endl;
+	unique_ptr<engine> eng;
+	if (engine_string == "CUDA")
+	{
+		eng.reset(new cu_engine);
+	}
+	else
+	{
+		eng.reset(new cl_engine);
+	}
+	const size_t num_devices = eng->devices.size();
+	if (!num_devices)
+	{
+		cerr << "No " << engine_string << " devices detected" << endl;
+		return 2;
+	}
+	for (size_t i = 0; i < num_devices; ++i)
+	{
+		cout << i << ": " << eng->devices[i] << endl;
+	}
+	eng.reset(nullptr);
+
+	cout << "Initializing Monte Carlo kernel for " << num_devices << " devices" << endl;
+	boost::ptr_vector<mc_kernel> mc_kernels(num_devices);
+	for (size_t i = 0; i < num_devices; ++i)
+	{
+		if (engine_string == "CUDA")
+		{
+			mc_kernels.push_back(new cu_mc_kernel(i));
+		}
+		else
+		{
+			mc_kernels.push_back(new cl_mc_kernel(i));
+		}
+		tp.enqueue(packaged_task<int(int)>(bind(&mc_kernel::initialize, ref(mc_kernels[i]), placeholders::_1, cref(sf.e), cref(sf.d), static_cast<size_t>(sf.ns), rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_bfgs_iterations, seed)));
+	}
+	tp.synchronize();
+	sf.clear();
+
+	const size_t num_kernel_threads = num_devices;
+	cout << "Creating a thread pool of " << num_kernel_threads << " worker threads to utilize " << num_devices << " devices in parallel" << endl;
+	thread_pool tpk(num_kernel_threads);
+
 	// Perform docking for each file in the ligand folder.
 	boost::ptr_vector<summary> summaries;
 	size_t num_ligands = 0; // Ligand counter.
+	mutex m;
 	cout.setf(ios::fixed, ios::floatfield);
-	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand in parallel" << endl;
-	cout << "   Index |       Ligand | pKd  1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
+	cout << "Running " << num_mc_tasks << " Monte Carlo tasks of " << num_bfgs_iterations << " BFGS generations in parallel" << endl;
+	cout << "D  Index |       Ligand | pKd  1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	const directory_iterator const_dir_iter; // A default constructed directory_iterator acts as the end iterator.
 	for (directory_iterator dir_iter(input_folder_path); dir_iter != const_dir_iter; ++dir_iter)
 	{
 		// Parse the ligand.
-		const path input_ligand_path = dir_iter->path();
-		const ligand lig(input_ligand_path);
-
-		// Output the ligand file stem.
-		const string stem = input_ligand_path.stem().string();
-		cout << setw(8) << ++num_ligands << " | " << setw(12) << stem << " | " << flush;
+		const ligand lig(dir_iter->path());
 
 		// Create grid maps on the fly if necessary.
 		vector<size_t> xs;
@@ -243,28 +264,20 @@ int main(int argc, char* argv[])
 				tp.enqueue(packaged_task<int(int)>(bind(&receptor::populate, ref(rec), placeholders::_1, cref(sf), cref(xs), z)));
 			}
 			tp.synchronize();
-			knl->update(rec.maps, xs);
+			for (size_t i = 0; i < num_devices; ++i)
+			{
+				tp.enqueue(packaged_task<int(int)>(bind(&mc_kernel::update, ref(mc_kernels[i]), placeholders::_1, cref(rec.maps), cref(xs))));
+			}
+			tp.synchronize();
 		}
 
 		// Run the Monte Carlo tasks in parallel
-		vector<float> ex;
-		knl->launch(ex, lig.lig, lig.nv, lig.nf, lig.na, lig.np);
-
-		// Cluster and save solutions to file.
-		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		const vector<float> affinities = lig.save(output_ligand_path, ex, max_conformations, num_mc_tasks, rec, f);
-		for_each(affinities.cbegin(), affinities.cbegin() + min<size_t>(affinities.size(), 9), [](const float a)
-		{
-			cout << setw(6) << a;
-		});
-		cout << endl;
-
-		// Save ligand stem and predicted affinities for subsequent sorting.
-		summaries.push_back(new summary(stem, affinities));
+		tpk.enqueue(packaged_task<int(int)>(bind(&ligand::mc, move(lig), placeholders::_1, ref(num_ligands), std::ref(summaries), std::ref(mc_kernels), cref(output_folder_path), max_conformations, num_mc_tasks, cref(rec), cref(f), std::ref(m))));
 	}
+	tpk.synchronize();
 
 	// Sort and write ligand summary to the log file.
-	cout << "Writing summary of " << num_ligands << " ligand" << (num_ligands == 1 ? "" : "s") << " to " << log_path << endl;
+	cout << "Writing summary of " << num_ligands << " ligands to " << log_path << endl;
 	summaries.sort();
 	boost::filesystem::ofstream log(log_path);
 	log.setf(ios::fixed, ios::floatfield);
@@ -274,13 +287,16 @@ int main(int argc, char* argv[])
 		log << ",pKd" << i;
 	}
 	log << '\n' << setprecision(2);
-	for (size_t i = 0; i < num_ligands; ++i)
+	for (const summary& s : summaries)
 	{
-		const summary& s = summaries[i];
 		log << s.stem;
 		for (const float a : s.affinities)
 		{
 			log << ',' << a;
+		}
+		for (size_t i = s.affinities.size(); i < max_conformations; ++i)
+		{
+			log << ',';
 		}
 		log << '\n';
 	}
