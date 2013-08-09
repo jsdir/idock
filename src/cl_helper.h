@@ -1,6 +1,6 @@
 #pragma once
-#ifndef CL_HELPER_HPP
-#define CL_HELPER_HPP
+#ifndef CL_HELPER_H
+#define CL_HELPER_H
 
 #include <stdio.h>
 
