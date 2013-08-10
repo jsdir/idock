@@ -10,7 +10,7 @@ obj/%.o: src/%.cu
 obj/cu_%.o: src/cu_%.cpp
 	$(CC) -o $@ $< -c -I${CUDA_ROOT}/include -I${CUDA_ROOT}/samples/common/inc
 
-obj/%.o: src/%.cpp 
+obj/%.o: src/%.cpp
 	$(CC) -o $@ $< -c
 
 clean:
