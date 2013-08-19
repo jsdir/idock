@@ -1,3 +1,7 @@
+// Avoid using Shared Local Memory on the Intel Xeon Phi coprocessor.
+// Have at least 1000 WGs per NDRange to optimally utilize Phi.
+// Use Array Notation with int32 Indices
+
 /*
 inline
 bool evaluate(__local float* e, __local float* g, __local float* a, __local float* q, __local float* c, __local float* d, __local float* f, __local float* t, __local const float* x, const int nf, const int na, const int np, const float eub, __local const int* shared)
