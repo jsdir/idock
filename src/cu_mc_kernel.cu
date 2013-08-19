@@ -23,7 +23,7 @@ extern __shared__ int shared[];
 
 // TODO: Use Restrict Qualifier for Kernel Arguments
 __device__  __noinline__// __forceinline__
-bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub)
+bool evaluate(float* const e, float* const g, float* const a, float* const q, float* const c, float* const d, float* const f, float* const t, const float* const x, const int nf, const int na, const int np, const float eub)
 {
 	const int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	const int gds = blockDim.x * gridDim.x;
@@ -335,7 +335,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 
 __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor) // .maxntid nx .minnctapersm ncta
-void mc(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, const int nf, const int na, const int np)
+void mc(float* const __restrict__ s0e, const int* const __restrict__ lig, const int nv, const int nf, const int na, const int np)
 {
 	const int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	const int gds = blockDim.x * gridDim.x;
