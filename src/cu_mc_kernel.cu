@@ -21,6 +21,7 @@ __constant__ unsigned long c_seed;
 
 extern __shared__ int shared[];
 
+// TODO: Use Restrict Qualifier for Kernel Arguments
 __device__  __noinline__// __forceinline__
 bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub)
 {
@@ -28,26 +29,25 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 	const int gds = blockDim.x * gridDim.x;
 	const int gd3 = 3 * gds;
 	const int gd4 = 4 * gds;
-
-	const int* act = shared;
-	const int* beg = act + nf;
-	const int* end = beg + nf;
-	const int* nbr = end + nf;
-	const int* prn = nbr + nf;
-	const float* yy0 = (float*)(prn + nf);
-	const float* yy1 = yy0 + nf;
-	const float* yy2 = yy1 + nf;
-	const float* xy0 = yy2 + nf;
-	const float* xy1 = xy0 + nf;
-	const float* xy2 = xy1 + nf;
-	const int* brs = (int*)(xy2 + nf);
-	const float* cr0 = (float*)(brs + nf - 1);
-	const float* cr1 = cr0 + na;
-	const float* cr2 = cr1 + na;
-	const int* xst = (int*)(cr2 + na);
-	const int* ip0 = xst + na;
-	const int* ip1 = ip0 + np;
-	const int* ipp = ip1 + np;
+	const int* const act = shared;
+	const int* const beg = &act[nf];
+	const int* const end = &beg[nf];
+	const int* const nbr = &end[nf];
+	const int* const prn = &nbr[nf];
+	const float* const yy0 = (float*)&prn[nf];
+	const float* const yy1 = &yy0[nf];
+	const float* const yy2 = &yy1[nf];
+	const float* const xy0 = &yy2[nf];
+	const float* const xy1 = &xy0[nf];
+	const float* const xy2 = &xy1[nf];
+	const int* const brs = (int*)&xy2[nf];
+	const float* const cr0 = (float*)&brs[nf - 1];
+	const float* const cr1 = &cr0[na];
+	const float* const cr2 = &cr1[na];
+	const int* const xst = (int*)&cr2[na];
+	const int* const ip0 = &xst[na];
+	const int* const ip1 = &ip0[np];
+	const int* const ipp = &ip1[np];
 
 	float y, y0, y1, y2, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, ang, sng, r0, r1, r2, r3, vs, dr, f0, f1, f2, t0, t1, t2, d0, d1, d2;
 	float q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8;
@@ -107,6 +107,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			i2 = i1 + gds;
 
 			// The first atom of a frame is assumed to be its rotor Y.
+			// TODO: avoid use of branching in short computations
 			if (i == beg[k])
 			{
 				c0 = y0;
@@ -333,43 +334,43 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 }
 
 __global__
-//__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
+//__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor) // .maxntid nx .minnctapersm ncta
 void mc(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, const int nf, const int na, const int np)
 {
 	const int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	const int gds = blockDim.x * gridDim.x;
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
-	float* s0x = s0e + gds;
-	float* s0g = s0x + (nv + 1) * gds;
-	float* s0a = s0g + nv * gds;
-	float* s0q = s0a + 3 * nf * gds;
-	float* s0c = s0q + 4 * nf * gds;
-	float* s0d = s0c + 3 * na * gds;
-	float* s0f = s0d + 3 * na * gds;
-	float* s0t = s0f + 3 * nf * gds;
-	float* s1e = s0t + 3 * nf * gds;
-	float* s1x = s1e + gds;
-	float* s1g = s1x + (nv + 1) * gds;
-	float* s1a = s1g + nv * gds;
-	float* s1q = s1a + 3 * nf * gds;
-	float* s1c = s1q + 4 * nf * gds;
-	float* s1d = s1c + 3 * na * gds;
-	float* s1f = s1d + 3 * na * gds;
-	float* s1t = s1f + 3 * nf * gds;
-	float* s2e = s1t + 3 * nf * gds;
-	float* s2x = s2e + gds;
-	float* s2g = s2x + (nv + 1) * gds;
-	float* s2a = s2g + nv * gds;
-	float* s2q = s2a + 3 * nf * gds;
-	float* s2c = s2q + 4 * nf * gds;
-	float* s2d = s2c + 3 * na * gds;
-	float* s2f = s2d + 3 * na * gds;
-	float* s2t = s2f + 3 * nf * gds;
-	float* bfh = s2t + 3 * nf * gds;
-	float* bfp = bfh + (nv*(nv+1)>>1) * gds;
-	float* bfy = bfp + nv * gds;
-	float* bfm = bfy + nv * gds;
+	float* const s0x = &s0e[gds];
+	float* const s0g = &s0x[(nv + 1) * gds];
+	float* const s0a = &s0g[nv * gds];
+	float* const s0q = &s0a[3 * nf * gds];
+	float* const s0c = &s0q[4 * nf * gds];
+	float* const s0d = &s0c[3 * na * gds];
+	float* const s0f = &s0d[3 * na * gds];
+	float* const s0t = &s0f[3 * nf * gds];
+	float* const s1e = &s0t[3 * nf * gds];
+	float* const s1x = &s1e[gds];
+	float* const s1g = &s1x[(nv + 1) * gds];
+	float* const s1a = &s1g[nv * gds];
+	float* const s1q = &s1a[3 * nf * gds];
+	float* const s1c = &s1q[4 * nf * gds];
+	float* const s1d = &s1c[3 * na * gds];
+	float* const s1f = &s1d[3 * na * gds];
+	float* const s1t = &s1f[3 * nf * gds];
+	float* const s2e = &s1t[3 * nf * gds];
+	float* const s2x = &s2e[gds];
+	float* const s2g = &s2x[(nv + 1) * gds];
+	float* const s2a = &s2g[nv * gds];
+	float* const s2q = &s2a[3 * nf * gds];
+	float* const s2c = &s2q[4 * nf * gds];
+	float* const s2d = &s2c[3 * na * gds];
+	float* const s2f = &s2d[3 * na * gds];
+	float* const s2t = &s2f[3 * nf * gds];
+	float* const bfh = &s2t[3 * nf * gds];
+	float* const bfp = &bfh[(nv*(nv+1)>>1) * gds];
+	float* const bfy = &bfp[nv * gds];
+	float* const bfm = &bfy[nv * gds];
 	float rd0, rd1, rd2, rd3, rst;
 	float sum, pg1, pga, pgc, alp, pg2, pr0, pr1, pr2, nrm, ang, sng, pq0, pq1, pq2, pq3, s1xq0, s1xq1, s1xq2, s1xq3, s2xq0, s2xq1, s2xq2, s2xq3, bpi;
 	float yhy, yps, ryp, pco, bpj, bmj, ppj;
@@ -377,6 +378,7 @@ void mc(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, cons
 	curandState crs;
 
 	// Load ligand into external shared memory.
+	// TODO: try not caching in shared memory.
 	g = 11 * nf + nf - 1 + 4 * na + 3 * np;
 	o0 = threadIdx.x;
 	for (i = 0, j = (g - 1) / blockDim.x; i < j; ++i)
