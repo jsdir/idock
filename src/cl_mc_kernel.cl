@@ -11,30 +11,30 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 	const int gd3 = 3 * gds;
 	const int gd4 = 4 * gds;
 
-	__local const int* act = shared;
-	__local const int* beg = act + nf;
-	__local const int* end = beg + nf;
-	__local const int* nbr = end + nf;
-	__local const int* prn = nbr + nf;
-	__local const float* yy0 = (__local const float*)(prn + nf);
-	__local const float* yy1 = yy0 + nf;
-	__local const float* yy2 = yy1 + nf;
-	__local const float* xy0 = yy2 + nf;
-	__local const float* xy1 = xy0 + nf;
-	__local const float* xy2 = xy1 + nf;
-	__local const int* brs = (__local const int*)(xy2 + nf);
-	__local const float* cr0 = (__local const float*)(brs + nf - 1);
-	__local const float* cr1 = cr0 + na;
-	__local const float* cr2 = cr1 + na;
-	__local const int* xst = (__local const int*)(cr2 + na);
-	__local const int* ip0 = xst + na;
-	__local const int* ip1 = ip0 + np;
-	__local const int* ipp = ip1 + np;
+	__local const int* const act = shared;
+	__local const int* const beg = &act[nf];
+	__local const int* const end = &beg[nf];
+	__local const int* const nbr = &end[nf];
+	__local const int* const prn = &nbr[nf];
+	__local const float* const yy0 = (__local const float*)&prn[nf];
+	__local const float* const yy1 = &yy0[nf];
+	__local const float* const yy2 = &yy1[nf];
+	__local const float* const xy0 = &yy2[nf];
+	__local const float* const xy1 = &xy0[nf];
+	__local const float* const xy2 = &xy1[nf];
+	__local const int* const brs = (__local const int*)&xy2[nf];
+	__local const float* const cr0 = (__local const float*)&brs[nf - 1];
+	__local const float* const cr1 = &cr0[na];
+	__local const float* const cr2 = &cr1[na];
+	__local const int* const xst = (__local const int*)&cr2[na];
+	__local const int* const ip0 = &xst[na];
+	__local const int* const ip1 = &ip0[np];
+	__local const int* const ipp = &ip1[np];
 
 	float y, y0, y1, y2, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, ang, sng, r0, r1, r2, r3, vs, dr, f0, f1, f2, t0, t1, t2, d0, d1, d2;
 	float q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8;
 	int i, j, k, b, w, i0, i1, i2, k0, k1, k2, z;
-	__global float* map;
+	__global const float* map;
 
 	// Apply position, orientation and torsions.
 	c[i  = gid] = x[k  = gid];
@@ -315,42 +315,42 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 }
 */
 __kernel //__attribute__((reqd_work_group_size(X, Y, Z)))
-void mc(__global float* __restrict__ s0e, __global const int* __restrict__ lig, const int nv, const int nf, const int na, const int np, __local int* shared, __constant const float* c_sf_e, __constant const float* c_sf_d, __constant int c_sf_ns, __constant float3 c_corner0, __constant float3 c_corner1, __constant int3 c_num_probes, __constant float c_granularity_inverse, __constant float* c_maps[15], __constant int c_ng, __constant unsigned long c_seed)
+void mc(__global float* const s0e, __global const int* const lig, const int nv, const int nf, const int na, const int np, __local int* shared, __constant const float* c_sf_e, __constant const float* c_sf_d, __constant int c_sf_ns, __constant float3 c_corner0, __constant float3 c_corner1, __constant int3 c_num_probes, __constant float c_granularity_inverse, __constant float* c_maps[15], __constant int c_ng, __constant unsigned long c_seed)
 {
 	const int gid = get_global_id(0);
 	const int gds = get_global_size(0);
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
-	__global float* s0x = s0e + gds;
-	__global float* s0g = s0x + (nv + 1) * gds;
-	__global float* s0a = s0g + nv * gds;
-	__global float* s0q = s0a + 3 * nf * gds;
-	__global float* s0c = s0q + 4 * nf * gds;
-	__global float* s0d = s0c + 3 * na * gds;
-	__global float* s0f = s0d + 3 * na * gds;
-	__global float* s0t = s0f + 3 * nf * gds;
-	__global float* s1e = s0t + 3 * nf * gds;
-	__global float* s1x = s1e + gds;
-	__global float* s1g = s1x + (nv + 1) * gds;
-	__global float* s1a = s1g + nv * gds;
-	__global float* s1q = s1a + 3 * nf * gds;
-	__global float* s1c = s1q + 4 * nf * gds;
-	__global float* s1d = s1c + 3 * na * gds;
-	__global float* s1f = s1d + 3 * na * gds;
-	__global float* s1t = s1f + 3 * nf * gds;
-	__global float* s2e = s1t + 3 * nf * gds;
-	__global float* s2x = s2e + gds;
-	__global float* s2g = s2x + (nv + 1) * gds;
-	__global float* s2a = s2g + nv * gds;
-	__global float* s2q = s2a + 3 * nf * gds;
-	__global float* s2c = s2q + 4 * nf * gds;
-	__global float* s2d = s2c + 3 * na * gds;
-	__global float* s2f = s2d + 3 * na * gds;
-	__global float* s2t = s2f + 3 * nf * gds;
-	__global float* bfh = s2t + 3 * nf * gds;
-	__global float* bfp = bfh + (nv*(nv+1)>>1) * gds;
-	__global float* bfy = bfp + nv * gds;
-	__global float* bfm = bfy + nv * gds;
+	__global float* const s0x = &s0e[gds];
+	__global float* const s0g = &s0x[(nv + 1) * gds];
+	__global float* const s0a = &s0g[nv * gds];
+	__global float* const s0q = &s0a[3 * nf * gds];
+	__global float* const s0c = &s0q[4 * nf * gds];
+	__global float* const s0d = &s0c[3 * na * gds];
+	__global float* const s0f = &s0d[3 * na * gds];
+	__global float* const s0t = &s0f[3 * nf * gds];
+	__global float* const s1e = &s0t[3 * nf * gds];
+	__global float* const s1x = &s1e[gds];
+	__global float* const s1g = &s1x[(nv + 1) * gds];
+	__global float* const s1a = &s1g[nv * gds];
+	__global float* const s1q = &s1a[3 * nf * gds];
+	__global float* const s1c = &s1q[4 * nf * gds];
+	__global float* const s1d = &s1c[3 * na * gds];
+	__global float* const s1f = &s1d[3 * na * gds];
+	__global float* const s1t = &s1f[3 * nf * gds];
+	__global float* const s2e = &s1t[3 * nf * gds];
+	__global float* const s2x = &s2e[gds];
+	__global float* const s2g = &s2x[(nv + 1) * gds];
+	__global float* const s2a = &s2g[nv * gds];
+	__global float* const s2q = &s2a[3 * nf * gds];
+	__global float* const s2c = &s2q[4 * nf * gds];
+	__global float* const s2d = &s2c[3 * na * gds];
+	__global float* const s2f = &s2d[3 * na * gds];
+	__global float* const s2t = &s2f[3 * nf * gds];
+	__global float* const bfh = &s2t[3 * nf * gds];
+	__global float* const bfp = &bfh[(nv*(nv+1)>>1) * gds];
+	__global float* const bfy = &bfp[nv * gds];
+	__global float* const bfm = &bfy[nv * gds];
 	float rd0, rd1, rd2, rd3, rst;
 	float sum, pg1, pga, pgc, alp, pg2, pr0, pr1, pr2, nrm, ang, sng, pq0, pq1, pq2, pq3, s1xq0, s1xq1, s1xq2, s1xq3, s2xq0, s2xq1, s2xq2, s2xq3, bpi;
 	float yhy, yps, ryp, pco, bpj, bmj, ppj;
