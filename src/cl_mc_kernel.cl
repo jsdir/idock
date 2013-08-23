@@ -357,7 +357,8 @@ void mc(__global float* const s0e, __global const int* const lig, const int nv, 
 	int g, i, j, o0, o1, o2;
 //	curandState crs;
 
-	// Load ligand into external shared memory.
+#ifdef CL_LOCAL
+	// Load ligand into local memory.
 	g = 11 * nf + nf - 1 + 4 * na + 3 * np;
 	o0 = get_local_id(0);
 	for (i = 0, j = (g - 1) / get_local_size(0); i < j; ++i)
@@ -370,6 +371,8 @@ void mc(__global float* const s0e, __global const int* const lig, const int nv, 
 		shared[o0] = lig[o0];
 	}
 	barrier(CLK_LOCAL_MEM_FENCE);
+//#else
+#endif
 
 	// Randomize s0x.
 //	curand_init(c_seed, gid, 0, &crs);
