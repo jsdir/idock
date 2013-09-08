@@ -89,7 +89,7 @@ int tree::grow(const int tid, const size_t mtry, const size_t seed)
 	return 0;
 }
 
-float tree::predict(const array<float, nv>& x) const
+float tree::operator()(const array<float, nv>& x) const
 {
 	size_t k;
 	for (k = 0; (*this)[k].children[0]; k = (*this)[k].children[x[(*this)[k].var] > (*this)[k].val]);
@@ -104,12 +104,12 @@ void tree::clear()
 	}
 }
 
-float forest::predict(const array<float, tree::nv>& x) const
+float forest::operator()(const array<float, tree::nv>& x) const
 {
 	float y = 0.0f;
 	for (const tree& t : *this)
 	{
-		y += t.predict(x);
+		y += t(x);
 	}
 	return y /= size();
 }

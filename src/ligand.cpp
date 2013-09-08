@@ -407,7 +407,7 @@ int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& s
 			}
 		}
 		affinities.push_back(ex[r]);
-//		affinities.push_back(f.predict(x));
+//		affinities.push_back(f(x));
 
 		// Dump the ROOT frame.
 		ofs << "ROOT\n";

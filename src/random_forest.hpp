@@ -32,7 +32,7 @@ public:
 	int grow(const int tid, const size_t mtry, const size_t seed);
 
 	/// Predict the y value of the given sample x
-	float predict(const array<float, nv>& x) const;
+	float operator()(const array<float, nv>& x) const;
 
 	/// Clear node samples to save memory
 	void clear();
@@ -50,7 +50,7 @@ public:
 	}
 
 	/// Predict the y value of the given sample x
-	float predict(const array<float, tree::nv>& x) const;
+	float operator()(const array<float, tree::nv>& x) const;
 
 	/// Clear node samples to save memory
 	void clear();
