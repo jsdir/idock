@@ -168,7 +168,7 @@ int main(int argc, char* argv[])
 	}
 	tp.synchronize();
 
-	cout << "Building a random forest of " << num_trees << " trees in parallel" << endl;
+	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
 	forest f(num_trees);
 	for (tree& t : f)
 	{
