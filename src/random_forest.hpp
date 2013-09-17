@@ -28,8 +28,8 @@ class tree : public vector<node>
 public:
 	static const size_t nv = 36; ///< Number of variables.
 
-	/// Grows an empty tree from bootstrap samples
-	int grow(const int tid, const size_t mtry, const size_t seed);
+	/// Train an empty tree from bootstrap samples
+	int train(const int tid, const size_t mtry, const size_t seed);
 
 	/// Predict the y value of the given sample x
 	float operator()(const array<float, nv>& x) const;
@@ -45,9 +45,7 @@ private:
 class forest : public vector<tree>
 {
 public:
-	forest(const size_t n) : vector<tree>(n)
-	{
-	}
+	forest(const size_t nt);
 
 	/// Predict the y value of the given sample x
 	float operator()(const array<float, tree::nv>& x) const;

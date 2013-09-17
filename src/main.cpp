@@ -172,7 +172,7 @@ int main(int argc, char* argv[])
 	forest f(num_trees);
 	for (tree& t : f)
 	{
-		tp.enqueue(packaged_task<int(int)>(bind(&tree::grow, ref(t), placeholders::_1, 5, rng())));
+		tp.enqueue(packaged_task<int(int)>(bind(&tree::train, ref(t), placeholders::_1, 5, rng())));
 	}
 	tp.synchronize();
 	f.clear();
