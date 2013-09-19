@@ -153,9 +153,6 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	cout << "Using random seed " << seed << endl;
-	mt19937_64 rng(seed);
-
 	cout << "Creating a thread pool of " << num_threads << " worker threads" << endl;
 	thread_pool tp(num_threads);
 
@@ -168,11 +165,11 @@ int main(int argc, char* argv[])
 	}
 	tp.synchronize();
 
-	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
-	forest f(num_trees);
+	cout << "Training a random forest of " << num_trees << " trees in parallel with seed " << seed << endl;
+	forest f(num_trees, seed);
 	for (tree& t : f)
 	{
-		tp.enqueue(packaged_task<int(int)>(bind(&tree::train, ref(t), placeholders::_1, 5, rng())));
+		tp.enqueue(packaged_task<int(int)>(bind(&tree::train, ref(t), placeholders::_1, 5, f.u01_s)));
 	}
 	tp.synchronize();
 	f.clear();
