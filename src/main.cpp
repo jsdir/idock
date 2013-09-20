@@ -9,9 +9,9 @@
 #include "ligand.hpp"
 #include "utility.hpp"
 #include "cu_engine.hpp"
-#include "cl_engine.hpp"
+//#include "cl_engine.hpp"
 #include "cu_mc_kernel.hpp"
-#include "cl_mc_kernel.hpp"
+//#include "cl_mc_kernel.hpp"
 #include "random_forest.hpp"
 using namespace std;
 using namespace boost::filesystem;
@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 			("generations", value<size_t>(&num_bfgs_iterations)->default_value(default_num_bfgs_iterations), "number of generations in BFGS")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
 			("granularity", value<float>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
-			("engine", value<string>(&engine_string)->default_value(default_engine_string), "CUDA or OpenCL")
+//			("engine", value<string>(&engine_string)->default_value(default_engine_string), "CUDA or OpenCL")
 			("help", "help information")
 			("version", "version information")
 			("config", value<path>(), "options can be loaded from a configuration file")
@@ -141,11 +141,11 @@ int main(int argc, char* argv[])
 		}
 
 		// Validate engine.
-		if (engine_string != "CUDA" && engine_string != "OpenCL")
-		{
-			cerr << "Engine must be either CUDA or OpenCL" << endl;
-			return 1;
-		}
+//		if (engine_string != "CUDA" && engine_string != "OpenCL")
+//		{
+//			cerr << "Engine must be either CUDA or OpenCL" << endl;
+//			return 1;
+//		}
 	}
 	catch (const exception& e)
 	{
@@ -179,14 +179,14 @@ int main(int argc, char* argv[])
 
 	cout << "Detecting " << engine_string << " devices" << endl;
 	unique_ptr<engine> eng;
-	if (engine_string == "CUDA")
-	{
+//	if (engine_string == "CUDA")
+//	{
 		eng.reset(new cu_engine);
-	}
-	else
-	{
-		eng.reset(new cl_engine);
-	}
+//	}
+//	else
+//	{
+//		eng.reset(new cl_engine);
+//	}
 	const size_t num_devices = eng->devices.size();
 	if (!num_devices)
 	{
@@ -203,14 +203,14 @@ int main(int argc, char* argv[])
 	boost::ptr_vector<mc_kernel> mc_kernels(num_devices);
 	for (size_t i = 0; i < num_devices; ++i)
 	{
-		if (engine_string == "CUDA")
-		{
+//		if (engine_string == "CUDA")
+//		{
 			mc_kernels.push_back(new cu_mc_kernel(i));
-		}
-		else
-		{
-			mc_kernels.push_back(new cl_mc_kernel(i));
-		}
+//		}
+//		else
+//		{
+//			mc_kernels.push_back(new cl_mc_kernel(i));
+//		}
 		tp.enqueue(packaged_task<int(int)>(bind(&mc_kernel::initialize, ref(mc_kernels[i]), placeholders::_1, cref(sf.e), cref(sf.d), static_cast<size_t>(sf.ns), rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_bfgs_iterations, seed)));
 	}
 	tp.synchronize();
