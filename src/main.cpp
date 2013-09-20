@@ -4,14 +4,13 @@
 #include <iomanip>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <cuda_runtime_api.h>
+#include <helper_cuda.h>
 #include "thread_pool.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "utility.hpp"
-#include "cu_engine.hpp"
-//#include "cl_engine.hpp"
 #include "cu_mc_kernel.hpp"
-//#include "cl_mc_kernel.hpp"
 #include "random_forest.hpp"
 using namespace std;
 using namespace boost::filesystem;
@@ -43,7 +42,6 @@ int main(int argc, char* argv[])
 		const size_t default_num_bfgs_iterations = 300;
 		const size_t default_max_conformations = 9;
 		const float default_granularity = 0.15625f;
-//		const string default_engine_string = "CUDA";
 
 		// Set up options description.
 		using namespace boost::program_options;
@@ -72,7 +70,6 @@ int main(int argc, char* argv[])
 			("generations", value<size_t>(&num_bfgs_iterations)->default_value(default_num_bfgs_iterations), "number of generations in BFGS")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
 			("granularity", value<float>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
-//			("engine", value<string>(&engine_string)->default_value(default_engine_string), "CUDA or OpenCL")
 			("help", "help information")
 			("version", "version information")
 			("config", value<path>(), "options can be loaded from a configuration file")
@@ -139,14 +136,6 @@ int main(int argc, char* argv[])
 				return 1;
 			}
 		}
-
-		// Validate engine.
-		engine_string = "CUDA";
-//		if (engine_string != "CUDA" && engine_string != "OpenCL")
-//		{
-//			cerr << "Engine must be either CUDA or OpenCL" << endl;
-//			return 1;
-//		}
 	}
 	catch (const exception& e)
 	{
@@ -178,40 +167,28 @@ int main(int argc, char* argv[])
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
 
-	cout << "Detecting " << engine_string << " devices" << endl;
-	unique_ptr<engine> eng;
-//	if (engine_string == "CUDA")
-//	{
-		eng.reset(new cu_engine);
-//	}
-//	else
-//	{
-//		eng.reset(new cl_engine);
-//	}
-	const size_t num_devices = eng->devices.size();
+	cout << "Detecting CUDA devices" << endl;
+	int num_devices;
+	checkCudaErrors(cudaGetDeviceCount(&num_devices));
 	if (!num_devices)
 	{
-		cerr << "No " << engine_string << " devices detected" << endl;
+		cerr << "No CUDA devices detected" << endl;
 		return 2;
 	}
-	for (size_t i = 0; i < num_devices; ++i)
+	cout << "D             Name   CC  SM  GMEM (MB)  SMEM (KB)  CMEM (KB)  ECC  TIMEOUT  MODE" << endl;
+	for (int d = 0; d < num_devices; ++d)
 	{
-		cout << i << ": " << eng->devices[i] << endl;
+        checkCudaErrors(cudaSetDevice(d));
+        cudaDeviceProp deviceProp;
+        checkCudaErrors(cudaGetDeviceProperties(&deviceProp, d));
+		cout << d << setw(17) << deviceProp.name << setw(3) << deviceProp.major << '.' << deviceProp.minor << setw(4) << deviceProp.multiProcessorCount << setw(11) << deviceProp.totalGlobalMem / 1048576 << setw(11) << deviceProp.sharedMemPerBlock / 1024 << setw(11) << deviceProp.totalConstMem / 1024 << setw(5) << deviceProp.ECCEnabled << setw(9) << deviceProp.kernelExecTimeoutEnabled << setw(6) << deviceProp.computeMode << endl;
 	}
-	eng.reset(nullptr);
 
 	cout << "Initializing Monte Carlo kernel for " << num_devices << " devices" << endl;
 	boost::ptr_vector<mc_kernel> mc_kernels(num_devices);
 	for (size_t i = 0; i < num_devices; ++i)
 	{
-//		if (engine_string == "CUDA")
-//		{
-			mc_kernels.push_back(new cu_mc_kernel(i));
-//		}
-//		else
-//		{
-//			mc_kernels.push_back(new cl_mc_kernel(i));
-//		}
+		mc_kernels.push_back(new cu_mc_kernel(i));
 		tp.enqueue(packaged_task<int(int)>(bind(&mc_kernel::initialize, ref(mc_kernels[i]), placeholders::_1, cref(sf.e), cref(sf.d), static_cast<size_t>(sf.ns), rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_bfgs_iterations, seed)));
 	}
 	tp.synchronize();
