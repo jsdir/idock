@@ -477,7 +477,7 @@ int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& s
 	const string stem = p.stem().string();
 	{
 		unique_lock<mutex> lock(m);
-		cout << setw(1) << tid << setw(7) << ++num_ligands << " | " << setw(12) << stem << " | ";
+		cout << setw(1) << tid << setw(9) << ++num_ligands << setw(14) << stem << "  ";
 		for_each(affinities.cbegin(), affinities.cbegin() + min<size_t>(affinities.size(), 9), [](const float a)
 		{
 			cout << setw(6) << a;

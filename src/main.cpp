@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 		const size_t default_num_bfgs_iterations = 300;
 		const size_t default_max_conformations = 9;
 		const float default_granularity = 0.15625f;
-		const string default_engine_string = "CUDA";
+//		const string default_engine_string = "CUDA";
 
 		// Set up options description.
 		using namespace boost::program_options;
@@ -141,6 +141,7 @@ int main(int argc, char* argv[])
 		}
 
 		// Validate engine.
+		engine_string = "CUDA";
 //		if (engine_string != "CUDA" && engine_string != "OpenCL")
 //		{
 //			cerr << "Engine must be either CUDA or OpenCL" << endl;
@@ -226,7 +227,7 @@ int main(int argc, char* argv[])
 	mutex m;
 	cout.setf(ios::fixed, ios::floatfield);
 	cout << "Running " << num_mc_tasks << " Monte Carlo tasks of " << num_bfgs_iterations << " BFGS generations in parallel" << endl;
-	cout << "D  Index |       Ligand | pKd  1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
+	cout << "D    Index        Ligand   pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	const directory_iterator const_dir_iter; // A default constructed directory_iterator acts as the end iterator.
 	for (directory_iterator dir_iter(input_folder_path); dir_iter != const_dir_iter; ++dir_iter)
 	{
