@@ -48,7 +48,7 @@ inline bool is_hbond(const size_t t1, const size_t t2)
 
 scoring_function::scoring_function() : e(ne), d(ne), rs(nr)
 {
-	const float ns_inv = 1. / ns;
+	const float ns_inv = 1.0f / ns;
 	for (size_t i = 0; i < nr; ++i)
 	{
 		rs[i] = sqrt(i * ns_inv);
