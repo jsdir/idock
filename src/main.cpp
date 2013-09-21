@@ -154,6 +154,7 @@ int main(int argc, char* argv[])
 		tp.enqueue(packaged_task<int(int)>(bind(&scoring_function::precalculate, ref(sf), placeholders::_1, t1, t2)));
 	}
 	tp.synchronize();
+	sf.clear();
 
 	cout << "Training a random forest of " << num_trees << " trees in parallel with seed " << seed << endl;
 	forest f(num_trees, seed);
