@@ -65,7 +65,7 @@ int tree::train(const int tid, const size_t mtry, const function<float()> u01)
 				{
 					bestChildNodePurity = curChildNodePurity;
 					n.var = v;
-					n.val = (x[n.samples[ncase[j]]][v] + x[n.samples[ncase[j+1]]][v]) * 0.5;
+					n.val = (x[n.samples[ncase[j]]][v] + x[n.samples[ncase[j+1]]][v]) * 0.5f;
 				}
 			}
 		}
