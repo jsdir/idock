@@ -10,7 +10,6 @@
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "utility.hpp"
-#include "cu_mc_kernel.hpp"
 #include "random_forest.hpp"
 using namespace std;
 using namespace boost::filesystem;
@@ -185,10 +184,11 @@ int main(int argc, char* argv[])
 	}
 
 	cout << "Initializing Monte Carlo kernel for " << num_devices << " devices" << endl;
-	boost::ptr_vector<mc_kernel> mc_kernels(num_devices);
+	vector<cu_mc_kernel> mc_kernels;
+	mc_kernels.reserve(num_devices);
 	for (size_t i = 0; i < num_devices; ++i)
 	{
-		mc_kernels.push_back(new cu_mc_kernel(i));
+		mc_kernels.emplace_back(i);
 		tp.enqueue(packaged_task<int(int)>(bind(&mc_kernel::initialize, ref(mc_kernels[i]), placeholders::_1, cref(sf.e), cref(sf.d), static_cast<size_t>(sf.ns), rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_bfgs_iterations, seed)));
 	}
 	tp.synchronize();

@@ -9,7 +9,7 @@
 #include "scoring_function.hpp"
 #include "receptor.hpp"
 #include "random_forest.hpp"
-#include "mc_kernel.hpp"
+#include "cu_mc_kernel.hpp"
 using namespace boost::filesystem;
 
 /// Represents a summary of docking results of a ligand.
@@ -60,7 +60,7 @@ public:
 	/// @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.
 	explicit ligand(const path p);
 
-	int mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& summaries, boost::ptr_vector<mc_kernel>& mc_kernels, const path& output_ligand_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, mutex& m) const;
+	int mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& summaries, vector<cu_mc_kernel>& mc_kernels, const path& output_ligand_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, mutex& m) const;
 
 private:
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.

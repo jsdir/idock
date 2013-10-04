@@ -317,7 +317,7 @@ public:
 	vector<array<float, 3>> c; ///< Heavy atom coordinates.
 };
 
-int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& summaries, boost::ptr_vector<mc_kernel>& mc_kernels, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, mutex& m) const
+int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& summaries, vector<cu_mc_kernel>& mc_kernels, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, mutex& m) const
 {
 	// Launch Monte Carlo kernel.
 	vector<float> ex;
