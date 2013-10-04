@@ -11,6 +11,7 @@ int cl_mc_kernel::initialize(const int tid, const vector<float>& h_sf_e, const v
 	cl_platform_id* platforms;
 	cl_platform_id platform;
 	cl_device_id device;
+//	BOOST_SCOPE_EXIT_ALL(&) { free(platforms); free(cSourceString); };
 	checkOclErrors(clGetPlatformIDs(0, NULL, &num_platforms));
 	platforms = (cl_platform_id*)malloc(sizeof(cl_platform_id) * num_platforms);
 	checkOclErrors(clGetPlatformIDs(num_platforms, platforms, NULL));
