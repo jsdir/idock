@@ -100,7 +100,7 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 			}
 			if (r2 < scoring_function::cutoff_sqr)
 			{
-				atoms.push_back(a);
+				atoms.push_back(move(a));
 			}
 		}
 		else if (record == "TER   ")

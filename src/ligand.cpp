@@ -14,7 +14,7 @@ ligand::ligand(const path p) : p(p), nv(6)
 {
 	// Initialize necessary variables for constructing a ligand.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
-	frames.push_back(frame(0, 0, 0, 0, 0)); // ROOT is also treated as a frame. The parent, rotorXsrn, rotorYsrn, rotorXidx of ROOT frame are dummy.
+	frames.emplace_back(0, 0, 0, 0, 0); // ROOT is also treated as a frame. The parent, rotorXsrn, rotorYsrn, rotorXidx of ROOT frame are dummy.
 	atoms.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 
 	// Initialize helper variables for parsing.
@@ -61,21 +61,21 @@ ligand::ligand(const path p) : p(p), nv(6)
 							assert(!b.is_hetero());
 						}
 						// Save the hydrogen.
-						b.hydrogens.push_back(a);
+						b.hydrogens.push_back(move(a));
 						unsaved = false;
 						break;
 					}
 				}
 				if (unsaved)
 				{
-					hydrogens.push_back(a);
+					hydrogens.push_back(move(a));
 				}
 			}
 			else // Current atom is a heavy atom.
 			{
 				// Find bonds between the current atom and the other atoms of the same frame.
 				assert(bonds.size() == atoms.size());
-				bonds.push_back(vector<size_t>());
+				bonds.emplace_back();
 				bonds.back().reserve(4); // An atom typically consists of <= 4 bonds.
 				for (size_t i = atoms.size(); i > f->rotorYidx;)
 				{
@@ -99,7 +99,7 @@ ligand::ligand(const path p) : p(p), nv(6)
 				}
 
 				// Save the heavy atom.
-				atoms.push_back(a);
+				atoms.push_back(move(a));
 			}
 		}
 		else if (record == "BRANCH")
@@ -114,13 +114,13 @@ ligand::ligand(const path p) : p(p), nv(6)
 				if (atoms[i].serial == rotorXsrn)
 				{
 					// Insert a new frame whose parent is the current frame.
-					frames.push_back(frame(current, rotorXsrn, rotorYsrn, i, atoms.size()));
+					frames.emplace_back(current, rotorXsrn, rotorYsrn, i, atoms.size());
 					break;
 				}
 			}
 
 			// The current frame has the newly inserted BRANCH frame as one of its branches.
-			// It is unsafe to use f in place of frames[current] because frames could reserve a new memory block after calling push_back().
+			// It is unsafe to use f in place of frames[current] because frames could reserve a new memory block after calling emplace_back().
 			frames[current].branches.push_back(frames.size() - 1);
 
 			// Now the current frame is the newly inserted BRANCH frame.
@@ -172,7 +172,7 @@ ligand::ligand(const path p) : p(p), nv(6)
 		}
 		else if (record == "ENDROO")
 		{
-			for (const atom& a : hydrogens)
+			for (atom& a : hydrogens)
 			{
 				for (size_t i = atoms.size(); i > f->rotorYidx;)
 				{
@@ -191,7 +191,7 @@ ligand::ligand(const path p) : p(p), nv(6)
 							assert(!b.is_hetero());
 						}
 						// Save the hydrogen.
-						b.hydrogens.push_back(a);
+						b.hydrogens.push_back(move(a));
 						break;
 					}
 				}
@@ -263,7 +263,7 @@ ligand::ligand(const path p) : p(p), nv(6)
 					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue;
 					if (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) continue;
 					if (find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) continue;
-					interacting_pairs.push_back(interacting_pair(i, j, scoring_function::nr * mp(t1, atoms[j].xs)));
+					interacting_pairs.emplace_back(i, j, scoring_function::nr * mp(t1, atoms[j].xs));
 				}
 			}
 
@@ -469,7 +469,7 @@ int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& s
 		}
 		ofs << "TORSDOF " << nf - 1 << '\n';
 
-		solutions.push_back(static_cast<solution&&>(s));
+		solutions.push_back(move(s));
 		if (solutions.size() == solutions.capacity()) break;
 	}
 

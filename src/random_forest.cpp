@@ -6,7 +6,7 @@ int tree::train(const int tid, const size_t mtry, const function<float()> u01)
 {
 	// Create bootstrap samples with replacement
 	reserve(ns);
-	push_back(node());
+	emplace_back();
 	node& root = front();
 	root.samples.resize(ns);
 	for (size_t& s : root.samples)
@@ -75,9 +75,9 @@ int tree::train(const int tid, const size_t mtry, const function<float()> u01)
 
 		// Create two child nodes and distribute samples
 		n.children[0] = size();
-		push_back(node());
+		emplace_back();
 		n.children[1] = size();
-		push_back(node());
+		emplace_back();
 		for (const size_t s : n.samples)
 		{
 			(*this)[n.children[x[s][n.var] > n.val]].samples.push_back(s);

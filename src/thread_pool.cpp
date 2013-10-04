@@ -5,7 +5,7 @@ thread_pool::thread_pool(const size_t num_threads) : num_scheduled_tasks(0), num
 	reserve(num_threads);
 	for (size_t thread_id = 0; thread_id < num_threads; ++thread_id)
 	{
-		push_back(thread([&,thread_id]()
+		emplace_back([&,thread_id]()
 		{
 			while (true)
 			{
@@ -33,14 +33,14 @@ thread_pool::thread_pool(const size_t num_threads) : num_scheduled_tasks(0), num
 					task_completion.notify_one();
 				}
 			}
-		}));
+		});
 	}
 }
 
 void thread_pool::enqueue(packaged_task<int(int)>&& task)
 {
 	unique_lock<mutex> lock(m);
-	tasks.push_back(static_cast<packaged_task<int(int)>&&>(task));
+	tasks.push_back(move(task));
 	task_incoming.notify_one();
 }
 
