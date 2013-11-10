@@ -2,12 +2,12 @@
 #ifndef IDOCK_CU_MC_KERNEL_HPP
 #define IDOCK_CU_MC_KERNEL_HPP
 
-#include "mc_kernel.hpp"
+static const size_t sf_n = 15;
 
-class cu_mc_kernel : public mc_kernel
+class cu_mc_kernel
 {
 public:
-	cu_mc_kernel(const int device_id) : mc_kernel(device_id)
+	cu_mc_kernel(const int device_id) : device_id(device_id)
 	{
 	}
 
@@ -23,6 +23,7 @@ public:
 	// Free device memory.
 	~cu_mc_kernel();
 private:
+	const int device_id;
 	float* d_sf_e;
 	float* d_sf_d;
 	float* d_maps[sf_n];
