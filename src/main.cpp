@@ -26,7 +26,6 @@ int main(int argc, char* argv[])
 	array<float, 3> center, size;
 	size_t seed, num_threads, num_trees, num_mc_tasks, num_bfgs_iterations, max_conformations;
 	float granularity;
-	string engine_string;
 
 	// Parse program options in a try/catch block.
 	try
