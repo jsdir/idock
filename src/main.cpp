@@ -5,7 +5,7 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <cuda_runtime_api.h>
-#include <helper_cuda.h>
+#include <helper_cuda.h> // "cu_helper.h"
 #include "thread_pool.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
@@ -168,6 +168,8 @@ int main(int argc, char* argv[])
 	cout << "Detecting CUDA devices" << endl;
 	int num_devices;
 	checkCudaErrors(cudaGetDeviceCount(&num_devices));
+//	checkCudaErrors(cuInit(0));
+//	checkCudaErrors(cuDeviceGetCount(&num_devices));
 	if (!num_devices)
 	{
 		cerr << "No CUDA devices detected" << endl;
@@ -180,6 +182,27 @@ int main(int argc, char* argv[])
         cudaDeviceProp deviceProp;
         checkCudaErrors(cudaGetDeviceProperties(&deviceProp, d));
 		cout << d << setw(17) << deviceProp.name << setw(3) << deviceProp.major << '.' << deviceProp.minor << setw(4) << deviceProp.multiProcessorCount << setw(11) << deviceProp.totalGlobalMem / 1048576 << setw(11) << deviceProp.sharedMemPerBlock / 1024 << setw(11) << deviceProp.totalConstMem / 1024 << setw(5) << deviceProp.ECCEnabled << setw(9) << deviceProp.kernelExecTimeoutEnabled << setw(6) << deviceProp.computeMode << endl;
+/*		char name[256];
+		size_t totalGlobalMem;
+		int major;
+		int minor;
+		int multiProcessorCount;
+		int sharedMemPerBlock;
+		int totalConstMem;
+		int ECCEnabled;
+		int kernelExecTimeoutEnabled;
+		int computeMode;
+		checkCudaErrors(cuDeviceGetName(name, sizeof(name), d));
+		checkCudaErrors(cuDeviceTotalMem(&totalGlobalMem, d));
+		checkCudaErrors(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, d));
+		checkCudaErrors(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, d));
+		checkCudaErrors(cuDeviceGetAttribute(&multiProcessorCount, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, d));
+		checkCudaErrors(cuDeviceGetAttribute(&sharedMemPerBlock, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, d));
+		checkCudaErrors(cuDeviceGetAttribute(&totalConstMem, CU_DEVICE_ATTRIBUTE_TOTAL_CONSTANT_MEMORY, d));
+		checkCudaErrors(cuDeviceGetAttribute(&ECCEnabled, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, d));
+		checkCudaErrors(cuDeviceGetAttribute(&kernelExecTimeoutEnabled, CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT, d));
+		checkCudaErrors(cuDeviceGetAttribute(&computeMode, CU_DEVICE_ATTRIBUTE_COMPUTE_MODE, d));
+		cout << d << setw(17) << name << setw(3) << major << '.' << minor << setw(4) << multiProcessorCount << setw(11) << totalGlobalMem / 1048576 << setw(11) << sharedMemPerBlock / 1024 << setw(11) << totalConstMem / 1024 << setw(5) << ECCEnabled << setw(9) << kernelExecTimeoutEnabled << setw(6) << computeMode << endl;*/
 	}
 
 	cout << "Initializing Monte Carlo kernel for " << num_devices << " devices" << endl;
@@ -188,7 +211,7 @@ int main(int argc, char* argv[])
 	for (size_t i = 0; i < num_devices; ++i)
 	{
 		mc_kernels.emplace_back(i);
-		tp.enqueue(packaged_task<int(int)>(bind(&mc_kernel::initialize, ref(mc_kernels[i]), placeholders::_1, cref(sf.e), cref(sf.d), static_cast<size_t>(sf.ns), rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_bfgs_iterations, seed)));
+		tp.enqueue(packaged_task<int(int)>(bind(&cu_mc_kernel::initialize, ref(mc_kernels[i]), placeholders::_1, cref(sf.e), cref(sf.d), static_cast<size_t>(sf.ns), rec.corner0.data(), rec.corner1.data(), rec.num_probes.data(), rec.granularity_inverse, num_mc_tasks, num_bfgs_iterations, seed)));
 	}
 	tp.synchronize();
 	sf.clear();
@@ -240,7 +263,7 @@ int main(int argc, char* argv[])
 			tp.synchronize();
 			for (size_t i = 0; i < num_devices; ++i)
 			{
-				tp.enqueue(packaged_task<int(int)>(bind(&mc_kernel::update, ref(mc_kernels[i]), placeholders::_1, cref(rec.maps), cref(xs))));
+				tp.enqueue(packaged_task<int(int)>(bind(&cu_mc_kernel::update, ref(mc_kernels[i]), placeholders::_1, cref(rec.maps), cref(xs))));
 			}
 			tp.synchronize();
 		}
