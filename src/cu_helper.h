@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <cuda.h>
 
-inline const char* getCudaDrvErrorString(CUresult error)
+inline static const char* getCudaDrvErrorString(CUresult error)
 {
 	switch (error)
 	{
@@ -112,9 +112,9 @@ inline const char* getCudaDrvErrorString(CUresult error)
 }
 
 #define checkCudaErrors(error) __checkCudaErrors((error), #error, __FILE__, __LINE__)
-inline void __checkCudaErrors(const int error, const char* const func, const char* const file, const int line)
+static void __checkCudaErrors(const int error, const char* const func, const char* const file, const int line)
 {
-	if (error != CUDA_SUCCESS)
+	if (error)
 	{
 		fprintf(stderr, "CUDA error at %s:%d code=%d(%s) \"%s\" \n", file, line, error, getCudaDrvErrorString(error), func);
 	}
