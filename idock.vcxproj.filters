@@ -23,9 +23,6 @@
     <ClCompile Include="src\receptor.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\thread_pool.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\atom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -41,13 +38,7 @@
     <ClCompile Include="src\random_forest_y.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\cl_mc_kernel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cl_engine.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\cu_engine.cpp">
+    <ClCompile Include="src\io_service_pool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -64,42 +55,24 @@
     <ClInclude Include="src\receptor.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\thread_pool.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\utility.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\kernel.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\random_forest.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\cl_mc_kernel.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\cu_mc_kernel.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\mc_kernel.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\cl_helper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\engine.hpp">
+    <ClInclude Include="src\io_service_pool.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\cl_engine.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\cu_engine.hpp">
+    <ClInclude Include="src\cu_helper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="src\cu_mc_kernel.cu">
+    <CudaCompile Include="src\idock.cu">
       <Filter>Source Files</Filter>
     </CudaCompile>
   </ItemGroup>
