@@ -272,9 +272,11 @@ ligand::ligand(const path p) : p(p), nv(6)
 		}
 	}
 	np = interacting_pairs.size();
+}
 
-	lig.resize(11 * nf + nf - 1 + 4 * na + 3 * np);
-	int* c = lig.data();
+void ligand::encode(int* p) const
+{
+	int* c = p;
 	for (const frame& f : frames) *c++ = f.active;
 	for (const frame& f : frames) *c++ = f.rotorYidx;
 	for (const frame& f : frames) *c++ = f.childYidx;
@@ -286,7 +288,7 @@ ligand::ligand(const path p) : p(p), nv(6)
 	for (const frame& f : frames) *(float*)c++ = f.xy[0];
 	for (const frame& f : frames) *(float*)c++ = f.xy[1];
 	for (const frame& f : frames) *(float*)c++ = f.xy[2];
-	assert(c == lig.data() + 11 * nf);
+	assert(c == p + 11 * nf);
 	for (const frame& f : frames)
 	{
 		for (const size_t b : f.branches)
@@ -294,17 +296,16 @@ ligand::ligand(const path p) : p(p), nv(6)
 			*c++ = b;
 		}
 	}
-	assert(c == lig.data() + 11 * nf + nf - 1);
+	assert(c == p + 11 * nf + nf - 1);
 	for (const atom& a : atoms) *(float*)c++ = a.coord[0];
 	for (const atom& a : atoms) *(float*)c++ = a.coord[1];
 	for (const atom& a : atoms) *(float*)c++ = a.coord[2];
 	for (const atom& a : atoms) *c++ = a.xs;
-	assert(c == lig.data() + 11 * nf + nf - 1 + 4 * na);
+	assert(c == p + 11 * nf + nf - 1 + 4 * na);
 	for (const interacting_pair& p : interacting_pairs) *c++ = p.i0;
 	for (const interacting_pair& p : interacting_pairs) *c++ = p.i1;
 	for (const interacting_pair& p : interacting_pairs) *c++ = p.p_offset;
-	assert(c == lig.data() + 11 * nf + nf - 1 + 4 * na + 3 * np);
-	assert(c == &lig.back() + 1);
+	assert(c == p + 11 * nf + nf - 1 + 4 * na + 3 * np);
 }
 
 /// Represents a result found by BFGS local optimization for later clustering.
@@ -317,12 +318,8 @@ public:
 	vector<array<float, 3>> c; ///< Heavy atom coordinates.
 };
 
-int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& summaries, vector<cu_mc_kernel>& mc_kernels, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, mutex& m) const
+void ligand::write(const float* ex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f)
 {
-	// Launch Monte Carlo kernel.
-	vector<float> ex;
-	mc_kernels[tid].launch(ex, lig, nv, nf, na, np);
-
 	// Sort solutions in ascending order of e.
 	vector<size_t> rank(num_mc_tasks);
 	iota(rank.begin(), rank.end(), 0);
@@ -335,7 +332,6 @@ int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& s
 	const float square_deviation_threshold = 4.0f * na;
 	vector<solution> solutions;
 	solutions.reserve(max_conformations);
-	vector<float> affinities;
 	affinities.reserve(max_conformations);
 	boost::filesystem::ofstream ofs(output_folder_path / p.filename());
 	ofs.setf(ios::fixed, ios::floatfield);
@@ -347,7 +343,7 @@ int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& s
 		size_t o;
 		s.q.resize(nf);
 		s.c.resize(na);
-		s.c[0][0] = ex[o = num_mc_tasks + r];
+		s.c[0][0] = ex[o  = num_mc_tasks + r];
 		s.c[0][1] = ex[o += num_mc_tasks];
 		s.c[0][2] = ex[o += num_mc_tasks];
 		s.q[0][0] = ex[o += num_mc_tasks];
@@ -469,21 +465,8 @@ int ligand::mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& s
 		}
 		ofs << "TORSDOF " << nf - 1 << '\n';
 
+		// Check if the number of conformations to write has been reached the upper bound.
 		solutions.push_back(move(s));
 		if (solutions.size() == solutions.capacity()) break;
 	}
-
-	// Output and save ligand stem and predicted affinities.
-	const string stem = p.stem().string();
-	{
-		unique_lock<mutex> lock(m);
-		cout << setw(1) << tid << setw(9) << ++num_ligands << setw(14) << stem << "  ";
-		for_each(affinities.cbegin(), affinities.cbegin() + min<size_t>(affinities.size(), 9), [](const float a)
-		{
-			cout << setw(6) << a;
-		});
-		cout << endl;
-		summaries.push_back(new summary(stem, affinities));
-	}
-	return 0;
 }

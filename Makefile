@@ -1,14 +1,19 @@
-CC=clang++ -std=c++11 -O3
-NVCC=nvcc -gencode arch=compute_11,code=sm_11 -Xptxas=-v -ftz=true -prec-div=false -prec-sqrt=false -use_fast_math# -maxrregcount=N -g -G -Xcompiler -rdynamic -lineinfo -src-in-ptx -cubin -gencode arch=compute_10,code=compute_10
+CC=clang++ -std=c++11 -O2
+NVCC=nvcc -Xptxas=-v -use_fast_math
 
-bin/idock: obj/utility.o obj/thread_pool.o obj/scoring_function.o obj/atom.o obj/receptor.o obj/ligand.o obj/cu_mc_kernel.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/main.o
-	$(CC) -o $@ $^ -pthread -lboost_system -lboost_program_options -lboost_filesystem -L${CUDA_ROOT}/lib64 -lcudart -lcurand
+all: bin/idock bin/idock.fatbin
 
-obj/%.o: src/%.cu
-	$(NVCC) -o $@ $< -c -I${CUDA_ROOT}/samples/common/inc
+bin/idock: obj/utility.o obj/io_service_pool.o obj/scoring_function.o obj/atom.o obj/receptor.o obj/ligand.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/main.o
+	$(CC) -o $@ $^ -pthread -L${BOOST_ROOT}/lib -lboost_system -lboost_program_options -lboost_filesystem -L${CUDA_ROOT}/lib64 -lcuda -lcurand
+
+obj/main.o: src/main.cpp
+	$(CC) -o $@ $< -c -I${BOOST_ROOT} -I${CUDA_ROOT}/include
 
 obj/%.o: src/%.cpp
-	$(CC) -o $@ $< -c -I${CUDA_ROOT}/include -I${CUDA_ROOT}/samples/common/inc
+	$(CC) -o $@ $< -c -I${BOOST_ROOT}
+
+bin/%.fatbin: src/%.cu
+	$(NVCC) -o $@ $< -fatbin -arch=compute_11
 
 clean:
-	rm -f bin/idock obj/*.o
+	rm -f bin/idock bin/idock.fatbin obj/*.o

@@ -2,24 +2,13 @@
 #ifndef IDOCK_LIGAND_HPP
 #define IDOCK_LIGAND_HPP
 
-#include <mutex>
 #include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include "atom.hpp"
 #include "scoring_function.hpp"
 #include "receptor.hpp"
 #include "random_forest.hpp"
-#include "cu_mc_kernel.hpp"
 using namespace boost::filesystem;
-
-/// Represents a summary of docking results of a ligand.
-class summary
-{
-public:
-	const string stem;
-	const vector<float> affinities;
-	explicit summary(const string& stem, const vector<float>& affinities) : stem(stem), affinities(affinities) {}
-};
 
 /// Represents a ROOT or a BRANCH in PDBQT structure.
 class frame
@@ -54,14 +43,17 @@ public:
 	size_t nf; ///< Number of frames.
 	size_t na; ///< Number of atoms.
 	size_t np; ///< Number of interacting pairs.
-	vector<int> lig; ///< Encoded ligand content.
+	vector<float> affinities;
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.
 	/// @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.
 	explicit ligand(const path p);
 
-	int mc(const int tid, size_t& num_ligands, boost::ptr_vector<summary>& summaries, vector<cu_mc_kernel>& mc_kernels, const path& output_ligand_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, mutex& m) const;
+	/// Encodes the current ligand.
+	void encode(int* p) const;
 
+	/// Writes conformations in PDBQT format to file.
+	void write(const float* ex, const path& output_ligand_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f);
 private:
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.
 	class interacting_pair

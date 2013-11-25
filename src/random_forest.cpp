@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "random_forest.hpp"
 
-int tree::train(const int tid, const size_t mtry, const function<float()> u01)
+void tree::train(const size_t mtry, const function<float()> u01)
 {
 	// Create bootstrap samples with replacement
 	reserve(ns);
@@ -83,7 +83,6 @@ int tree::train(const int tid, const size_t mtry, const function<float()> u01)
 			(*this)[n.children[x[s][n.var] > n.val]].samples.push_back(s);
 		}
 	}
-	return 0;
 }
 
 float tree::operator()(const array<float, nv>& x) const
@@ -103,7 +102,7 @@ void tree::clear()
 
 forest::forest(const size_t nt, const size_t seed) : vector<tree>(nt), rng(seed), uniform_01(0, 1), u01_s([&]()->float
 {
-	unique_lock<mutex> lock(m);
+	lock_guard<mutex> guard(m);
 	return uniform_01(rng);
 })
 {

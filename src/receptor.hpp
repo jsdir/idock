@@ -31,7 +31,7 @@ public:
 	explicit receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity);
 
 	/// Task for populating grid maps for certain atom types along X and Y dimensions for an Z dimension value.
-	int populate(const int tid, const scoring_function& sf, const vector<size_t>& xs, const size_t z);
+	void populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z);
 };
 
 #endif

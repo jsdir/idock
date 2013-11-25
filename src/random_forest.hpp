@@ -31,7 +31,7 @@ public:
 	static const size_t nv = 36; ///< Number of variables
 
 	/// Train an empty tree from bootstrap samples
-	int train(const int tid, const size_t mtry, const function<float()> u01);
+	void train(const size_t mtry, const function<float()> u01);
 
 	/// Predict the y value of the given sample x
 	float operator()(const array<float, nv>& x) const;

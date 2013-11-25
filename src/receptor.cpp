@@ -110,7 +110,7 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 	}
 }
 
-int receptor::populate(const int tid, const scoring_function& sf, const vector<size_t>& xs, const size_t z)
+void receptor::populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z)
 {
 	const size_t n = xs.size();
 	const float z_coord = corner0[2] + granularity * z;
@@ -157,5 +157,4 @@ int receptor::populate(const int tid, const scoring_function& sf, const vector<s
 			}
 		}
 	}
-	return 0;
 }
