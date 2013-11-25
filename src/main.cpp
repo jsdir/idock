@@ -2,6 +2,8 @@
 #include <random>
 #include <iostream>
 #include <iomanip>
+#include <numeric>
+#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 #include "cu_helper.h"
