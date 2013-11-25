@@ -228,7 +228,7 @@ int main(int argc, char* argv[])
 		cerr << "No CUDA devices detected" << endl;
 		return 2;
 	}
-	cout << "DV               Name  CC SM GMEM(MB) SMEM(KB) CMEM(KB) MAPHOST ECC TIMEOUT MODE" << endl;
+	cout << "D               Name  CC SM GMEM(MB) SMEM(KB) CMEM(KB) MAPHOST ECC TIMEOUT MODE" << endl;
 	vector<int> can_map_host_memory(num_devices);
 	vector<CUcontext> contexts(num_devices);
 	vector<CUfunction> functions(num_devices);
@@ -262,7 +262,7 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuDeviceGetAttribute(&ECCEnabled, CU_DEVICE_ATTRIBUTE_ECC_ENABLED, device));
 		checkCudaErrors(cuDeviceGetAttribute(&kernelExecTimeoutEnabled, CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT, device));
 		checkCudaErrors(cuDeviceGetAttribute(&computeMode, CU_DEVICE_ATTRIBUTE_COMPUTE_MODE, device));
-		cout << setw(2) << dev << setw(19) << name << setw(2) << major << '.' << minor << setw(3) << multiProcessorCount << setw(9) << totalGlobalMem / 1048576 << setw(9) << sharedMemPerBlock / 1024 << setw(9) << totalConstMem / 1024 << setw(8) << canMapHostMemory << setw(4) << ECCEnabled << setw(8) << kernelExecTimeoutEnabled << setw(5) << computeMode << endl;
+		cout << dev << setw(19) << name << setw(2) << major << '.' << minor << setw(3) << multiProcessorCount << setw(9) << totalGlobalMem / 1048576 << setw(9) << sharedMemPerBlock / 1024 << setw(9) << totalConstMem / 1024 << setw(8) << canMapHostMemory << setw(4) << ECCEnabled << setw(8) << kernelExecTimeoutEnabled << setw(5) << computeMode << endl;
 
 		// Save the device attribute of host memory mapping capability.
 		can_map_host_memory[dev] = canMapHostMemory;
@@ -417,7 +417,7 @@ int main(int argc, char* argv[])
 	log_engine log;
 	cout.setf(ios::fixed, ios::floatfield);
 	cout << "Executing " << num_mc_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl;
-	cout << "   Index       Ligand Dv   pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
+	cout << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
 		// Parse the ligand. Don't declare it const as it will be moved to the io service pool for device.
@@ -539,7 +539,7 @@ int main(int argc, char* argv[])
 			safe_print([&]()
 			{
 				string stem = lig.p.stem().string();
-				cout << setw(8) << log.size() + 1 << setw(13) << stem << setw(3) << dev << "  ";
+				cout << setw(8) << log.size() + 1 << setw(14) << stem << setw(2) << dev << ' ';
 				for_each(lig.affinities.cbegin(), lig.affinities.cbegin() + min<size_t>(lig.affinities.size(), 9), [](const float a)
 				{
 					cout << setw(6) << a;
