@@ -59,7 +59,7 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 			q1 = q[k0 += gds];
 			q2 = q[k0 += gds];
 			q3 = q[k0 += gds];
-//			assert(fabs(q0*q0 + q1*q1 + q2*q2 + q3*q3 - 1.0f) < 1e-3f);
+//			assert(fabs(q0*q0 + q1*q1 + q2*q2 + q3*q3 - 1.0f) < 2e-3f);
 			q00 = q0 * q0;
 			q01 = q0 * q1;
 			q02 = q0 * q2;
@@ -159,7 +159,7 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 			a0 = m0 * xy0[i] + m1 * xy1[i] + m2 * xy2[i];
 			a1 = m3 * xy0[i] + m4 * xy1[i] + m5 * xy2[i];
 			a2 = m6 * xy0[i] + m7 * xy1[i] + m8 * xy2[i];
-//			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 1e-3f);
+//			assert(fabs(a0*a0 + a1*a1 + a2*a2 - 1.0f) < 2e-3f);
 			a[k0  = i * gd3 + gid] = a0;
 			a[k0 += gds] = a1;
 			a[k0 += gds] = a2;
@@ -177,7 +177,7 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 			q01 = r0 * q1 + r1 * q0 + r2 * q3 - r3 * q2;
 			q02 = r0 * q2 - r1 * q3 + r2 * q0 + r3 * q1;
 			q03 = r0 * q3 + r1 * q2 - r2 * q1 + r3 * q0;
-//			assert(fabs(q00*q00 + q01*q01 + q02*q02 + q03*q03 - 1.0f) < 1e-3f);
+//			assert(fabs(q00*q00 + q01*q01 + q02*q02 + q03*q03 - 1.0f) < 2e-3f);
 			q[k0  = i * gd4 + gid] = q00;
 			q[k0 += gds] = q01;
 			q[k0 += gds] = q02;
@@ -501,7 +501,7 @@ void mc(__global float* const restrict s0e, __global const int* const restrict l
 				pr2 = bfp[o0];
 				o0 += gds;
 				s1xq3 = s1x[o0];
-//				assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 1e-3f);
+//				assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 2e-3f);
 				nrm = sqrt(pr0*pr0 + pr1*pr1 + pr2*pr2);
 				ang = 0.5f * alp * nrm;
 //				sng = sin(ang) / nrm;
@@ -512,12 +512,12 @@ void mc(__global float* const restrict s0e, __global const int* const restrict l
 				pq1 = sng * pr0;
 				pq2 = sng * pr1;
 				pq3 = sng * pr2;
-//				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 1e-3f);
+//				assert(fabs(pq0*pq0 + pq1*pq1 + pq2*pq2 + pq3*pq3 - 1.0f) < 2e-3f);
 				s2xq0 = pq0 * s1xq0 - pq1 * s1xq1 - pq2 * s1xq2 - pq3 * s1xq3;
 				s2xq1 = pq0 * s1xq1 + pq1 * s1xq0 + pq2 * s1xq3 - pq3 * s1xq2;
 				s2xq2 = pq0 * s1xq2 - pq1 * s1xq3 + pq2 * s1xq0 + pq3 * s1xq1;
 				s2xq3 = pq0 * s1xq3 + pq1 * s1xq2 - pq2 * s1xq1 + pq3 * s1xq0;
-//				assert(fabs(s2xq0*s2xq0 + s2xq1*s2xq1 + s2xq2*s2xq2 + s2xq3*s2xq3 - 1.0f) < 1e-3f);
+//				assert(fabs(s2xq0*s2xq0 + s2xq1*s2xq1 + s2xq2*s2xq2 + s2xq3*s2xq3 - 1.0f) < 2e-3f);
 				s2x[o0 -= 3 * gds] = s2xq0;
 				s2x[o0 += gds] = s2xq1;
 				s2x[o0 += gds] = s2xq2;

@@ -2,7 +2,6 @@
 #ifndef IDOCK_LIGAND_HPP
 #define IDOCK_LIGAND_HPP
 
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include "atom.hpp"
 #include "scoring_function.hpp"
@@ -43,14 +42,13 @@ public:
 	size_t nf; ///< Number of frames.
 	size_t na; ///< Number of atoms.
 	size_t np; ///< Number of interacting pairs.
-	vector<float> affinities;
+	vector<float> affinities; ///< Binding affinities of predicted conformations.
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.
-	/// @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.
 	explicit ligand(const path p);
 
 	/// Encodes the current ligand.
-	void encode(int* p) const;
+	void encode(int* const p) const;
 
 	/// Writes conformations in PDBQT format to file.
 	void write(const float* ex, const path& output_ligand_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f);

@@ -1,6 +1,4 @@
-#include <iostream>
 #include <iomanip>
-#include <random>
 #include <numeric>
 #include "utility.hpp"
 #include "ligand.hpp"
@@ -274,7 +272,7 @@ ligand::ligand(const path p) : p(p), nv(6)
 	np = interacting_pairs.size();
 }
 
-void ligand::encode(int* p) const
+void ligand::encode(int* const p) const
 {
 	int* c = p;
 	for (const frame& f : frames) *c++ = f.active;
