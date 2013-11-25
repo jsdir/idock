@@ -1,14 +1,9 @@
+#include <iomanip>
 #include "log.hpp"
 
-/// For sorting ptr_vector<log_record>.
-inline bool operator<(const log_record& r0, const log_record& r1)
+void log_engine::write(const path& log_path) const
 {
-	return r0.affinities.front() < r1.affinities.front();
-}
-
-void log_engine::write(const path& log_path)
-{
-	sort();
+	const size_t max_conformations = front().affinities.capacity();
 	boost::filesystem::ofstream log(log_path);
 	log.setf(ios::fixed, ios::floatfield);
 	log << "Ligand";
@@ -17,14 +12,14 @@ void log_engine::write(const path& log_path)
 		log << ",pKd" << i;
 	}
 	log << '\n' << setprecision(2);
-	for (const log_record& s : *this)
+	for (const auto& r : *this)
 	{
-		log << s.stem;
-		for (const float a : s.affinities)
+		log << r.stem;
+		for (const float a : r.affinities)
 		{
 			log << ',' << a;
 		}
-		for (size_t i = s.affinities.size(); i < max_conformations; ++i)
+		for (size_t i = r.affinities.size(); i < max_conformations; ++i)
 		{
 			log << ',';
 		}

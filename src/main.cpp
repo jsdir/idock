@@ -3,7 +3,6 @@
 #include <iostream>
 #include <iomanip>
 #include <numeric>
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 #include "cu_helper.h"
@@ -12,23 +11,9 @@
 #include "ligand.hpp"
 #include "utility.hpp"
 #include "random_forest.hpp"
+#include "log.hpp"
 using namespace std;
 using namespace boost::filesystem;
-
-/// Represents a summary of docking results of a ligand.
-class summary
-{
-public:
-	const string stem;
-	const vector<float> affinities;
-	explicit summary(const string& stem, const vector<float>& affinities) : stem(stem), affinities(affinities) {}
-};
-
-/// For sorting ptr_vector<summary>.
-inline bool operator<(const summary& s0, const summary& s1)
-{
-	return s0.affinities.front() < s1.affinities.front();
-}
 
 class safe_function
 {
@@ -429,13 +414,11 @@ int main(int argc, char* argv[])
 	safe_function safe_print;
 
 	// Perform docking for each ligand in the input folder.
-	boost::ptr_vector<summary> summaries;
-	size_t num_ligands = 0; // Ligand counter.
+	log_engine log;
 	cout.setf(ios::fixed, ios::floatfield);
 	cout << "Executing " << num_mc_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl;
 	cout << "   Index       Ligand Dv   pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
-	const directory_iterator const_dir_iter; // A default constructed directory_iterator acts as the end iterator.
-	for (directory_iterator dir_iter(input_folder_path); dir_iter != const_dir_iter; ++dir_iter)
+	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
 		// Parse the ligand. Don't declare it const as it will be moved to the io service pool for device.
 		ligand lig(dir_iter->path());
@@ -555,14 +538,14 @@ int main(int argc, char* argv[])
 			// Output and save ligand stem and predicted affinities.
 			safe_print([&]()
 			{
-				const string stem = lig.p.stem().string();
-				cout << setw(8) << ++num_ligands << setw(13) << stem << setw(3) << dev << "  ";
+				string stem = lig.p.stem().string();
+				cout << setw(8) << log.size() + 1 << setw(13) << stem << setw(3) << dev << "  ";
 				for_each(lig.affinities.cbegin(), lig.affinities.cbegin() + min<size_t>(lig.affinities.size(), 9), [](const float a)
 				{
 					cout << setw(6) << a;
 				});
 				cout << endl;
-				summaries.push_back(new summary(stem, lig.affinities));
+				log.push_back(new log_record(move(stem), move(lig.affinities)));
 			});
 
 			// Free host memory.
@@ -597,28 +580,9 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuCtxDestroy(context));
 	}
 
-	// Sort and write ligand summary to the log file.
-	cout << "Writing summary of " << num_ligands << " ligands to " << log_path << endl;
-	summaries.sort();
-	boost::filesystem::ofstream log(log_path);
-	log.setf(ios::fixed, ios::floatfield);
-	log << "Ligand";
-	for (size_t i = 1; i <= max_conformations; ++i)
-	{
-		log << ",pKd" << i;
-	}
-	log << '\n' << setprecision(2);
-	for (const summary& s : summaries)
-	{
-		log << s.stem;
-		for (const float a : s.affinities)
-		{
-			log << ',' << a;
-		}
-		for (size_t i = s.affinities.size(); i < max_conformations; ++i)
-		{
-			log << ',';
-		}
-		log << '\n';
-	}
+	// Sort and write ligand log records to the log file.
+	if (log.empty()) return 0;
+	cout << "Writing log records of " << log.size() << " ligands to " << log_path << endl;
+	log.sort();
+	log.write(log_path);
 }
