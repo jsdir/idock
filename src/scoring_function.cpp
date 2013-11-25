@@ -83,7 +83,7 @@ void scoring_function::precalculate(const size_t t1, const size_t t2)
 	float* dt = d.data() + offset;
 	for (size_t i = 0; i < nr - 1; ++i)
 	{
-		dt[i] = (e[i+1] - e[i]) / ((rs[i+1] - rs[i]) * rs[i]);
+		dt[i] = (et[i+1] - et[i]) / ((rs[i+1] - rs[i]) * rs[i]);
 	}
 }
 
