@@ -109,7 +109,7 @@ Documentation Creation
 
 Documentations in both HTML and LaTeX formats can be esaily created by running [doxygen]
 
-    doxygen doxygen
+    doxygen idock.dox
 
 The created documents will be placed in `doc` folder. To compile LaTeX files into PDF, one must have `pdflatex` installed.
 
