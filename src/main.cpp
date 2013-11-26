@@ -228,6 +228,8 @@ int main(int argc, char* argv[])
 		cerr << "No CUDA devices detected" << endl;
 		return 2;
 	}
+	std::ifstream ifs(getenv("idock_fatbin"), ios::binary);
+	auto image = vector<char>((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	cout << "D               Name  CC SM GMEM(MB) SMEM(KB) CMEM(KB) MAPHOST ECC TIMEOUT MODE" << endl;
 	vector<int> can_map_host_memory(num_devices);
 	vector<CUcontext> contexts(num_devices);
@@ -273,47 +275,21 @@ int main(int argc, char* argv[])
 //		checkCudaErrors(cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE));
 
 		// Initialize just-in-time compilation options.
-//		const unsigned int numOptions = 6;
-//		CUjit_option* options = (CUjit_option*)malloc(sizeof(CUjit_option) * numOptions);
-//		void** optionValues = (void**)malloc(sizeof(void*) * numOptions);
-//		options[0] = CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES;
-//		size_t/*unsigned int*/ info_log_buffer_size_bytes = 1024;
-//		optionValues[0] = (void*)info_log_buffer_size_bytes;
-//		options[1] = CU_JIT_INFO_LOG_BUFFER;
-//		char* info_log_buffer = (char*)malloc(sizeof(char) * info_log_buffer_size_bytes);
-//		optionValues[1] = info_log_buffer;
-//		options[2] = CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES;
-//		size_t/*unsigned int*/ error_log_buffer_size_bytes = 1024;
-//		optionValues[2] = (void*)error_log_buffer_size_bytes;
-//		options[3] = CU_JIT_ERROR_LOG_BUFFER;
-//		char* error_log_buffer = (char*)malloc(sizeof(char) * error_log_buffer_size_bytes);
-//		optionValues[3] = error_log_buffer;
-//		options[4] = CU_JIT_LOG_VERBOSE;
-//		size_t/*int*/ log_verbose = 1;
-//		optionValues[4] = (void*)log_verbose;
-//		options[5] = CU_JIT_MAX_REGISTERS;
-//		size_t/*unsigned int*/ max_registers = 32;
-//		optionValues[5] = (void*)max_registers;
-//		options[6] = CU_JIT_CACHE_MODE;
-//		CUjit_cacheMode cache_mode = CU_JIT_CACHE_OPTION_NONE; // CU_JIT_CACHE_OPTION_CG, CU_JIT_CACHE_OPTION_CA
-//		optionValues[6] = (void*)cache_mode;
-//		options[7] = CU_JIT_GENERATE_DEBUG_INFO;
-//		int generated_debug_info = 1;
-//		optionValues[7] = (void*)generated_debug_info;
-//		options[8] = CU_JIT_GENERATE_LINE_INFO;
-//		int generated_line_info = 1;
-//		optionValues[8] = (void*)generated_line_info;
+		const unsigned int num_jit_options = 2;
+		array<CUjit_option, num_jit_options> jit_keys =
+		{
+			CU_JIT_MAX_REGISTERS,
+			CU_JIT_CACHE_MODE
+		};
+		array<void*, num_jit_options> jit_vals =
+		{
+			(void*)32,
+			(void*)CU_JIT_CACHE_OPTION_NONE // CU_JIT_CACHE_OPTION_CG, CU_JIT_CACHE_OPTION_CA
+		};
 
-		// Load the Monte Carlo module into the current context.
+		// Load the module into the current context.
 		CUmodule module;
-		checkCudaErrors(cuModuleLoad(&module, getenv("idock_fatbin")));
-//		checkCudaErrors(cuModuleLoadDataEx(&module, source, numOptions, options, optionValues));
-//		printf("%s\n", info_log_buffer);
-//		printf("%s\n", error_log_buffer);
-//		free(error_log_buffer);
-//		free(info_log_buffer);
-//		free(optionValues);
-//		free(options);
+		checkCudaErrors(cuModuleLoadDataEx(&module, image.data(), num_jit_options, jit_keys.data(), jit_vals.data()));
 
 		// Get functions from module.
 		checkCudaErrors(cuModuleGetFunction(&functions[dev], module, "monte_carlo"));
@@ -389,6 +365,7 @@ int main(int argc, char* argv[])
 		// Pop the current context.
 		checkCudaErrors(cuCtxPopCurrent(NULL));
 	}
+	image.clear();
 	sf.clear();
 
 	// Initialize a vector of idle devices.
