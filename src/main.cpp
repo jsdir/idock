@@ -306,7 +306,7 @@ int main(int argc, char* argv[])
 
 		// Load the Monte Carlo module into the current context.
 		CUmodule module;
-		checkCudaErrors(cuModuleLoad(&module, "/home/hjli/idock/bin/idock.fatbin"));
+		checkCudaErrors(cuModuleLoad(&module, getenv("idock_fatbin")));
 //		checkCudaErrors(cuModuleLoadDataEx(&module, source, numOptions, options, optionValues));
 //		printf("%s\n", info_log_buffer);
 //		printf("%s\n", error_log_buffer);
