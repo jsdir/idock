@@ -1,19 +1,13 @@
-BOOST_ROOT = $(HOME)/boost_1_53_0
-CC = g++ -static -O3 -DNDEBUG -std=c++11
+CC = g++ -std=c++11 -O3 -DNDEBUG -static
 
-all: ../bin/Linux/x86_64/idock ../bin/Linux/x86/idock
+../bin/Linux/idock: ../obj/Linux/utility.o ../obj/Linux/io_service_pool.o ../obj/Linux/scoring_function.o ../obj/Linux/atom.o ../obj/Linux/receptor.o ../obj/Linux/ligand.o ../obj/Linux/random_forest.o ../obj/Linux/random_forest_x.o ../obj/Linux/random_forest_y.o ../obj/Linux/log.o ../obj/Linux/main.o
+	$(CC) -o $@ $^ -pthread -L${BOOST_ROOT}/lib -lboost_system -lboost_filesystem -lboost_program_options -L${CUDA_ROOT}/lib64 -lcuda -lcurand
 
-../bin/Linux/x86_64/idock: ../obj/Linux/x86_64/scoring_function.o ../obj/Linux/x86_64/box.o ../obj/Linux/x86_64/quaternion.o ../obj/Linux/x86_64/thread_pool.o ../obj/Linux/x86_64/receptor.o ../obj/Linux/x86_64/ligand.o ../obj/Linux/x86_64/grid_map_task.o ../obj/Linux/x86_64/monte_carlo_task.o ../obj/Linux/x86_64/main.o
-	$(CC) -m64 -o $@ $^ -L$(BOOST_ROOT)/lib/x86_64 -pthread -lboost_system -lboost_thread -lboost_filesystem -lboost_program_options -lboost_iostreams -lz -lbz2
+../obj/Linux/main.o: ../src/main.cpp
+	$(CC) -o $@ $< -c -I${BOOST_ROOT} -I${CUDA_ROOT}/include
 
-../obj/Linux/x86_64/%.o: ../src/%.cpp 
-	$(CC) -m64 -o $@ $< -I$(BOOST_ROOT) -c
-
-../bin/Linux/x86/idock: ../obj/Linux/x86/scoring_function.o ../obj/Linux/x86/box.o ../obj/Linux/x86/quaternion.o ../obj/Linux/x86/thread_pool.o ../obj/Linux/x86/receptor.o ../obj/Linux/x86/ligand.o ../obj/Linux/x86/grid_map_task.o ../obj/Linux/x86/monte_carlo_task.o ../obj/Linux/x86/main.o
-	$(CC) -m32 -o $@ $^ -L$(BOOST_ROOT)/lib/x86 -pthread -lboost_system -lboost_thread -lboost_filesystem -lboost_program_options -lboost_iostreams -lz -lbz2
-
-../obj/Linux/x86/%.o: ../src/%.cpp 
-	$(CC) -m32 -o $@ $< -I$(BOOST_ROOT) -c
+../obj/Linux/%.o: ../src/%.cpp
+	$(CC) -o $@ $< -c -I${BOOST_ROOT}
 
 clean:
-	rm -f ../bin/Linux/x86/idock ../obj/Linux/x86/*.o ../bin/Linux/x86_64/idock ../obj/Linux/x86_64/*.o
+	rm -f ../bin/Linux/idock ../obj/Linux/*.o
