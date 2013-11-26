@@ -439,16 +439,7 @@ int main(int argc, char* argv[])
 		if (xs.size())
 		{
 			// Precalculate p_offset.
-			for (size_t t1 = 0; t1 < sf.n; ++t1)
-			{
-				vector<size_t>& p = rec.p_offset[t1];
-				p.resize(xs.size());
-				for (size_t i = 0; i < xs.size(); ++i)
-				{
-					const size_t t2 = xs[i];
-					p[i] = sf.nr * mp(t1, t2);
-				}
-			}
+			rec.precalculate(sf, xs);
 
 			// Create grid maps in parallel.
 			cnt.init(rec.num_probes[2]);

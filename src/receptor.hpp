@@ -30,6 +30,9 @@ public:
 	/// @param granularity 1D size of grids.
 	explicit receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity);
 
+	// Precalculate p_offset.
+	void precalculate(const scoring_function& sf, const vector<size_t>& xs);
+
 	/// Task for populating grid maps for certain atom types along X and Y dimensions for an Z dimension value.
 	void populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z);
 };

@@ -110,6 +110,21 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 	}
 }
 
+void receptor::precalculate(const scoring_function& sf, const vector<size_t>& xs)
+{
+	const size_t nxs = xs.size();
+	for (size_t t1 = 0; t1 < sf.n; ++t1)
+	{
+		vector<size_t>& p = p_offset[t1];
+		p.resize(nxs);
+		for (size_t i = 0; i < nxs; ++i)
+		{
+			const size_t t2 = xs[i];
+			p[i] = sf.nr * mp(t1, t2);
+		}
+	}
+}
+
 void receptor::populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z)
 {
 	const size_t n = xs.size();
