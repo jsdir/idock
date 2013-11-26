@@ -466,7 +466,7 @@ int main(int argc, char* argv[])
 			for (int dev = 0; dev < num_devices; ++dev)
 			{
 				checkCudaErrors(cuCtxPushCurrent(contexts[dev]));
-				const size_t map_bytes = sizeof(float) * rec.maps[xs.front()].size();
+				const size_t map_bytes = sizeof(float) * rec.num_probes_product;
 				for (const auto t : xs)
 				{
 					CUdeviceptr mapd;
