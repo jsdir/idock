@@ -52,6 +52,15 @@ public:
 
 	/// Writes conformations in PDBQT format to file.
 	void write(const float* ex, const path& output_ligand_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f);
+
+	/// Gets the number of elements of the current ligand.
+	size_t get_lig_elems() const;
+
+	/// Gets the number of elements of a solution.
+	size_t get_sln_elems() const;
+
+	/// Gets the number of elements of a conformation.
+	size_t get_cnf_elems() const;
 private:
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.
 	class interacting_pair

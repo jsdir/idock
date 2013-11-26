@@ -272,6 +272,21 @@ ligand::ligand(const path p) : p(p), nv(6)
 	np = interacting_pairs.size();
 }
 
+size_t ligand::get_lig_elems() const
+{
+	return 11 * nf + nf - 1 + 4 * na + 3 * np;
+}
+
+size_t ligand::get_sln_elems() const
+{
+	return (1 + nv + 1 + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * 3 + (nv * (nv + 1) >> 1) + nv * 3;
+}
+
+size_t ligand::get_cnf_elems() const
+{
+	return 1 + nv + 1;
+}
+
 void ligand::encode(int* const p) const
 {
 	int* c = p;
@@ -304,6 +319,7 @@ void ligand::encode(int* const p) const
 	for (const interacting_pair& p : interacting_pairs) *c++ = p.i1;
 	for (const interacting_pair& p : interacting_pairs) *c++ = p.p_offset;
 	assert(c == p + 11 * nf + nf - 1 + 4 * na + 3 * np);
+	assert(c == p + get_lig_elems());
 }
 
 /// Represents a result found by BFGS local optimization for later clustering.

@@ -480,7 +480,7 @@ int main(int argc, char* argv[])
 			checkCudaErrors(cuCtxPushCurrent(contexts[dev]));
 
 			// Map or copy ligand from host memory to device memory.
-			const size_t lig_bytes = sizeof(int) * (11 * lig.nf + lig.nf - 1 + 4 * lig.na + 3 * lig.np);
+			const size_t lig_bytes = sizeof(int) * lig.get_lig_elems();
 			int* ligh;
 			checkCudaErrors(cuMemHostAlloc((void**)&ligh, lig_bytes, can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
 			lig.encode(ligh);
@@ -497,7 +497,7 @@ int main(int argc, char* argv[])
 
 			// Allocate device memory for solutions.
 			// 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
-			const size_t sln_elems = ((1 + lig.nv + 1 + lig.nv + 3 * lig.nf + 4 * lig.nf + 3 * lig.na + 3 * lig.na + 3 * lig.nf + 3 * lig.nf) * 3 + (lig.nv * (lig.nv + 1) >> 1) + lig.nv * 3) * num_mc_tasks;
+			const size_t sln_elems = lig.get_sln_elems() * num_mc_tasks;
 			const size_t sln_bytes = sizeof(float) * sln_elems;
 			CUdeviceptr slnd;
 			checkCudaErrors(cuMemAlloc(&slnd, sln_bytes));
@@ -509,7 +509,7 @@ int main(int argc, char* argv[])
 
 			// Copy conformations from device memory to host memory.
 			float* cnfh;
-			const size_t cnf_bytes = sizeof(float) * (1 + lig.nv + 1) * num_mc_tasks;
+			const size_t cnf_bytes = sizeof(float) * lig.get_cnf_elems() * num_mc_tasks;
 			checkCudaErrors(cuMemHostAlloc((void**)&cnfh, cnf_bytes, 0));
 			checkCudaErrors(cuMemcpyDtoHAsync(cnfh, slnd, cnf_bytes, NULL));
 
