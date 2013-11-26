@@ -77,9 +77,4 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="src\idock.cu">
-      <Filter>Source Files</Filter>
-    </CudaCompile>
-  </ItemGroup>
 </Project>
