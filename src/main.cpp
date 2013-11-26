@@ -472,7 +472,7 @@ int main(int argc, char* argv[])
 					CUdeviceptr mapd;
 					checkCudaErrors(cuMemAlloc(&mapd, map_bytes));
 					checkCudaErrors(cuMemcpyHtoD(mapd, rec.maps[t].data(), map_bytes));
-					checkCudaErrors(cuMemcpyHtoD(mps[dev] + sizeof(CUdeviceptr) * t, &mapd, sizeof(mapd)));
+					checkCudaErrors(cuMemcpyHtoD(mps[dev] + sizeof(mapd) * t, &mapd, sizeof(mapd)));
 				}
 				checkCudaErrors(cuCtxPopCurrent(NULL));
 			}
