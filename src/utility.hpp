@@ -3,6 +3,8 @@
 #define IDOCK_UTILITY_HPP
 
 #include <array>
+#include <vector>
+#include <condition_variable>
 using namespace std;
 
 /// Returns the flattened 1D index of a triangular 2D index (x, y) where x is the lowest dimension.
@@ -76,5 +78,42 @@ array<float, 9> qtn4_to_mat3(const array<float, 4>& a);
 
 /// Transforms a vector by a 3x3 matrix.
 array<float, 3> operator*(const array<float, 9>& m, const array<float, 3>& v);
+
+/// Represents a thread safe function.
+class safe_function
+{
+public:
+	void operator()(function<void(void)>&& f);
+private:
+	mutex m;
+};
+
+/// Represents a thread safe counter.
+template <typename T>
+class safe_counter
+{
+public:
+	void init(const T z);
+	void increment();
+	void wait();
+private:
+	mutex m;
+	condition_variable cv;
+	T n;
+	T i;
+};
+
+/// Represents a thread safe vector.
+template <typename T>
+class safe_vector : public vector<T>
+{
+public:
+	using vector<T>::vector;
+	void safe_push_back(const T x);
+	T safe_pop_back();
+private:
+	mutex m;
+	condition_variable cv;
+};
 
 #endif
