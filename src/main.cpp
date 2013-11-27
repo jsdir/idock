@@ -384,7 +384,6 @@ int main(int argc, char* argv[])
 				}
 				checkCudaErrors(cuCtxPopCurrent(NULL));
 			}
-			cnt.wait();
 		}
 
 		// Wait until a device is ready for execution.
