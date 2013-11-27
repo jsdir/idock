@@ -171,6 +171,7 @@ int main(int argc, char* argv[])
 	vector<CUcontext> contexts(num_devices);
 	vector<CUfunction> functions(num_devices);
 	vector<CUdeviceptr> mps(num_devices);
+	vector<CUstream> streams(num_devices);
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
 		// Get a device handle from an ordinal.
@@ -298,6 +299,9 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuMemcpyHtoD(nbic, &nbih, nbis));
 		checkCudaErrors(cuMemcpyHtoD(sedc, &seed, seds));
 
+		// Create stream.
+		cuStreamCreate(&streams[dev], CU_STREAM_NON_BLOCKING);
+
 		// Pop the current context.
 		checkCudaErrors(cuCtxPopCurrent(NULL));
 	}
@@ -405,7 +409,7 @@ int main(int argc, char* argv[])
 			else
 			{
 				checkCudaErrors(cuMemAlloc(&ligd, lig_bytes));
-				checkCudaErrors(cuMemcpyHtoDAsync(ligd, ligh, lig_bytes, NULL));
+				checkCudaErrors(cuMemcpyHtoDAsync(ligd, ligh, lig_bytes, streams[dev]));
 			}
 
 			// Allocate device memory for solutions.
@@ -414,20 +418,20 @@ int main(int argc, char* argv[])
 			const size_t sln_bytes = sizeof(float) * sln_elems;
 			CUdeviceptr slnd;
 			checkCudaErrors(cuMemAlloc(&slnd, sln_bytes));
-			checkCudaErrors(cuMemsetD32Async(slnd, 0, sln_elems, NULL));
+			checkCudaErrors(cuMemsetD32Async(slnd, 0, sln_elems, streams[dev]));
 
 			// Launch kernel.
 			void* params[] = { &slnd, &ligd, &lig.nv, &lig.nf, &lig.na, &lig.np };
-			checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, NULL, params, NULL));
+			checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, streams[dev], params, NULL));
 
 			// Copy conformations from device memory to host memory.
 			float* cnfh;
 			const size_t cnf_bytes = sizeof(float) * lig.get_cnf_elems() * num_mc_tasks;
 			checkCudaErrors(cuMemHostAlloc((void**)&cnfh, cnf_bytes, 0));
-			checkCudaErrors(cuMemcpyDtoHAsync(cnfh, slnd, cnf_bytes, NULL));
+			checkCudaErrors(cuMemcpyDtoHAsync(cnfh, slnd, cnf_bytes, streams[dev]));
 
 			// Synchronize.
-			checkCudaErrors(cuCtxSynchronize());
+			checkCudaErrors(cuStreamSynchronize(streams[dev]));
 
 			// Free device memory.
 			checkCudaErrors(cuMemFree(slnd));
