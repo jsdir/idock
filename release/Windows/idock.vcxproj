@@ -1,10 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-    <ProjectConfiguration Include="Release|Win32">
-      <Configuration>Release</Configuration>
-      <Platform>Win32</Platform>
-    </ProjectConfiguration>
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
       <Platform>x64</Platform>
@@ -14,78 +10,47 @@
     <ProjectGuid>{861D016F-5A30-4CAB-BF5F-8DF4FE8B791F}</ProjectGuid>
   </PropertyGroup>
   <ItemGroup>
-    <ClInclude Include="src\atom.hpp" />
-    <ClInclude Include="src\cl_helper.h" />
-    <ClInclude Include="src\cu_helper.h" />
-    <ClInclude Include="src\io_service_pool.hpp" />
-    <ClInclude Include="src\ligand.hpp" />
-    <ClInclude Include="src\random_forest.hpp" />
-    <ClInclude Include="src\scoring_function.hpp" />
-    <ClInclude Include="src\receptor.hpp" />
-    <ClInclude Include="src\utility.hpp" />
+    <ClInclude Include="..\..\src\atom.hpp" />
+    <ClInclude Include="..\..\src\cl_helper.h" />
+    <ClInclude Include="..\..\src\cu_helper.h" />
+    <ClInclude Include="..\..\src\io_service_pool.hpp" />
+    <ClInclude Include="..\..\src\ligand.hpp" />
+    <ClInclude Include="..\..\src\log.hpp" />
+    <ClInclude Include="..\..\src\random_forest.hpp" />
+    <ClInclude Include="..\..\src\scoring_function.hpp" />
+    <ClInclude Include="..\..\src\receptor.hpp" />
+    <ClInclude Include="..\..\src\utility.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\atom.cpp" />
-    <ClCompile Include="src\io_service_pool.cpp" />
-    <ClCompile Include="src\ligand.cpp" />
-    <ClCompile Include="src\main.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(BOOST_ROOT);$(CUDA_PATH)\include</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">$(BOOST_ROOT);$(CUDA_PATH)\include</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(BOOST_ROOT);$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+    <ClCompile Include="..\..\src\atom.cpp" />
+    <ClCompile Include="..\..\src\io_service_pool.cpp" />
+    <ClCompile Include="..\..\src\ligand.cpp" />
+    <ClCompile Include="..\..\src\log.cpp" />
+    <ClCompile Include="..\..\src\main.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BOOST_ROOT);$(CUDA_PATH)\include</AdditionalIncludeDirectories>
     </ClCompile>
-    <ClCompile Include="src\random_forest.cpp" />
-    <ClCompile Include="src\random_forest_x.cpp" />
-    <ClCompile Include="src\random_forest_y.cpp" />
-    <ClCompile Include="src\scoring_function.cpp" />
-    <ClCompile Include="src\receptor.cpp" />
-    <ClCompile Include="src\utility.cpp" />
+    <ClCompile Include="..\..\src\random_forest.cpp" />
+    <ClCompile Include="..\..\src\random_forest_x.cpp" />
+    <ClCompile Include="..\..\src\random_forest_y.cpp" />
+    <ClCompile Include="..\..\src\scoring_function.cpp" />
+    <ClCompile Include="..\..\src\receptor.cpp" />
+    <ClCompile Include="..\..\src\utility.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <UseDebugLibraries>false</UseDebugLibraries>
-    <WholeProgramOptimization>true</WholeProgramOptimization>
-    <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v110</PlatformToolset>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>v110</PlatformToolset>
+    <PlatformToolset>CTP_Nov2013</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="PropertySheets">
-    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-  </ImportGroup>
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <OutDir>..\bin\Windows\$(Platform)\</OutDir>
-    <IntDir>..\obj\Windows\$(Platform)\</IntDir>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <OutDir>..\bin\Windows\$(Platform)\</OutDir>
-    <IntDir>..\obj\Windows\$(Platform)\</IntDir>
+    <OutDir>..\..\bin\Windows\</OutDir>
+    <IntDir>..\..\obj\Windows\</IntDir>
   </PropertyGroup>
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
-      <Optimization>MaxSpeed</Optimization>
-      <FunctionLevelLinking>true</FunctionLevelLinking>
-      <IntrinsicFunctions>true</IntrinsicFunctions>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(BOOST_ROOT)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <SubSystem>Console</SubSystem>
-      <EnableCOMDATFolding>true</EnableCOMDATFolding>
-      <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform)</AdditionalLibraryDirectories>
-    </Link>
-  </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -100,7 +65,8 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib;$(CUDA_PATH)\lib\$(Platform)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>cuda.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
