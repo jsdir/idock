@@ -171,14 +171,16 @@ int main(int argc, char* argv[])
 	vector<CUcontext> contexts(num_devices);
 	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
-	vector<CUdeviceptr> mps(num_devices);
+	vector<CUdeviceptr> mpsv(num_devices);
+	vector<CUdeviceptr> slnv(num_devices);
+	vector<CUdeviceptr> ligv(num_devices);
 	vector<int*> ligh(num_devices);
 	vector<CUdeviceptr> ligd(num_devices);
 	vector<CUdeviceptr> slnd(num_devices);
 	vector<float*> cnfh(num_devices);
-	const size_t default_lig_elems = 2601;
-	const size_t default_sln_elems = 3438;
-	const size_t default_cnf_elems = 43;
+	size_t lig_elems = 1;//2601;
+	size_t sln_elems = 1;//3438;
+	size_t cnf_elems = 1;//43;
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
 		// Get a device handle from an ordinal.
@@ -252,7 +254,7 @@ int main(int argc, char* argv[])
 		CUdeviceptr mpsc;
 		CUdeviceptr nbic;
 		CUdeviceptr sedc;
-		CUdeviceptr s0ec;
+		CUdeviceptr slnc;
 		CUdeviceptr ligc;
 		size_t sfes;
 		size_t sfds;
@@ -264,7 +266,7 @@ int main(int argc, char* argv[])
 		size_t mpss;
 		size_t nbis;
 		size_t seds;
-		size_t s0es;
+		size_t slns;
 		size_t ligs;
 		checkCudaErrors(cuModuleGetGlobal(&sfec, &sfes, module, "sfe")); //   8 const float*
 		checkCudaErrors(cuModuleGetGlobal(&sfdc, &sfds, module, "sfd")); //   8 const float*
@@ -276,7 +278,7 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuModuleGetGlobal(&mpsc, &mpss, module, "mps")); // 120 conat float* [15]
 		checkCudaErrors(cuModuleGetGlobal(&nbic, &nbis, module, "nbi")); //   4 int
 		checkCudaErrors(cuModuleGetGlobal(&sedc, &seds, module, "sed")); //   8 unsigned long
-		checkCudaErrors(cuModuleGetGlobal(&s0ec, &s0es, module, "s0e")); //   8 float*
+		checkCudaErrors(cuModuleGetGlobal(&slnc, &slns, module, "s0e")); //   8 float*
 		checkCudaErrors(cuModuleGetGlobal(&ligc, &ligs, module, "lig")); //   8 const int*
 
 		// Initialize symbols for scoring function.
@@ -306,7 +308,7 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuMemcpyHtoD(cr1c, rec.corner1.data(), cr1s));
 		checkCudaErrors(cuMemcpyHtoD(nprc, rec.num_probes.data(), nprs));
 		checkCudaErrors(cuMemcpyHtoD(gric, &rec.granularity_inverse, gris));
-		mps[dev] = mpsc;
+		mpsv[dev] = mpsc;
 
 		// Initialize symbols for program control.
 		const int nbih = num_bfgs_iterations;
@@ -316,23 +318,25 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuMemcpyHtoD(sedc, &seed, seds));
 
 		// Allocate ligh, ligd, slnd and cnfh.
-		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * default_lig_elems, can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
+		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems, can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
 		if (can_map_host_memory[dev])
 		{
 			checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
 		}
 		else
 		{
-			checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * default_lig_elems));
+			checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * lig_elems));
 		}
-		checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * default_sln_elems * num_mc_tasks));
-		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * default_cnf_elems * num_mc_tasks, 0));
+		checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems * num_mc_tasks));
+		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems * num_mc_tasks, 0));
 
 		// Initialize symbols for sln and lig.
-		assert(s0es == sizeof(slnd[dev]));
+		assert(slns == sizeof(slnd[dev]));
 		assert(ligs == sizeof(ligd[dev]));
-		checkCudaErrors(cuMemcpyHtoD(s0ec, &slnd[dev], s0es));
+		checkCudaErrors(cuMemcpyHtoD(slnc, &slnd[dev], slns));
 		checkCudaErrors(cuMemcpyHtoD(ligc, &ligd[dev], ligs));
+		slnv[dev] = slnc;
+		ligv[dev] = ligc;
 
 		// Pop the current context.
 		checkCudaErrors(cuCtxPopCurrent(NULL));
@@ -412,7 +416,7 @@ int main(int argc, char* argv[])
 					CUdeviceptr mapd;
 					checkCudaErrors(cuMemAlloc(&mapd, map_bytes));
 					checkCudaErrors(cuMemcpyHtoD(mapd, rec.maps[t].data(), map_bytes));
-					checkCudaErrors(cuMemcpyHtoD(mps[dev] + sizeof(mapd) * t, &mapd, sizeof(mapd)));
+					checkCudaErrors(cuMemcpyHtoD(mpsv[dev] + sizeof(mapd) * t, &mapd, sizeof(mapd)));
 				}
 				checkCudaErrors(cuCtxPopCurrent(NULL));
 			}
@@ -427,27 +431,66 @@ int main(int argc, char* argv[])
 			// Push the context of the chosen device.
 			checkCudaErrors(cuCtxPushCurrent(contexts[dev]));
 
-			// Map or copy ligand from host memory to device memory.
-			const size_t lig_bytes = sizeof(int) * lig.get_lig_elems();
+			// Reallocate ligh and ligd should the current ligand elements exceed the default size.
+			const size_t this_lig_elems = lig.get_lig_elems();
+			if (this_lig_elems > lig_elems)
+			{
+				if (!can_map_host_memory[dev])
+				{
+					checkCudaErrors(cuMemFree(ligd[dev]));
+				}
+				checkCudaErrors(cuMemFreeHost(ligh[dev]));
+				lig_elems = this_lig_elems;
+				checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems, can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
+				if (can_map_host_memory[dev])
+				{
+					checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
+				}
+				else
+				{
+					checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * lig_elems));
+				}
+				checkCudaErrors(cuMemcpyHtoD(ligv[dev], &ligd[dev], sizeof(ligv[dev])));
+			}
+
+			// Encode the current ligand.
 			lig.encode(ligh[dev]);
+
+			// Copy ligand from host memory to device memory if necessary.
+			const size_t lig_bytes = sizeof(int) * lig_elems;
 			if (!can_map_host_memory[dev])
 			{
 				checkCudaErrors(cuMemcpyHtoDAsync(ligd[dev], ligh[dev], lig_bytes, streams[dev]));
 			}
 
-			// Allocate device memory for solutions.
-			// 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
-			const size_t sln_elems = lig.get_sln_elems() * num_mc_tasks;
-			const size_t sln_bytes = sizeof(float) * sln_elems;
-			checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems, streams[dev]));
+			// Reallocate slnd should the current solution elements exceed the default size.
+			const size_t this_sln_elems = lig.get_sln_elems();
+			if (this_sln_elems > sln_elems)
+			{
+				checkCudaErrors(cuMemFree(slnd[dev]));
+				sln_elems = this_sln_elems;
+				checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems * num_mc_tasks));
+				checkCudaErrors(cuMemcpyHtoD(slnv[dev], &slnd[dev], sizeof(slnv[dev])));
+			}
+
+			// Clear the solution buffer.
+			checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems * num_mc_tasks, streams[dev]));
 
 			// Launch kernel.
 			void* params[] = { &lig.nv, &lig.nf, &lig.na, &lig.np };
 			checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, streams[dev], params, NULL));
 
+			// Reallocate cnfh should the current conformation elements exceed the default size.
+			const size_t this_cnf_elems = lig.get_cnf_elems();
+			if (this_cnf_elems > cnf_elems)
+			{
+				checkCudaErrors(cuMemFreeHost(cnfh[dev]));
+				cnf_elems = this_cnf_elems;
+				checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems * num_mc_tasks, 0));
+			}
+
 			// Copy conformations from device memory to host memory.
-			const size_t cnf_bytes = sizeof(float) * lig.get_cnf_elems() * num_mc_tasks;
-			checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], cnf_bytes, streams[dev]));
+			checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems * num_mc_tasks, streams[dev]));
 
 			// Synchronize.
 			checkCudaErrors(cuStreamSynchronize(streams[dev]));
