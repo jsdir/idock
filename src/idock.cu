@@ -16,6 +16,8 @@ __constant__ float gri;
 __constant__ const float* mps[15];
 __constant__ int nbi;
 __constant__ unsigned long sed;
+__constant__ float* __restrict__ s0e;
+__constant__ const int* __restrict__ lig;
 
 extern __shared__ int shared[];
 
@@ -332,7 +334,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 
 extern "C" __global__
 //__launch_bounds__(maxThreadsPerBlock, minBlocksPerMultiprocessor)
-void monte_carlo(float* __restrict__ s0e, const int* __restrict__ lig, const int nv, const int nf, const int na, const int np)
+void monte_carlo(const int nv, const int nf, const int na, const int np)
 {
 	const int gid = blockIdx.x * blockDim.x + threadIdx.x;
 	const int gds = blockDim.x * gridDim.x;

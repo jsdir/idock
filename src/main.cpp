@@ -252,6 +252,8 @@ int main(int argc, char* argv[])
 		CUdeviceptr mpsc;
 		CUdeviceptr nbic;
 		CUdeviceptr sedc;
+		CUdeviceptr s0ec;
+		CUdeviceptr ligc;
 		size_t sfes;
 		size_t sfds;
 		size_t sfss;
@@ -262,6 +264,8 @@ int main(int argc, char* argv[])
 		size_t mpss;
 		size_t nbis;
 		size_t seds;
+		size_t s0es;
+		size_t ligs;
 		checkCudaErrors(cuModuleGetGlobal(&sfec, &sfes, module, "sfe")); //   8 const float*
 		checkCudaErrors(cuModuleGetGlobal(&sfdc, &sfds, module, "sfd")); //   8 const float*
 		checkCudaErrors(cuModuleGetGlobal(&sfsc, &sfss, module, "sfs")); //   4 int
@@ -272,6 +276,8 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuModuleGetGlobal(&mpsc, &mpss, module, "mps")); // 120 conat float* [15]
 		checkCudaErrors(cuModuleGetGlobal(&nbic, &nbis, module, "nbi")); //   4 int
 		checkCudaErrors(cuModuleGetGlobal(&sedc, &seds, module, "sed")); //   8 unsigned long
+		checkCudaErrors(cuModuleGetGlobal(&s0ec, &s0es, module, "s0e")); //   8 float*
+		checkCudaErrors(cuModuleGetGlobal(&ligc, &ligs, module, "lig")); //   8 const int*
 
 		// Initialize symbols for scoring function.
 		CUdeviceptr sfed;
@@ -321,6 +327,12 @@ int main(int argc, char* argv[])
 		}
 		checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * default_sln_elems * num_mc_tasks));
 		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * default_cnf_elems * num_mc_tasks, 0));
+
+		// Initialize symbols for sln and lig.
+		assert(s0es == sizeof(slnd[dev]));
+		assert(ligs == sizeof(ligd[dev]));
+		checkCudaErrors(cuMemcpyHtoD(s0ec, &slnd[dev], s0es));
+		checkCudaErrors(cuMemcpyHtoD(ligc, &ligd[dev], ligs));
 
 		// Pop the current context.
 		checkCudaErrors(cuCtxPopCurrent(NULL));
@@ -430,7 +442,7 @@ int main(int argc, char* argv[])
 			checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems, streams[dev]));
 
 			// Launch kernel.
-			void* params[] = { &slnd[dev], &ligd[dev], &lig.nv, &lig.nf, &lig.na, &lig.np };
+			void* params[] = { &lig.nv, &lig.nf, &lig.na, &lig.np };
 			checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, streams[dev], params, NULL));
 
 			// Copy conformations from device memory to host memory.
