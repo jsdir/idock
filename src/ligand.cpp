@@ -279,6 +279,7 @@ size_t ligand::get_lig_elems() const
 
 size_t ligand::get_sln_elems() const
 {
+	// 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
 	return (1 + nv + 1 + nv + 3 * nf + 4 * nf + 3 * na + 3 * na + 3 * nf + 3 * nf) * 3 + (nv * (nv + 1) >> 1) + nv * 3;
 }
 
