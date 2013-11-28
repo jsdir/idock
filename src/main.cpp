@@ -178,9 +178,9 @@ int main(int argc, char* argv[])
 	vector<CUdeviceptr> ligd(num_devices);
 	vector<CUdeviceptr> slnd(num_devices);
 	vector<float*> cnfh(num_devices);
-	size_t lig_elems = 1;//2601;
-	size_t sln_elems = 1;//3438;
-	size_t cnf_elems = 1;//43;
+	size_t lig_elems = 2601;
+	size_t sln_elems = 3438;
+	size_t cnf_elems = 43;
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
 		// Get a device handle from an ordinal.
