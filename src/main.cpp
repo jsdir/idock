@@ -178,9 +178,9 @@ int main(int argc, char* argv[])
 	vector<CUdeviceptr> ligd(num_devices);
 	vector<CUdeviceptr> slnd(num_devices);
 	vector<float*> cnfh(num_devices);
-	size_t lig_elems = 2601;
-	size_t sln_elems = 3438;
-	size_t cnf_elems = 43;
+	vector<size_t> lig_elems(num_devices, 2601);
+	vector<size_t> sln_elems(num_devices, 3438);
+	vector<size_t> cnf_elems(num_devices,   43);
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
 		// Get a device handle from an ordinal.
@@ -318,17 +318,17 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuMemcpyHtoD(sedc, &seed, seds));
 
 		// Allocate ligh, ligd, slnd and cnfh.
-		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems, can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
+		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems[dev], can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
 		if (can_map_host_memory[dev])
 		{
 			checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
 		}
 		else
 		{
-			checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * lig_elems));
+			checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * lig_elems[dev]));
 		}
-		checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems * num_mc_tasks));
-		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems * num_mc_tasks, 0));
+		checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems[dev] * num_mc_tasks));
+		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, 0));
 
 		// Initialize symbols for sln and lig.
 		assert(slns == sizeof(slnd[dev]));
@@ -433,22 +433,22 @@ int main(int argc, char* argv[])
 
 			// Reallocate ligh and ligd should the current ligand elements exceed the default size.
 			const size_t this_lig_elems = lig.get_lig_elems();
-			if (this_lig_elems > lig_elems)
+			if (this_lig_elems > lig_elems[dev])
 			{
 				if (!can_map_host_memory[dev])
 				{
 					checkCudaErrors(cuMemFree(ligd[dev]));
 				}
 				checkCudaErrors(cuMemFreeHost(ligh[dev]));
-				lig_elems = this_lig_elems;
-				checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems, can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
+				lig_elems[dev] = this_lig_elems;
+				checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems[dev], can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
 				if (can_map_host_memory[dev])
 				{
 					checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
 				}
 				else
 				{
-					checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * lig_elems));
+					checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * lig_elems[dev]));
 				}
 				checkCudaErrors(cuMemcpyHtoD(ligv[dev], &ligd[dev], sizeof(ligv[dev])));
 			}
@@ -457,7 +457,7 @@ int main(int argc, char* argv[])
 			lig.encode(ligh[dev]);
 
 			// Copy ligand from host memory to device memory if necessary.
-			const size_t lig_bytes = sizeof(int) * lig_elems;
+			const size_t lig_bytes = sizeof(int) * lig_elems[dev];
 			if (!can_map_host_memory[dev])
 			{
 				checkCudaErrors(cuMemcpyHtoDAsync(ligd[dev], ligh[dev], lig_bytes, streams[dev]));
@@ -465,16 +465,16 @@ int main(int argc, char* argv[])
 
 			// Reallocate slnd should the current solution elements exceed the default size.
 			const size_t this_sln_elems = lig.get_sln_elems();
-			if (this_sln_elems > sln_elems)
+			if (this_sln_elems > sln_elems[dev])
 			{
 				checkCudaErrors(cuMemFree(slnd[dev]));
-				sln_elems = this_sln_elems;
-				checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems * num_mc_tasks));
+				sln_elems[dev] = this_sln_elems;
+				checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems[dev] * num_mc_tasks));
 				checkCudaErrors(cuMemcpyHtoD(slnv[dev], &slnd[dev], sizeof(slnv[dev])));
 			}
 
 			// Clear the solution buffer.
-			checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems * num_mc_tasks, streams[dev]));
+			checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems[dev] * num_mc_tasks, streams[dev]));
 
 			// Launch kernel.
 			void* params[] = { &lig.nv, &lig.nf, &lig.na, &lig.np };
@@ -482,15 +482,15 @@ int main(int argc, char* argv[])
 
 			// Reallocate cnfh should the current conformation elements exceed the default size.
 			const size_t this_cnf_elems = lig.get_cnf_elems();
-			if (this_cnf_elems > cnf_elems)
+			if (this_cnf_elems > cnf_elems[dev])
 			{
 				checkCudaErrors(cuMemFreeHost(cnfh[dev]));
-				cnf_elems = this_cnf_elems;
-				checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems * num_mc_tasks, 0));
+				cnf_elems[dev] = this_cnf_elems;
+				checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, 0));
 			}
 
 			// Copy conformations from device memory to host memory.
-			checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems * num_mc_tasks, streams[dev]));
+			checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, streams[dev]));
 
 			// Synchronize.
 			checkCudaErrors(cuStreamSynchronize(streams[dev]));
