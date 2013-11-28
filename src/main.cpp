@@ -169,9 +169,16 @@ int main(int argc, char* argv[])
 	cout << "D               Name  CC SM GMEM(MB) SMEM(KB) CMEM(KB) MAPHOST ECC TIMEOUT MODE" << endl;
 	vector<int> can_map_host_memory(num_devices);
 	vector<CUcontext> contexts(num_devices);
+	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
 	vector<CUdeviceptr> mps(num_devices);
-	vector<CUstream> streams(num_devices);
+	vector<int*> ligh(num_devices);
+	vector<CUdeviceptr> ligd(num_devices);
+	vector<CUdeviceptr> slnd(num_devices);
+	vector<float*> cnfh(num_devices);
+	const size_t default_lig_elems = 2601;
+	const size_t default_sln_elems = 3438;
+	const size_t default_cnf_elems = 43;
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
 		// Get a device handle from an ordinal.
@@ -210,6 +217,9 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuCtxCreate(&contexts[dev], CU_CTX_SCHED_AUTO/*CU_CTX_SCHED_YIELD*/ | (canMapHostMemory ? CU_CTX_MAP_HOST : 0), device));
 //		checkCudaErrors(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 //		checkCudaErrors(cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE));
+
+		// Create a stream.
+		cuStreamCreate(&streams[dev], CU_STREAM_NON_BLOCKING);
 
 		// Initialize just-in-time compilation options.
 		const unsigned int num_jit_options = 2;
@@ -299,8 +309,18 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuMemcpyHtoD(nbic, &nbih, nbis));
 		checkCudaErrors(cuMemcpyHtoD(sedc, &seed, seds));
 
-		// Create stream.
-		cuStreamCreate(&streams[dev], CU_STREAM_NON_BLOCKING);
+		// Allocate ligh, ligd, slnd and cnfh.
+		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * default_lig_elems, can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
+		if (can_map_host_memory[dev])
+		{
+			checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
+		}
+		else
+		{
+			checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * default_lig_elems));
+		}
+		checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * default_sln_elems * num_mc_tasks));
+		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * default_cnf_elems * num_mc_tasks, 0));
 
 		// Pop the current context.
 		checkCudaErrors(cuCtxPopCurrent(NULL));
@@ -397,50 +417,31 @@ int main(int argc, char* argv[])
 
 			// Map or copy ligand from host memory to device memory.
 			const size_t lig_bytes = sizeof(int) * lig.get_lig_elems();
-			int* ligh;
-			checkCudaErrors(cuMemHostAlloc((void**)&ligh, lig_bytes, can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
-			lig.encode(ligh);
-			CUdeviceptr ligd;
-			if (can_map_host_memory[dev])
+			lig.encode(ligh[dev]);
+			if (!can_map_host_memory[dev])
 			{
-				checkCudaErrors(cuMemHostGetDevicePointer(&ligd, ligh, 0));
-			}
-			else
-			{
-				checkCudaErrors(cuMemAlloc(&ligd, lig_bytes));
-				checkCudaErrors(cuMemcpyHtoDAsync(ligd, ligh, lig_bytes, streams[dev]));
+				checkCudaErrors(cuMemcpyHtoDAsync(ligd[dev], ligh[dev], lig_bytes, streams[dev]));
 			}
 
 			// Allocate device memory for solutions.
 			// 3 * (nt + 1) is sufficient for t because the torques of inactive frames are always zero.
 			const size_t sln_elems = lig.get_sln_elems() * num_mc_tasks;
 			const size_t sln_bytes = sizeof(float) * sln_elems;
-			CUdeviceptr slnd;
-			checkCudaErrors(cuMemAlloc(&slnd, sln_bytes));
-			checkCudaErrors(cuMemsetD32Async(slnd, 0, sln_elems, streams[dev]));
+			checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems, streams[dev]));
 
 			// Launch kernel.
-			void* params[] = { &slnd, &ligd, &lig.nv, &lig.nf, &lig.na, &lig.np };
+			void* params[] = { &slnd[dev], &ligd[dev], &lig.nv, &lig.nf, &lig.na, &lig.np };
 			checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, streams[dev], params, NULL));
 
 			// Copy conformations from device memory to host memory.
-			float* cnfh;
 			const size_t cnf_bytes = sizeof(float) * lig.get_cnf_elems() * num_mc_tasks;
-			checkCudaErrors(cuMemHostAlloc((void**)&cnfh, cnf_bytes, 0));
-			checkCudaErrors(cuMemcpyDtoHAsync(cnfh, slnd, cnf_bytes, streams[dev]));
+			checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], cnf_bytes, streams[dev]));
 
 			// Synchronize.
 			checkCudaErrors(cuStreamSynchronize(streams[dev]));
 
-			// Free device memory.
-			checkCudaErrors(cuMemFree(slnd));
-			if (!can_map_host_memory[dev])
-			{
-				checkCudaErrors(cuMemFree(ligd));
-			}
-
 			// Write conformations.
-			lig.write(cnfh, output_folder_path, max_conformations, num_mc_tasks, rec, f);
+			lig.write(cnfh[dev], output_folder_path, max_conformations, num_mc_tasks, rec, f);
 
 			// Output and save ligand stem and predicted affinities.
 			safe_print([&]()
@@ -454,10 +455,6 @@ int main(int argc, char* argv[])
 				cout << endl;
 				log.push_back(new log_record(move(stem), move(lig.affinities)));
 			});
-
-			// Free host memory.
-			checkCudaErrors(cuMemFreeHost(ligh));
-			checkCudaErrors(cuMemFreeHost(cnfh));
 
 			// Pop the context after use.
 			checkCudaErrors(cuCtxPopCurrent(NULL));
@@ -476,14 +473,6 @@ int main(int argc, char* argv[])
 	// Destroy contexts.
 	for (auto& context : contexts)
 	{
-//		const float* const mpsc = mps[dev];
-//		for (size_t t = 0; t < sf.n; ++t)
-//		{
-//			float* const mapd = mpsc[t];
-//			if (mapd) checkCudaErrors(cuMemFree(mapd));
-//		}
-//		checkCudaErrors(cuMemFree(sfdd));
-//		checkCudaErrors(cuMemFree(sfed));
 		checkCudaErrors(cuCtxDestroy(context));
 	}
 
