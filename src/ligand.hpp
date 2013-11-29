@@ -35,7 +35,7 @@ public:
 class ligand
 {
 public:
-	path p; ///< Path to the input ligand.
+	path filename; ///< Path to the input ligand.
 	vector<frame> frames; ///< ROOT and BRANCH frames.
 	vector<atom> atoms; ///< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
 	size_t nv; ///< Number of variables to optimize.
@@ -45,7 +45,7 @@ public:
 	vector<float> affinities; ///< Binding affinities of predicted conformations.
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.
-	explicit ligand(const path p);
+	explicit ligand(const path& p);
 
 	/// Encodes the current ligand.
 	void encode(int* const p) const;

@@ -8,7 +8,7 @@ void frame::output(boost::filesystem::ofstream& ofs) const
 	ofs << "BRANCH"    << setw(4) << rotorXsrn << setw(4) << rotorYsrn << '\n';
 }
 
-ligand::ligand(const path p) : p(p), nv(6)
+ligand::ligand(const path& p) : filename(p.filename()), nv(6)
 {
 	// Initialize necessary variables for constructing a ligand.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
@@ -348,7 +348,7 @@ void ligand::write(const float* ex, const path& output_folder_path, const size_t
 	vector<solution> solutions;
 	solutions.reserve(max_conformations);
 	affinities.reserve(max_conformations);
-	boost::filesystem::ofstream ofs(output_folder_path / p.filename());
+	boost::filesystem::ofstream ofs(output_folder_path / filename);
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
 	for (const size_t r : rank)

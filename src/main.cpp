@@ -501,7 +501,7 @@ int main(int argc, char* argv[])
 			// Output and save ligand stem and predicted affinities.
 			safe_print([&]()
 			{
-				string stem = lig.p.stem().string();
+				string stem = lig.filename.stem().string();
 				cout << setw(8) << log.size() + 1 << setw(14) << stem << setw(2) << dev << ' ';
 				for_each(lig.affinities.cbegin(), lig.affinities.cbegin() + min<size_t>(lig.affinities.size(), 9), [](const float a)
 				{
