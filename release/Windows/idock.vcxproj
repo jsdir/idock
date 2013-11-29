@@ -36,6 +36,12 @@
     <ClCompile Include="..\..\src\receptor.cpp" />
     <ClCompile Include="..\..\src\utility.cpp" />
   </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\idock.cu">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"%CUDA_PATH%\bin\nvcc" -arch=compute_11 -fatbin -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(OutDir)idock.fatbin $(ProjectDir)\src\idock.cu</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">idock.fatbin</Outputs>
+    </CustomBuild>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>

@@ -7,7 +7,7 @@
     </Filter>
     <Filter Include="Source Files">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx;cu</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -76,5 +76,10 @@
     <ClInclude Include="src\log.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="src\idock.cu">
+      <Filter>Source Files</Filter>
+    </CustomBuild>
   </ItemGroup>
 </Project>
