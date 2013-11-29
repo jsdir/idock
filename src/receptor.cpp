@@ -1,3 +1,4 @@
+#include <cmath>
 #include <boost/filesystem/fstream.hpp>
 #include "scoring_function.hpp"
 #include "receptor.hpp"

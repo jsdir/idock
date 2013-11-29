@@ -4,6 +4,7 @@
 
 #include <array>
 #include <vector>
+#include <functional>
 #include <condition_variable>
 using namespace std;
 
