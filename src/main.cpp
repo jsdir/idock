@@ -381,10 +381,10 @@ int main(int argc, char* argv[])
 		for (const atom& a : lig.atoms)
 		{
 			const size_t t = a.xs;
-			if (rec.maps[t].empty() && find(xs.cbegin(), xs.cend(), t) == xs.cend())
+			if (rec.maps[t].empty())
 			{
-				xs.push_back(t);
 				rec.maps[t].resize(rec.num_probes_product);
+				xs.push_back(t);
 			}
 		}
 
