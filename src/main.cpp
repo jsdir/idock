@@ -165,6 +165,7 @@ int main(int argc, char* argv[])
 		return 2;
 	}
 	cout << "D               Name  CC SM GMEM(MB) SMEM(KB) CMEM(KB) MAPHOST ECC TIMEOUT MODE" << endl;
+	vector<CUdevice> devices(num_devices);
 	vector<int> can_map_host_memory(num_devices);
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
@@ -197,6 +198,9 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuDeviceGetAttribute(&computeMode, CU_DEVICE_ATTRIBUTE_COMPUTE_MODE, device));
 		cout << dev << setw(19) << name << setw(2) << major << '.' << minor << setw(3) << multiProcessorCount << setw(9) << totalGlobalMem / 1048576 << setw(9) << sharedMemPerBlock / 1024 << setw(9) << totalConstMem / 1024 << setw(8) << canMapHostMemory << setw(4) << ECCEnabled << setw(8) << kernelExecTimeoutEnabled << setw(5) << computeMode << endl;
 
+		// Save the device handle.
+		devices[dev] = device;
+
 		// Save the device attribute of host memory mapping capability.
 		can_map_host_memory[dev] = canMapHostMemory;
 	}
@@ -220,12 +224,8 @@ int main(int argc, char* argv[])
 	vector<size_t> cnf_elems(num_devices,   43);
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
-		// Get a device handle from an ordinal.
-		CUdevice device;
-		checkCudaErrors(cuDeviceGet(&device, dev));
-
 		// Create a context for the current device.
-		checkCudaErrors(cuCtxCreate(&contexts[dev], CU_CTX_SCHED_AUTO/*CU_CTX_SCHED_YIELD*/ | (can_map_host_memory[dev] ? CU_CTX_MAP_HOST : 0), device));
+		checkCudaErrors(cuCtxCreate(&contexts[dev], CU_CTX_SCHED_AUTO/*CU_CTX_SCHED_YIELD*/ | (can_map_host_memory[dev] ? CU_CTX_MAP_HOST : 0), devices[dev]));
 //		checkCudaErrors(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 //		checkCudaErrors(cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE));
 
