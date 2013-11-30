@@ -155,7 +155,7 @@ int main(int argc, char* argv[])
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
 
-	cout << "Detecting CUDA devices and just-in-time compiling modules" << endl;
+	cout << "Detecting CUDA devices" << endl;
 	checkCudaErrors(cuInit(0));
 	int num_devices;
 	checkCudaErrors(cuDeviceGetCount(&num_devices));
@@ -164,24 +164,8 @@ int main(int argc, char* argv[])
 		cerr << "No CUDA devices detected" << endl;
 		return 2;
 	}
-	std::ifstream ifs(getenv("idock_fatbin"), ios::binary);
-	auto image = vector<char>((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	cout << "D               Name  CC SM GMEM(MB) SMEM(KB) CMEM(KB) MAPHOST ECC TIMEOUT MODE" << endl;
 	vector<int> can_map_host_memory(num_devices);
-	vector<CUcontext> contexts(num_devices);
-	vector<CUstream> streams(num_devices);
-	vector<CUfunction> functions(num_devices);
-	vector<vector<size_t>> xst(num_devices);
-	vector<CUdeviceptr> mpsv(num_devices);
-	vector<CUdeviceptr> slnv(num_devices);
-	vector<CUdeviceptr> ligv(num_devices);
-	vector<int*> ligh(num_devices);
-	vector<CUdeviceptr> ligd(num_devices);
-	vector<CUdeviceptr> slnd(num_devices);
-	vector<float*> cnfh(num_devices);
-	vector<size_t> lig_elems(num_devices, 2601);
-	vector<size_t> sln_elems(num_devices, 3438);
-	vector<size_t> cnf_elems(num_devices,   43);
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
 		// Get a device handle from an ordinal.
@@ -215,9 +199,33 @@ int main(int argc, char* argv[])
 
 		// Save the device attribute of host memory mapping capability.
 		can_map_host_memory[dev] = canMapHostMemory;
+	}
+
+	cout << "Compiling modules for " << num_devices << " devices" << endl;
+	std::ifstream ifs(getenv("idock_fatbin"), ios::binary);
+	auto image = vector<char>((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
+	vector<CUcontext> contexts(num_devices);
+	vector<CUstream> streams(num_devices);
+	vector<CUfunction> functions(num_devices);
+	vector<vector<size_t>> xst(num_devices);
+	vector<CUdeviceptr> mpsv(num_devices);
+	vector<CUdeviceptr> slnv(num_devices);
+	vector<CUdeviceptr> ligv(num_devices);
+	vector<int*> ligh(num_devices);
+	vector<CUdeviceptr> ligd(num_devices);
+	vector<CUdeviceptr> slnd(num_devices);
+	vector<float*> cnfh(num_devices);
+	vector<size_t> lig_elems(num_devices, 2601);
+	vector<size_t> sln_elems(num_devices, 3438);
+	vector<size_t> cnf_elems(num_devices,   43);
+	for (int dev = 0; dev < num_devices; ++dev)
+	{
+		// Get a device handle from an ordinal.
+		CUdevice device;
+		checkCudaErrors(cuDeviceGet(&device, dev));
 
 		// Create a context for the current device.
-		checkCudaErrors(cuCtxCreate(&contexts[dev], CU_CTX_SCHED_AUTO/*CU_CTX_SCHED_YIELD*/ | (canMapHostMemory ? CU_CTX_MAP_HOST : 0), device));
+		checkCudaErrors(cuCtxCreate(&contexts[dev], CU_CTX_SCHED_AUTO/*CU_CTX_SCHED_YIELD*/ | (can_map_host_memory[dev] ? CU_CTX_MAP_HOST : 0), device));
 //		checkCudaErrors(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 //		checkCudaErrors(cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE));
 
