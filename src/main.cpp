@@ -171,6 +171,7 @@ int main(int argc, char* argv[])
 	vector<CUcontext> contexts(num_devices);
 	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
+	vector<vector<size_t>> xst(num_devices);
 	vector<CUdeviceptr> mpsv(num_devices);
 	vector<CUdeviceptr> slnv(num_devices);
 	vector<CUdeviceptr> ligv(num_devices);
@@ -317,6 +318,9 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuMemcpyHtoD(nbic, &nbih, nbis));
 		checkCudaErrors(cuMemcpyHtoD(sedc, &seed, seds));
 
+		// Reserve space for xst.
+		xst[dev].reserve(sf.n);
+
 		// Allocate ligh, ligd, slnd and cnfh.
 		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems[dev], can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
 		if (can_map_host_memory[dev])
@@ -405,21 +409,6 @@ int main(int argc, char* argv[])
 				});
 			}
 			cnt.wait();
-
-			// Copy grid maps from host memory to device memory.
-			for (int dev = 0; dev < num_devices; ++dev)
-			{
-				checkCudaErrors(cuCtxPushCurrent(contexts[dev]));
-				const size_t map_bytes = sizeof(float) * rec.num_probes_product;
-				for (const auto t : xs)
-				{
-					CUdeviceptr mapd;
-					checkCudaErrors(cuMemAlloc(&mapd, map_bytes));
-					checkCudaErrors(cuMemcpyHtoD(mapd, rec.maps[t].data(), map_bytes));
-					checkCudaErrors(cuMemcpyHtoD(mpsv[dev] + sizeof(mapd) * t, &mapd, sizeof(mapd)));
-				}
-				checkCudaErrors(cuCtxPopCurrent(NULL));
-			}
 		}
 
 		// Wait until a device is ready for execution.
@@ -430,6 +419,31 @@ int main(int argc, char* argv[])
 		{
 			// Push the context of the chosen device.
 			checkCudaErrors(cuCtxPushCurrent(contexts[dev]));
+
+			// Find atom types that are presented in the current ligand but are not yet copied to device memory.
+			vector<size_t> xs;
+			for (const atom& a : lig.atoms)
+			{
+				const size_t t = a.xs;
+				if (find(xst[dev].cbegin(), xst[dev].cend(), t) == xst[dev].cend())
+				{
+					xst[dev].push_back(t);
+					xs.push_back(t);
+				}
+			}
+
+			// Copy grid maps from host memory to device memory if necessary.
+			if (xs.size())
+			{
+				const size_t map_bytes = sizeof(float) * rec.num_probes_product;
+				for (const auto t : xs)
+				{
+					CUdeviceptr mapd;
+					checkCudaErrors(cuMemAlloc(&mapd, map_bytes));
+					checkCudaErrors(cuMemcpyHtoD(mapd, rec.maps[t].data(), map_bytes));
+					checkCudaErrors(cuMemcpyHtoD(mpsv[dev] + sizeof(mapd) * t, &mapd, sizeof(mapd)));
+				}
+			}
 
 			// Reallocate ligh and ligd should the current ligand elements exceed the default size.
 			const size_t this_lig_elems = lig.get_lig_elems();
