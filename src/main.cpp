@@ -13,6 +13,25 @@
 #include "random_forest.hpp"
 #include "log.hpp"
 
+template <typename T>
+class callback_data
+{
+public:
+	callback_data(io_service_pool& io, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const T dev, const vector<float*>& cnfh, ligand&& lig_, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), dev(dev), cnfh(cnfh), lig(move(lig_)), safe_print(safe_print), log(log), idle(idle) {}
+	io_service_pool& io;
+	const path& output_folder_path;
+	const size_t max_conformations;
+	const size_t num_mc_tasks;
+	const receptor& rec;
+	const forest& f;
+	const T dev;
+	const vector<float*>& cnfh;
+	ligand lig;
+	safe_function& safe_print;
+	log_engine& log;
+	safe_vector<T>& idle;
+};
+
 int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
@@ -134,9 +153,10 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
-	cout << "Creating an io service pool of " << num_threads << " worker threads for host" << endl;
-	io_service_pool ioh(num_threads);
+	cout << "Creating an io service pool of " << num_threads << " worker threads" << endl;
+	io_service_pool io(num_threads);
 	safe_counter<size_t> cnt;
+	safe_function safe_print;
 
 	cout << "Precalculating a scoring function of " << scoring_function::n << " atom types in parallel" << endl;
 	scoring_function sf;
@@ -144,7 +164,7 @@ int main(int argc, char* argv[])
 	for (size_t t2 = 0; t2 < sf.n; ++t2)
 	for (size_t t1 = 0; t1 <=  t2; ++t1)
 	{
-		ioh.post([&,t1,t2]()
+		io.post([&,t1,t2]()
 		{
 			sf.precalculate(t1, t2);
 			cnt.increment();
@@ -155,29 +175,32 @@ int main(int argc, char* argv[])
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
 
-	cout << "Detecting CUDA devices" << endl;
+	cout << "Detecting CUDA devices with compute capability 1.1 or greater" << endl;
 	checkCudaErrors(cuInit(0));
 	int num_devices;
 	checkCudaErrors(cuDeviceGetCount(&num_devices));
-	if (!num_devices)
-	{
-		cerr << "No CUDA devices detected" << endl;
-		return 2;
-	}
 	cout << "D               Name  CC SM GMEM(MB) SMEM(KB) CMEM(KB) MAPHOST ECC TIMEOUT MODE" << endl;
-	vector<CUdevice> devices(num_devices);
-	vector<int> can_map_host_memory(num_devices);
+	vector<CUdevice> devices;
+	devices.reserve(num_devices);
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
 		// Get a device handle from an ordinal.
 		CUdevice device;
 		checkCudaErrors(cuDeviceGet(&device, dev));
 
+		// Filter devices with compute capability 1.1 or greater, which is required by cuMemHostGetDevicePointer and cuStreamAddCallback.
+		int major;
+		int minor;
+		checkCudaErrors(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
+		checkCudaErrors(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
+		if (major == 1 && minor == 0) continue;
+
+		// Save the device handle.
+		devices.push_back(device);
+
 		// Get and print device attributes.
 		char name[256];
 		size_t totalGlobalMem;
-		int major;
-		int minor;
 		int multiProcessorCount;
 		int sharedMemPerBlock;
 		int totalConstMem;
@@ -187,8 +210,6 @@ int main(int argc, char* argv[])
 		int computeMode;
 		checkCudaErrors(cuDeviceGetName(name, sizeof(name), device));
 		checkCudaErrors(cuDeviceTotalMem(&totalGlobalMem, device));
-		checkCudaErrors(cuDeviceGetAttribute(&major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, device));
-		checkCudaErrors(cuDeviceGetAttribute(&minor, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MINOR, device));
 		checkCudaErrors(cuDeviceGetAttribute(&multiProcessorCount, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, device));
 		checkCudaErrors(cuDeviceGetAttribute(&sharedMemPerBlock, CU_DEVICE_ATTRIBUTE_MAX_SHARED_MEMORY_PER_BLOCK, device));
 		checkCudaErrors(cuDeviceGetAttribute(&totalConstMem, CU_DEVICE_ATTRIBUTE_TOTAL_CONSTANT_MEMORY, device));
@@ -197,16 +218,17 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuDeviceGetAttribute(&kernelExecTimeoutEnabled, CU_DEVICE_ATTRIBUTE_KERNEL_EXEC_TIMEOUT, device));
 		checkCudaErrors(cuDeviceGetAttribute(&computeMode, CU_DEVICE_ATTRIBUTE_COMPUTE_MODE, device));
 		cout << dev << setw(19) << name << setw(2) << major << '.' << minor << setw(3) << multiProcessorCount << setw(9) << totalGlobalMem / 1048576 << setw(9) << sharedMemPerBlock / 1024 << setw(9) << totalConstMem / 1024 << setw(8) << canMapHostMemory << setw(4) << ECCEnabled << setw(8) << kernelExecTimeoutEnabled << setw(5) << computeMode << endl;
-
-		// Save the device handle.
-		devices[dev] = device;
-
-		// Save the device attribute of host memory mapping capability.
-		can_map_host_memory[dev] = canMapHostMemory;
+	}
+	num_devices = devices.size();
+	if (!num_devices)
+	{
+		cerr << "No CUDA devices with compute capability 1.1 or greater detected" << endl;
+		return 2;
 	}
 
-	cout << "Compiling modules for " << num_devices << " devices" << endl;
-	std::ifstream ifs(getenv("idock_fatbin"), ios::binary);
+	const auto fatbin = getenv("idock_fatbin");
+	cout << "Compiling module " << fatbin << " for " << num_devices << " devices" << endl;
+	std::ifstream ifs(fatbin, ios::binary);
 	auto image = vector<char>((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	vector<CUcontext> contexts(num_devices);
 	vector<CUstream> streams(num_devices);
@@ -225,7 +247,7 @@ int main(int argc, char* argv[])
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
 		// Create a context for the current device.
-		checkCudaErrors(cuCtxCreate(&contexts[dev], CU_CTX_SCHED_AUTO/*CU_CTX_SCHED_YIELD*/ | (can_map_host_memory[dev] ? CU_CTX_MAP_HOST : 0), devices[dev]));
+		checkCudaErrors(cuCtxCreate(&contexts[dev], CU_CTX_SCHED_AUTO/*CU_CTX_SCHED_YIELD*/ | CU_CTX_MAP_HOST, devices[dev]));
 //		checkCudaErrors(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 //		checkCudaErrors(cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE));
 
@@ -330,15 +352,8 @@ int main(int argc, char* argv[])
 		xst[dev].reserve(sf.n);
 
 		// Allocate ligh, ligd, slnd and cnfh.
-		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems[dev], can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
-		if (can_map_host_memory[dev])
-		{
-			checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
-		}
-		else
-		{
-			checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * lig_elems[dev]));
-		}
+		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems[dev], CU_MEMHOSTALLOC_DEVICEMAP));
+		checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
 		checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems[dev] * num_mc_tasks));
 		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, 0));
 
@@ -365,7 +380,7 @@ int main(int argc, char* argv[])
 	cnt.init(num_trees);
 	for (size_t i = 0; i < num_trees; ++i)
 	{
-		ioh.post([&,i]()
+		io.post([&,i]()
 		{
 			f[i].train(5, f.u01_s);
 			cnt.increment();
@@ -374,10 +389,6 @@ int main(int argc, char* argv[])
 	cnt.wait();
 	f.clear();
 
-	cout << "Creating an io service pool of " << num_devices << " worker threads for device" << endl;
-	io_service_pool iod(num_devices);
-	safe_function safe_print;
-
 	// Perform docking for each ligand in the input folder.
 	log_engine log;
 	cout.setf(ios::fixed, ios::floatfield);
@@ -385,7 +396,7 @@ int main(int argc, char* argv[])
 	cout << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
-		// Parse the ligand. Don't declare it const as it will be moved to the io service pool for device.
+		// Parse the ligand. Don't declare it const as it will be moved to the callback data wrapper.
 		ligand lig(dir_iter->path());
 
 		// Find atom types that are presented in the current ligand but not presented in the grid maps.
@@ -410,7 +421,7 @@ int main(int argc, char* argv[])
 			cnt.init(rec.num_probes[2]);
 			for (size_t z = 0; z < rec.num_probes[2]; ++z)
 			{
-				ioh.post([&,z]()
+				io.post([&,z]()
 				{
 					rec.populate(sf, xs, z);
 					cnt.increment();
@@ -422,130 +433,135 @@ int main(int argc, char* argv[])
 		// Wait until a device is ready for execution.
 		const int dev = idle.safe_pop_back();
 
-		// Move the ligand from main thread to the io service pool for device.
-		iod.post(bind<void>([&,dev](ligand& lig)
+		// Push the context of the chosen device.
+		checkCudaErrors(cuCtxPushCurrent(contexts[dev]));
+
+		// Find atom types that are presented in the current ligand but are not yet copied to device memory.
+		xs.clear();
+		for (const atom& a : lig.atoms)
 		{
-			// Push the context of the chosen device.
-			checkCudaErrors(cuCtxPushCurrent(contexts[dev]));
-
-			// Find atom types that are presented in the current ligand but are not yet copied to device memory.
-			vector<size_t> xs;
-			for (const atom& a : lig.atoms)
+			const size_t t = a.xs;
+			if (find(xst[dev].cbegin(), xst[dev].cend(), t) == xst[dev].cend())
 			{
-				const size_t t = a.xs;
-				if (find(xst[dev].cbegin(), xst[dev].cend(), t) == xst[dev].cend())
-				{
-					xst[dev].push_back(t);
-					xs.push_back(t);
-				}
+				xst[dev].push_back(t);
+				xs.push_back(t);
 			}
+		}
 
-			// Copy grid maps from host memory to device memory if necessary.
-			if (xs.size())
+		// Copy grid maps from host memory to device memory if necessary.
+		if (xs.size())
+		{
+			const size_t map_bytes = sizeof(float) * rec.num_probes_product;
+			for (const auto t : xs)
 			{
-				const size_t map_bytes = sizeof(float) * rec.num_probes_product;
-				for (const auto t : xs)
-				{
-					CUdeviceptr mapd;
-					checkCudaErrors(cuMemAlloc(&mapd, map_bytes));
-					checkCudaErrors(cuMemcpyHtoD(mapd, rec.maps[t].data(), map_bytes));
-					checkCudaErrors(cuMemcpyHtoD(mpsv[dev] + sizeof(mapd) * t, &mapd, sizeof(mapd)));
-				}
+				CUdeviceptr mapd;
+				checkCudaErrors(cuMemAlloc(&mapd, map_bytes));
+				checkCudaErrors(cuMemcpyHtoD(mapd, rec.maps[t].data(), map_bytes));
+				checkCudaErrors(cuMemcpyHtoD(mpsv[dev] + sizeof(mapd) * t, &mapd, sizeof(mapd)));
 			}
+		}
 
-			// Reallocate ligh and ligd should the current ligand elements exceed the default size.
-			const size_t this_lig_elems = lig.get_lig_elems();
-			if (this_lig_elems > lig_elems[dev])
+		// Reallocate ligh and ligd should the current ligand elements exceed the default size.
+		const size_t this_lig_elems = lig.get_lig_elems();
+		if (this_lig_elems > lig_elems[dev])
+		{
+			checkCudaErrors(cuMemFreeHost(ligh[dev]));
+			lig_elems[dev] = this_lig_elems;
+			checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems[dev], CU_MEMHOSTALLOC_DEVICEMAP));
+			checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
+			checkCudaErrors(cuMemcpyHtoD(ligv[dev], &ligd[dev], sizeof(ligv[dev])));
+		}
+
+		// Encode the current ligand.
+		lig.encode(ligh[dev]);
+
+		// Compute the number of shared memory bytes.
+		const size_t lig_bytes = sizeof(int) * lig_elems[dev];
+
+		// Reallocate slnd should the current solution elements exceed the default size.
+		const size_t this_sln_elems = lig.get_sln_elems();
+		if (this_sln_elems > sln_elems[dev])
+		{
+			checkCudaErrors(cuMemFree(slnd[dev]));
+			sln_elems[dev] = this_sln_elems;
+			checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems[dev] * num_mc_tasks));
+			checkCudaErrors(cuMemcpyHtoD(slnv[dev], &slnd[dev], sizeof(slnv[dev])));
+		}
+
+		// Clear the solution buffer.
+		checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems[dev] * num_mc_tasks, streams[dev]));
+
+		// Launch kernel.
+		void* params[] = { &lig.nv, &lig.nf, &lig.na, &lig.np };
+		checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, streams[dev], params, NULL));
+
+		// Reallocate cnfh should the current conformation elements exceed the default size.
+		const size_t this_cnf_elems = lig.get_cnf_elems();
+		if (this_cnf_elems > cnf_elems[dev])
+		{
+			checkCudaErrors(cuMemFreeHost(cnfh[dev]));
+			cnf_elems[dev] = this_cnf_elems;
+			checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, 0));
+		}
+
+		// Copy conformations from device memory to host memory.
+		checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, streams[dev]));
+
+		// Add a callback to the compute stream.
+		checkCudaErrors(cuStreamAddCallback(streams[dev], []CUDA_CB (CUstream stream, CUresult error, void* data)
+		{
+			checkCudaErrors(error);
+			const shared_ptr<callback_data<int>> cbd(reinterpret_cast<callback_data<int>*>(data));
+			cbd->io.post([=]()
 			{
-				if (!can_map_host_memory[dev])
+				const auto& output_folder_path = cbd->output_folder_path;
+				const auto  max_conformations = cbd->max_conformations;
+				const auto  num_mc_tasks = cbd->num_mc_tasks;
+				const auto& rec = cbd->rec;
+				const auto& f = cbd->f;
+				const auto  dev = cbd->dev;
+				const auto& cnfh = cbd->cnfh;
+				auto& lig = cbd->lig;
+				auto& safe_print = cbd->safe_print;
+				auto& log = cbd->log;
+				auto& idle = cbd->idle;
+
+				// Write conformations.
+				lig.write(cnfh[dev], output_folder_path, max_conformations, num_mc_tasks, rec, f);
+
+				// Output and save ligand stem and predicted affinities.
+				safe_print([&]()
 				{
-					checkCudaErrors(cuMemFree(ligd[dev]));
-				}
-				checkCudaErrors(cuMemFreeHost(ligh[dev]));
-				lig_elems[dev] = this_lig_elems;
-				checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems[dev], can_map_host_memory[dev] ? CU_MEMHOSTALLOC_DEVICEMAP : 0));
-				if (can_map_host_memory[dev])
-				{
-					checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
-				}
-				else
-				{
-					checkCudaErrors(cuMemAlloc(&ligd[dev], sizeof(int) * lig_elems[dev]));
-				}
-				checkCudaErrors(cuMemcpyHtoD(ligv[dev], &ligd[dev], sizeof(ligv[dev])));
-			}
-
-			// Encode the current ligand.
-			lig.encode(ligh[dev]);
-
-			// Copy ligand from host memory to device memory if necessary.
-			const size_t lig_bytes = sizeof(int) * lig_elems[dev];
-			if (!can_map_host_memory[dev])
-			{
-				checkCudaErrors(cuMemcpyHtoDAsync(ligd[dev], ligh[dev], lig_bytes, streams[dev]));
-			}
-
-			// Reallocate slnd should the current solution elements exceed the default size.
-			const size_t this_sln_elems = lig.get_sln_elems();
-			if (this_sln_elems > sln_elems[dev])
-			{
-				checkCudaErrors(cuMemFree(slnd[dev]));
-				sln_elems[dev] = this_sln_elems;
-				checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems[dev] * num_mc_tasks));
-				checkCudaErrors(cuMemcpyHtoD(slnv[dev], &slnd[dev], sizeof(slnv[dev])));
-			}
-
-			// Clear the solution buffer.
-			checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems[dev] * num_mc_tasks, streams[dev]));
-
-			// Launch kernel.
-			void* params[] = { &lig.nv, &lig.nf, &lig.na, &lig.np };
-			checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, streams[dev], params, NULL));
-
-			// Reallocate cnfh should the current conformation elements exceed the default size.
-			const size_t this_cnf_elems = lig.get_cnf_elems();
-			if (this_cnf_elems > cnf_elems[dev])
-			{
-				checkCudaErrors(cuMemFreeHost(cnfh[dev]));
-				cnf_elems[dev] = this_cnf_elems;
-				checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, 0));
-			}
-
-			// Copy conformations from device memory to host memory.
-			checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, streams[dev]));
-
-			// Synchronize.
-			checkCudaErrors(cuStreamSynchronize(streams[dev]));
-
-			// Write conformations.
-			lig.write(cnfh[dev], output_folder_path, max_conformations, num_mc_tasks, rec, f);
-
-			// Output and save ligand stem and predicted affinities.
-			safe_print([&]()
-			{
-				string stem = lig.filename.stem().string();
-				cout << setw(8) << log.size() + 1 << setw(14) << stem << setw(2) << dev << ' ';
-				for_each(lig.affinities.cbegin(), lig.affinities.cbegin() + min<size_t>(lig.affinities.size(), 9), [](const float a)
-				{
-					cout << setw(6) << a;
+					string stem = lig.filename.stem().string();
+					cout << setw(8) << log.size() + 1 << setw(14) << stem << setw(2) << dev << ' ';
+					for_each(lig.affinities.cbegin(), lig.affinities.cbegin() + min<size_t>(lig.affinities.size(), 9), [](const float a)
+					{
+						cout << setw(6) << a;
+					});
+					cout << endl;
+					log.push_back(new log_record(move(stem), move(lig.affinities)));
 				});
-				cout << endl;
-				log.push_back(new log_record(move(stem), move(lig.affinities)));
+
+				// Signal the main thread to post another task.
+				idle.safe_push_back(dev);
 			});
+		}, new callback_data<int>(io, output_folder_path, max_conformations, num_mc_tasks, rec, f, dev, cnfh, move(lig), safe_print, log, idle), 0));
 
-			// Pop the context after use.
-			checkCudaErrors(cuCtxPopCurrent(NULL));
-
-			// Signal the main thread to post another task.
-			idle.safe_push_back(dev);
-		}, move(lig)));
+		// Pop the context after use.
+		checkCudaErrors(cuCtxPopCurrent(NULL));
 	}
 
-	// Wait until the io service pool for host has finished all its tasks.
-	ioh.wait();
+	// Synchronize contexts.
+	for (auto& context : contexts)
+	{
+		checkCudaErrors(cuCtxPushCurrent(context));
+		checkCudaErrors(cuCtxSynchronize());
+		checkCudaErrors(cuCtxPopCurrent(NULL));
+	}
 
-	// Wait until the io service pool for device has finished all its tasks.
-	iod.wait();
+	// Wait until the io service pool has finished all its tasks.
+	io.wait();
+	assert(idle.size() == num_devices);
 
 	// Destroy contexts.
 	for (auto& context : contexts)
