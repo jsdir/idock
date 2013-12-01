@@ -51,7 +51,7 @@ public:
 	void encode(int* const p) const;
 
 	/// Writes conformations in PDBQT format to file.
-	void write(const float* ex, const path& output_ligand_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f);
+	void write(const float* ex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f);
 
 	/// Gets the number of elements of the current ligand.
 	size_t get_lig_elems() const;
