@@ -13,7 +13,7 @@ obj/%.o: src/%.cpp
 	$(CC) -o $@ $< -c -I${BOOST_ROOT}
 
 bin/%.fatbin: src/%.cu
-	$(NVCC) -o $@ $< -fatbin -arch=compute_11
+	$(NVCC) -o $@ $< -fatbin -gencode arch=compute_11,code=compute_11
 
 clean:
 	rm -f bin/idock bin/idock.fatbin obj/*.o
