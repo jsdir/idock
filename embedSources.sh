@@ -1,4 +1,4 @@
-echo "static const char* sources[] ="
+echo "static const char* images[] ="
 echo "{"
 for f; do
 	echo "\"\\"
