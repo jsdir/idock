@@ -28,6 +28,12 @@ inline bool is_hydrophobic(const size_t t)
 	return t ==  0 || t == 10 || t == 11 || t == 12 || t == 13;
 }
 
+/// Returns true if the two XScore atom types are both hydrophobic.
+inline bool is_hydrophobic(const size_t t1, const size_t t2)
+{
+	return is_hydrophobic(t1) && is_hydrophobic(t2);
+}
+
 /// Returns true if the XScore atom type is a hydrogen bond donor.
 inline bool is_hbdonor(const size_t t)
 {
@@ -55,12 +61,22 @@ scoring_function::scoring_function() : e(ne), d(ne), rs(nr)
 	}
 }
 
+void scoring_function::score(float* const x, const size_t t1, const size_t t2, const float r2) const
+{
+	const float d = sqrt(r2) - (vdw[t1] + vdw[t2]);
+	x[0] += exp(-4.0f * d * d);
+	x[1] += exp(-0.25f * (d - 3.0f) * (d - 3.0f));
+	x[2] += d < 0.0f ? d * d : 0.0f;
+	x[3] += is_hydrophobic(t1, t2) ? (d >= 1.5f ? 0.0f : (d <= 0.5f ? 1.0f : 1.5f - d)) : 0.0f;
+	x[4] += is_hbond(t1, t2) ? (d >= 0.0f ? 0.0f : (d <= -0.7f ? 1.0f : d * -1.4285714285714286f)) : 0.0f;
+}
+
 void scoring_function::precalculate(const size_t t1, const size_t t2)
 {
 	assert(t1 <= t2);
 	const size_t offset = nr * ((t2*(t2+1)>>1) + t1);
 	const float s = vdw[t1] + vdw[t2];
-	const bool hydrophobic = is_hydrophobic(t1) && is_hydrophobic(t2);
+	const bool hydrophobic = is_hydrophobic(t1, t2);
 	const bool hbond = is_hbond(t1, t2);
 
 	// Calculate the value of scoring function evaluated at (t1, t2, r).

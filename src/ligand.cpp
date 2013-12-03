@@ -333,7 +333,7 @@ public:
 	vector<array<float, 3>> c; ///< Heavy atom coordinates.
 };
 
-void ligand::write(const float* ex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f)
+void ligand::write(const float* ex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf)
 {
 	// Sort solutions in ascending order of e.
 	vector<size_t> rank(num_mc_tasks);
@@ -409,12 +409,19 @@ void ligand::write(const float* ex, const path& output_folder_path, const size_t
 		for (size_t i = 0; i < na; ++i)
 		{
 			const atom& la = atoms[i];
-			if (la.rf_unsupported()) continue;
 			for (const atom& ra : rec.atoms)
 			{
-				if (ra.rf_unsupported()) continue;
-				if (distance_sqr(s.c[i], ra.coord) >= 144) continue;
-				++x[la.rf * 4 + ra.rf];
+				const float ds = distance_sqr(s.c[i], ra.coord);
+				if (ds >= 144) continue; // RF-Score cutoff 12A
+				if (!la.rf_unsupported() && !ra.rf_unsupported())
+				{
+					++x[(la.rf << 2) + ra.rf];
+				}
+				if (ds >= 64) continue; // Vina score cutoff 8A
+				if (!la.xs_unsupported() && !ra.xs_unsupported())
+				{
+					sf.score(x.data() + 36, la.xs, ra.xs, ds);
+				}
 			}
 		}
 		affinities.push_back(ex[r]);

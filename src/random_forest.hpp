@@ -28,7 +28,7 @@ public:
 class tree : public vector<node>
 {
 public:
-	static const size_t nv = 36; ///< Number of variables
+	static const size_t nv = 41; ///< Number of variables
 
 	/// Train an empty tree from bootstrap samples
 	void train(const size_t mtry, const function<float()> u01);
@@ -39,7 +39,7 @@ public:
 	/// Clear node samples to save memory
 	void clear();
 private:
-	static const size_t ns = 2897; ///< Number of training samples
+	static const size_t ns = 2958; ///< Number of training samples
 	static const array<array<float, nv>, ns> x;
 	static const array<float, ns> y;
 };

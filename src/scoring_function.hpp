@@ -20,6 +20,9 @@ public:
 	/// Constructs an empty scoring function.
 	scoring_function();
 
+	/// Return the scoring function evaluated at (t1, t2, r).
+	void score(float* const x, const size_t t1, const size_t t2, const float r2) const;
+
 	/// Precalculates the scoring function values of sample points for the type combination of t1 and t2.
 	void precalculate(const size_t t1, const size_t t2);
 
