@@ -35,7 +35,7 @@ public:
 
 int main(int argc, char* argv[])
 {
-	path receptor_path, input_folder_path, output_folder_path, log_path;
+	path module_path, receptor_path, input_folder_path, output_folder_path, log_path;
 	array<float, 3> center, size;
 	size_t seed, num_threads, num_trees, num_mc_tasks, num_bfgs_iterations, max_conformations;
 	float granularity;
@@ -58,6 +58,7 @@ int main(int argc, char* argv[])
 		using namespace boost::program_options;
 		options_description input_options("input (required)");
 		input_options.add_options()
+			("module", value<path>(&module_path)->required(), "path to idock.fatbin")
 			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
 			("input_folder", value<path>(&input_folder_path)->required(), "folder of ligands in PDBQT format")
 			("center_x", value<float>(&center[0])->required(), "x coordinate of the search space center")
@@ -115,6 +116,13 @@ int main(int argc, char* argv[])
 
 		// Notify the user of parsing errors, if any.
 		vm.notify();
+
+		// Validate module.
+		if (!is_regular_file(module_path) || module_path.extension() != ".fatbin")
+		{
+			cerr << "Module " << module_path << " does not exist or is not a fatbin file" << endl;
+			return 1;
+		}
 
 		// Validate receptor.
 		if (!is_regular_file(receptor_path))
@@ -227,9 +235,8 @@ int main(int argc, char* argv[])
 		return 2;
 	}
 
-	const auto fatbin = getenv("idock_fatbin");
-	cout << "Compiling module " << fatbin << " for " << num_devices << " devices" << endl;
-	std::ifstream ifs(fatbin, ios::binary);
+	cout << "Compiling module " << module_path << " for " << num_devices << " devices" << endl;
+	boost::filesystem::ifstream ifs(module_path, ios::binary);
 	auto image = vector<char>((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	vector<CUcontext> contexts(num_devices);
 	vector<CUstream> streams(num_devices);
