@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
 
 	cout << "Compiling module " << module_path << " for " << num_devices << " devices" << endl;
 	boost::filesystem::ifstream ifs(module_path, ios::binary);
-	auto image = vector<char>((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
+	vector<char> image((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	vector<CUcontext> contexts(num_devices);
 	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
