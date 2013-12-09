@@ -516,7 +516,7 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, streams[dev]));
 
 		// Add a callback to the compute stream.
-		checkCudaErrors(cuStreamAddCallback(streams[dev], []CUDA_CB (CUstream stream, CUresult error, void* data)
+		checkCudaErrors(cuStreamAddCallback(streams[dev], [](CUstream stream, CUresult error, void* data)
 		{
 			checkCudaErrors(error);
 			const shared_ptr<callback_data<int>> cbd(reinterpret_cast<callback_data<int>*>(data));
