@@ -17,7 +17,7 @@ template <typename T>
 class callback_data
 {
 public:
-	callback_data(io_service_pool& io, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, const vector<float*>& cnfh, ligand&& lig_, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), safe_print(safe_print), log(log), idle(idle) {}
+	callback_data(io_service_pool& io, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, const float* const cnfh, ligand&& lig_, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), safe_print(safe_print), log(log), idle(idle) {}
 	io_service_pool& io;
 	const path& output_folder_path;
 	const size_t max_conformations;
@@ -26,7 +26,7 @@ public:
 	const forest& f;
 	const scoring_function& sf;
 	const T dev;
-	const vector<float*>& cnfh;
+	const float* const cnfh;
 	ligand lig;
 	safe_function& safe_print;
 	log_engine& log;
@@ -529,14 +529,14 @@ int main(int argc, char* argv[])
 				const auto& f = cbd->f;
 				const auto& sf = cbd->sf;
 				const auto  dev = cbd->dev;
-				const auto& cnfh = cbd->cnfh;
+				const auto cnfh = cbd->cnfh;
 				auto& lig = cbd->lig;
 				auto& safe_print = cbd->safe_print;
 				auto& log = cbd->log;
 				auto& idle = cbd->idle;
 
 				// Write conformations.
-				lig.write(cnfh[dev], output_folder_path, max_conformations, num_mc_tasks, rec, f, sf);
+				lig.write(cnfh, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf);
 
 				// Output and save ligand stem and predicted affinities.
 				safe_print([&]()
@@ -554,7 +554,7 @@ int main(int argc, char* argv[])
 				// Signal the main thread to post another task.
 				idle.safe_push_back(dev);
 			});
-		}, new callback_data<int>(io, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh, move(lig), safe_print, log, idle), 0));
+		}, new callback_data<int>(io, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh[dev], move(lig), safe_print, log, idle), 0));
 
 		// Pop the context after use.
 		checkCudaErrors(cuCtxPopCurrent(NULL));
