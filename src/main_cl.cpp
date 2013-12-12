@@ -18,7 +18,7 @@ template <typename T>
 class callback_data
 {
 public:
-	callback_data(io_service_pool& io, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, const float* const cnfh, ligand&& lig_, cl_command_queue queue, cl_mem slnd, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), queue(queue), slnd(slnd), safe_print(safe_print), log(log), idle(idle) {}
+	callback_data(io_service_pool& io, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, float* const cnfh, ligand&& lig_, cl_command_queue queue, cl_mem slnd, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), queue(queue), slnd(slnd), safe_print(safe_print), log(log), idle(idle) {}
 	io_service_pool& io;
 	const path& output_folder_path;
 	const size_t max_conformations;
@@ -27,7 +27,7 @@ public:
 	const forest& f;
 	const scoring_function& sf;
 	const T dev;
-	const float* const cnfh;
+	float* const cnfh;
 	ligand lig;
 	cl_command_queue queue;
 	cl_mem slnd;
@@ -240,7 +240,7 @@ int main(int argc, char* argv[])
 	boost::filesystem::ifstream ifs(module_path);
 	vector<char> source((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	const char* sources[] = { source.data() };
-	const size_t source_length = source.length();
+	const size_t source_length = source.size();
 	vector<cl_context> contexts(num_devices);
 	vector<cl_command_queue> queues(num_devices);
 	vector<cl_program> programs(num_devices);
@@ -401,7 +401,7 @@ int main(int argc, char* argv[])
 		{
 			checkOclErrors(clReleaseMemObject(ligd[dev]));
 			lig_elems[dev] = this_lig_elems;
-			ligd[dev] = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int) * lig_elems[dev], NULL, &error);
+			ligd[dev] = clCreateBuffer(contexts[dev], CL_MEM_READ_ONLY, sizeof(int) * lig_elems[dev], NULL, &error);
 			checkOclErrors(error);
 		}
 
@@ -410,7 +410,7 @@ int main(int argc, char* argv[])
 
 		// Encode the current ligand.
 		cl_event input_events[2];
-		float* ligh = (float*)clEnqueueMapBuffer(queues[dev], ligd[dev], CL_TRUE, CL_MAP_WRITE_INVALIDATE_REGION, 0, lig_bytes, 0, NULL, NULL, &error);
+		int* ligh = (int*)clEnqueueMapBuffer(queues[dev], ligd[dev], CL_TRUE, CL_MAP_WRITE_INVALIDATE_REGION, 0, lig_bytes, 0, NULL, NULL, &error);
 		checkOclErrors(error);
 		lig.encode(ligh);
 		checkOclErrors(clEnqueueUnmapMemObject(queues[dev], ligd[dev], ligh, 0, NULL, &input_events[0]));
@@ -421,7 +421,7 @@ int main(int argc, char* argv[])
 		{
 			checkOclErrors(clReleaseMemObject(slnd[dev]));
 			sln_elems[dev] = this_sln_elems;
-			slnd[dev] = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * sln_elems[dev] * num_mc_tasks, NULL, &error);
+			slnd[dev] = clCreateBuffer(contexts[dev], CL_MEM_READ_WRITE, sizeof(float) * sln_elems[dev] * num_mc_tasks, NULL, &error);
 			checkOclErrors(error);
 		}
 
@@ -445,10 +445,10 @@ int main(int argc, char* argv[])
 		checkOclErrors(clSetKernelArg(kernels[dev], 2, lig_bytes, NULL));
 		checkOclErrors(clSetKernelArg(kernels[dev], 3, sizeof(cl_mem), &sfed[dev]));
 		checkOclErrors(clSetKernelArg(kernels[dev], 4, sizeof(cl_mem), &sfdd[dev]));
-		checkOclErrors(clSetKernelArg(kernel, 2, sizeof(int), &nv));
-		checkOclErrors(clSetKernelArg(kernel, 3, sizeof(int), &nf));
-		checkOclErrors(clSetKernelArg(kernel, 4, sizeof(int), &na));
-		checkOclErrors(clSetKernelArg(kernel, 5, sizeof(int), &np));
+		checkOclErrors(clSetKernelArg(kernels[dev], 5, sizeof(int), &lig.nv));
+		checkOclErrors(clSetKernelArg(kernels[dev], 6, sizeof(int), &lig.nf));
+		checkOclErrors(clSetKernelArg(kernels[dev], 7, sizeof(int), &lig.na));
+		checkOclErrors(clSetKernelArg(kernels[dev], 8, sizeof(int), &lig.np));
 		const size_t gws = num_mc_tasks;
 		const size_t lws = 32;
 		cl_event kernel_event;
@@ -512,10 +512,7 @@ int main(int argc, char* argv[])
 				// Signal the main thread to post another task.
 				idle.safe_push_back(dev);
 			});
-		}, new callback_data<int>(io, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh[dev], move(lig), queues[dev], slnd[dev], safe_print, log, idle)));
-
-		// Pop the context after use.
-		checkCudaErrors(cuCtxPopCurrent(NULL));
+		}, new callback_data<int>(io, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh, move(lig), queues[dev], slnd[dev], safe_print, log, idle)));
 	}
 
 	// Synchronize queues.
