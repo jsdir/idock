@@ -2,7 +2,6 @@
 // Have at least 1000 WGs per NDRange to optimally utilize Phi.
 // Use Array Notation with int32 Indices
 
-/*
 inline
 bool evaluate(__local float* e, __local float* g, __local float* a, __local float* q, __local float* c, __local float* d, __local float* f, __local float* t, __local const float* x, const int nf, const int na, const int np, const float eub, __local const int* shared)
 {
@@ -314,7 +313,7 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 	g[i0 += gds] = t2;
 	return true;
 }
-*/
+
 __kernel //__attribute__((reqd_work_group_size(X, Y, Z))) // X <= 16 (i.e. half warp or quarter wavefront) informs the compiler to optimize out barrier. Compile-time work group size helps the compiler to optimize register allocation.
 void monte_carlo(__global float* const restrict s0e, __global const int* const restrict lig, const int nv, const int nf, const int na, const int np, __local int* shared, __constant const float* c_sf_e, __constant const float* c_sf_d, __constant int c_sf_ns, __constant float3 c_corner0, __constant float3 c_corner1, __constant int3 c_num_probes, __constant float c_granularity_inverse, __constant float* c_maps[15], __constant int c_ng, __constant unsigned long c_seed)
 {
