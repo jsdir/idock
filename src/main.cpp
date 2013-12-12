@@ -480,11 +480,11 @@ int main(int argc, char* argv[])
 			checkCudaErrors(cuMemcpyHtoD(ligv[dev], &ligd[dev], sizeof(ligv[dev])));
 		}
 
-		// Encode the current ligand.
-		lig.encode(ligh[dev]);
-
 		// Compute the number of shared memory bytes.
 		const size_t lig_bytes = sizeof(int) * lig_elems[dev];
+
+		// Encode the current ligand.
+		lig.encode(ligh[dev]);
 
 		// Reallocate slnd should the current solution elements exceed the default size.
 		const size_t this_sln_elems = lig.get_sln_elems();
