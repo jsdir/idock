@@ -18,8 +18,9 @@ template <typename T>
 class callback_data
 {
 public:
-	callback_data(io_service_pool& io, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, float* const cnfh, ligand&& lig_, cl_command_queue queue, cl_mem slnd, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), queue(queue), slnd(slnd), safe_print(safe_print), log(log), idle(idle) {}
+	callback_data(io_service_pool& io, cl_event cbex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, float* const cnfh, ligand&& lig_, cl_command_queue queue, cl_mem slnd, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), cbex(cbex), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), queue(queue), slnd(slnd), safe_print(safe_print), log(log), idle(idle) {}
 	io_service_pool& io;
+	cl_event cbex;
 	const path& output_folder_path;
 	const size_t max_conformations;
 	const size_t num_mc_tasks;
@@ -293,8 +294,6 @@ int main(int argc, char* argv[])
 		checkOclErrors(error);
 		sfdd[dev] = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sfd_bytes, sf.d.data(), &error);
 		checkOclErrors(error);
-//		checkOclErrors(clEnqueueWriteBuffer(queue, sfed, CL_TRUE, 0, sfe_bytes, sf.e.data(), 0, NULL, NULL));
-//		checkOclErrors(clEnqueueWriteBuffer(queue, sfdd, CL_TRUE, 0, sfd_bytes, sf.d.data(), 0, NULL, NULL));
 
 		// Reserve space for xst.
 		xst[dev].reserve(sf.n);
@@ -328,6 +327,7 @@ int main(int argc, char* argv[])
 
 	// Perform docking for each ligand in the input folder.
 	log_engine log;
+	vector<cl_event> cbex(num_devices);
 	cout.setf(ios::fixed, ios::floatfield);
 	cout << "Executing " << num_mc_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl;
 	cout << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
@@ -468,6 +468,11 @@ int main(int argc, char* argv[])
 		float* cnfh = (float*)clEnqueueMapBuffer(queues[dev], slnd[dev], CL_FALSE, CL_MAP_READ, 0, sizeof(float) * cnf_elems[dev] * num_mc_tasks, 1, &kernel_event, &output_event, &error);
 		checkOclErrors(error);
 
+		// Create callback events.
+		if (cbex[dev]) checkOclErrors(clReleaseEvent(cbex[dev]));
+		cbex[dev] = clCreateUserEvent(contexts[dev], &error);
+		checkOclErrors(error);
+
 		// Add a callback to the output event.
 		checkOclErrors(clSetEventCallback(output_event, CL_COMPLETE, [](cl_event event, cl_int command_exec_status, void* data)
 		{
@@ -512,13 +517,15 @@ int main(int argc, char* argv[])
 				// Signal the main thread to post another task.
 				idle.safe_push_back(dev);
 			});
-		}, new callback_data<int>(io, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh, move(lig), queues[dev], slnd[dev], safe_print, log, idle)));
+			checkOclErrors(clSetUserEventStatus(cbd->cbex, CL_COMPLETE));
+		}, new callback_data<int>(io, cbex[dev], output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh, move(lig), queues[dev], slnd[dev], safe_print, log, idle)));
 	}
 
-	// Synchronize queues.
-	for (auto& queue : queues)
+	// Synchronize queues and callback events.
+	for (int dev = 0; dev < num_devices; ++dev)
 	{
-		checkOclErrors(clFinish(queue));
+		checkOclErrors(clFinish(queues[dev]));
+		if (cbex[dev]) checkOclErrors(clWaitForEvents(1, &cbex[dev]));
 	}
 
 	// Wait until the io service pool has finished all its tasks.
@@ -533,6 +540,7 @@ int main(int argc, char* argv[])
 			const cl_mem d_m = d_maps[t];
 			if (d_m) checkOclErrors(clReleaseMemObject(d_m));
 		}*/
+		if (cbex[dev]) checkOclErrors(clReleaseEvent(cbex[dev]));
 		checkOclErrors(clReleaseMemObject(sfdd[dev]));
 		checkOclErrors(clReleaseMemObject(sfed[dev]));
 		checkOclErrors(clReleaseMemObject(slnd[dev]));
