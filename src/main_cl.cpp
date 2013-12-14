@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
 		cout << dev << setw(19) << name << setw(2) << version << setw(3) << max_compute_units << setw(9) << global_mem_size / 1048576 << setw(9) << local_mem_size / 1024 << setw(9) << max_constant_buffer_size / 1024 << setw(11) << host_unified_memory[dev] << setw(9) << local_mem_types[local_mem_type] << setw(4) << error_correction_support << endl;
 	}
 
-	cout << "Compiling module " << module_path << " for " << num_devices << " devices" << endl;
+	cout << "Create contexts and compiling module " << module_path << " for " << num_devices << " devices" << endl;
 	boost::filesystem::ifstream ifs(module_path);
 	vector<char> source((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	const char* sources[] = { source.data() };
