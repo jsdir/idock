@@ -22,10 +22,10 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 	__local const float* const xy1 = &xy0[nf];
 	__local const float* const xy2 = &xy1[nf];
 	__local const int* const brs = (__local const int*)&xy2[nf];
-	__local const float* const cr0 = (__local const float*)&brs[nf - 1];
-	__local const float* const cr1 = &cr0[na];
-	__local const float* const cr2 = &cr1[na];
-	__local const int* const xst = (__local const int*)&cr2[na];
+	__local const float* const co0 = (__local const float*)&brs[nf - 1];
+	__local const float* const co1 = &co0[na];
+	__local const float* const co2 = &co1[na];
+	__local const int* const xst = (__local const int*)&co2[na];
 	__local const int* const ip0 = &xst[na];
 	__local const int* const ip1 = &ip0[np];
 	__local const int* const ipp = &ip1[np];
@@ -97,9 +97,9 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 			else
 			{
 				// Calculate coordinate from transformation matrix and offset.
-				v0 = cr0[i];
-				v1 = cr1[i];
-				v2 = cr2[i];
+				v0 = co0[i];
+				v1 = co1[i];
+				v2 = co2[i];
 				c0 = y0 + m0 * v0 + m1 * v1 + m2 * v2;
 				c1 = y1 + m3 * v0 + m4 * v1 + m5 * v2;
 				c2 = y2 + m6 * v0 + m7 * v1 + m8 * v2;
