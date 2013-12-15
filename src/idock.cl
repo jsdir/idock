@@ -1,3 +1,109 @@
+/*
+Copyright (c) 2011, David Thomas
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+	* Redistributions of source code must retain the above copyright notice,
+	this list of conditions and the following disclaimer.
+	* Redistributions in binary form must reproduce the above copyright
+	notice, this list of conditions and the following disclaimer in the
+	documentation and/or other materials provided with the distribution.
+	* Neither the name of Imperial College London nor the names of its
+	contributors may be used to endorse or promote products derived
+	from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+// Pre: a < M, b < M
+// Post: r = (a + b) mod M
+ulong AddMod64(ulong a, ulong b, ulong M)
+{
+	ulong v = a + b;
+	if (v >= M || v < a) v -= M;
+	return v;
+}
+
+// Pre: a < M, b < M
+// Post: r = (a * b) mod M
+ulong MulMod64(ulong a, ulong b, ulong M)
+{
+	ulong r = 0;
+	while (a)
+	{
+		if (a & 1) r = AddMod64(r, b, M);
+		b = AddMod64(b, b, M);
+		a = a >> 1;
+	}
+	return r;
+}
+
+// Pre: a < M, e >= 0
+// Post: r = (a ^ b) mod M
+// This takes at most ~64^2 modular additions, so probably about 2^15 or so instructions on
+// most architectures
+ulong PowMod64(ulong a, ulong e, ulong M)
+{
+	ulong sqr = a, acc = 1;
+	while (e)
+	{
+		if (e & 1) acc = MulMod64(acc, sqr, M);
+		sqr = MulMod64(sqr, sqr, M);
+		e = e >> 1;
+	}
+	return acc;
+}
+
+typedef struct { uint x; uint c; } mwc64x_state_t;
+
+enum { A = 4294883355U };
+enum { M = 18446383549859758079UL };
+enum { B = 4077358422479273989UL };
+
+void skip(mwc64x_state_t *s, ulong d)
+{
+	ulong m = PowMod64(A, d, M);
+	ulong x = MulMod64(s->x * (ulong)A + s->c, m, M);
+	s->x = x / A;
+	s->c = x % A;
+}
+
+void seed(mwc64x_state_t *s, ulong baseOffset, ulong perStreamOffset)
+{
+	ulong d = baseOffset + get_global_id(0) * perStreamOffset;
+	ulong m = PowMod64(A, d, M);
+	ulong x = MulMod64(B, m, M);
+	s->x = x / A;
+	s->c = x % A;
+}
+
+uint next(mwc64x_state_t *s)
+{
+	uint X = s->x;
+	uint C = s->c;
+	uint r = X ^ C;
+	uint Xn = A * X + C;
+	uint carry = Xn < C;
+	uint Cn = mad_hi(A, X, carry);
+	s->x = Xn;
+	s->c = Cn;
+	return r;
+}
+
 // Avoid using Shared Local Memory on the Intel Xeon Phi coprocessor.
 // Have at least 1000 WGs per NDRange to optimally utilize Phi.
 // Use Array Notation with int32 Indices
@@ -355,7 +461,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 	float sum, pg1, pga, pgc, alp, pg2, pr0, pr1, pr2, nrm, ang, sng, pq0, pq1, pq2, pq3, s1xq0, s1xq1, s1xq2, s1xq3, s2xq0, s2xq1, s2xq2, s2xq3, bpi;
 	float yhy, yps, ryp, pco, bpj, bmj, ppj;
 	int g, i, j, o0, o1, o2;
-//	curandState crs;
+	mwc64x_state_t rng;
 
 #ifdef CL_LOCAL
 	// Load ligand into local memory.
@@ -375,17 +481,17 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 #endif
 
 	// Randomize s0x.
-//	curand_init(c_seed, gid, 0, &crs);
-//	rd0 = curand_uniform(&crs);
+	seed(&rng, 0, 1e+4);
+	rd0 = next(&rng);
 	s0x[o0  = gid] = rd0 * c_corner1.x + (1 - rd0) * c_corner0.x;
-//	rd0 = curand_uniform(&crs);
+	rd0 = next(&rng);
 	s0x[o0 += gds] = rd0 * c_corner1.y + (1 - rd0) * c_corner0.y;
-//	rd0 = curand_uniform(&crs);
+	rd0 = next(&rng);
 	s0x[o0 += gds] = rd0 * c_corner1.z + (1 - rd0) * c_corner0.z;
-//	rd0 = curand_uniform(&crs);
-//	rd1 = curand_uniform(&crs);
-//	rd2 = curand_uniform(&crs);
-//	rd3 = curand_uniform(&crs);
+	rd0 = next(&rng);
+	rd1 = next(&rng);
+	rd2 = next(&rng);
+	rd3 = next(&rng);
 	rst = rsqrt(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
 	s0x[o0 += gds] = rd0 * rst;
 	s0x[o0 += gds] = rd1 * rst;
@@ -393,7 +499,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 	s0x[o0 += gds] = rd3 * rst;
 	for (i = 6; i < nv; ++i)
 	{
-//		s0x[o0 += gds] = curand_uniform(&crs);
+		s0x[o0 += gds] = next(&rng);
 	}
 /*
 	s0x[o0  = gid] =  49.799f;
@@ -415,11 +521,11 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 	{
 		// Mutate s0x into s1x
 		o0  = gid;
-//		s1x[o0] = s0x[o0] + curand_uniform(&crs);
+		s1x[o0] = s0x[o0] + next(&rng);
 		o0 += gds;
-//		s1x[o0] = s0x[o0] + curand_uniform(&crs);
+		s1x[o0] = s0x[o0] + next(&rng);
 		o0 += gds;
-//		s1x[o0] = s0x[o0] + curand_uniform(&crs);
+		s1x[o0] = s0x[o0] + next(&rng);
 //		for (i = 3; i < nv + 1; ++i)
 		for (i = 2 - nv; i < 0; ++i)
 		{
