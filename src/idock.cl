@@ -218,7 +218,7 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 
 			// TODO: move conditional expression out to bypass short circuiting.
 			// Penalize out-of-box case.
-			if (c0 < c_corner0.x || c_corner1.x <= c0 || c1 < c_corner0.y || c_corner1.y <= c1 || c2 < c_corner0.z || c_corner1.z <= c2)
+			if (c0 < cr0.x || cr1.x <= c0 || c1 < cr0.y || cr1.y <= c1 || c2 < cr0.z || cr1.z <= c2)
 			{
 				y += 10.0f;
 				d[i0] = 0.0f;
@@ -228,24 +228,24 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 			}
 
 			// Find the index of the current coordinate
-			k0 = (int)((c0 - c_corner0.x) * c_granularity_inverse);
-			k1 = (int)((c1 - c_corner0.y) * c_granularity_inverse);
-			k2 = (int)((c2 - c_corner0.z) * c_granularity_inverse);
-//			assert(k0 + 1 < c_num_probes.x);
-//			assert(k1 + 1 < c_num_probes.y);
-//			assert(k2 + 1 < c_num_probes.z);
-			k0 = c_num_probes.x * (c_num_probes.y * k2 + k1) + k0;
+			k0 = (int)((c0 - cr0.x) * gri);
+			k1 = (int)((c1 - cr0.y) * gri);
+			k2 = (int)((c2 - cr0.z) * gri);
+//			assert(k0 + 1 < npr.x);
+//			assert(k1 + 1 < npr.y);
+//			assert(k2 + 1 < npr.z);
+			k0 = npr.x * (npr.y * k2 + k1) + k0;
 
 			// Retrieve the grid map and lookup the value
-			map = c_maps[xst[i]];
+			map = mps[xst[i]];
 			e000 = map[k0];
 			e100 = map[k0 + 1];
-			e010 = map[k0 + c_num_probes.x];
-			e001 = map[k0 + c_num_probes.x * c_num_probes.y];
+			e010 = map[k0 + npr.x];
+			e001 = map[k0 + npr.x * npr.y];
 			y += e000;
-			d[i0] = (e100 - e000) * c_granularity_inverse;
-			d[i1] = (e010 - e000) * c_granularity_inverse;
-			d[i2] = (e001 - e000) * c_granularity_inverse;
+			d[i0] = (e100 - e000) * gri;
+			d[i1] = (e010 - e000) * gri;
+			d[i2] = (e001 - e000) * gri;
 		}
 		for (j = 0, z = nbr[k]; j < z; ++j)
 		{
@@ -308,9 +308,9 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 		vs = v0*v0 + v1*v1 + v2*v2;
 		if (vs < 64.0)
 		{
-			j = ipp[i] + (int)(c_sf_ns * vs);
-			y += c_sf_e[j];
-			dr = c_sf_d[j];
+			j = ipp[i] + (int)(sfs * vs);
+			y += sfe[j];
+			dr = sfd[j];
 			d0 = dr * v0;
 			d1 = dr * v1;
 			d2 = dr * v2;
@@ -421,7 +421,7 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 }
 
 __kernel //__attribute__((reqd_work_group_size(X, Y, Z))) // X <= 16 (i.e. half warp or quarter wavefront) informs the compiler to optimize out barrier. Compile-time work group size helps the compiler to optimize register allocation.
-void monte_carlo(__global float* const restrict s0e, __global const int* const restrict lig, const int nv, const int nf, const int na, const int np, __local int* shared, __constant const float* c_sf_e, __constant const float* c_sf_d, __constant int c_sf_ns, __constant float3 c_corner0, __constant float3 c_corner1, __constant int3 c_num_probes, __constant float c_granularity_inverse, __constant float* c_maps[15], __constant int c_ng, __constant unsigned long c_seed)
+void monte_carlo(__global float* const restrict s0e, __global const int* const restrict lig, const int nv, const int nf, const int na, const int np, __local int* shared, __constant const float* sfe, __constant const float* sfd, __constant int sfs, __constant float3 cr0, __constant float3 cr1, __constant int3 npr, __constant float gri, __constant float* mps[15], __constant int nbi, __constant unsigned long sed)
 {
 	const int gid = get_global_id(0);
 	const int gds = get_global_size(0);
@@ -483,11 +483,11 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 	// Randomize s0x.
 	seed(&rng, 0, 1e+4);
 	rd0 = next(&rng);
-	s0x[o0  = gid] = rd0 * c_corner1.x + (1 - rd0) * c_corner0.x;
+	s0x[o0  = gid] = rd0 * cr1.x + (1 - rd0) * cr0.x;
 	rd0 = next(&rng);
-	s0x[o0 += gds] = rd0 * c_corner1.y + (1 - rd0) * c_corner0.y;
+	s0x[o0 += gds] = rd0 * cr1.y + (1 - rd0) * cr0.y;
 	rd0 = next(&rng);
-	s0x[o0 += gds] = rd0 * c_corner1.z + (1 - rd0) * c_corner0.z;
+	s0x[o0 += gds] = rd0 * cr1.z + (1 - rd0) * cr0.z;
 	rd0 = next(&rng);
 	rd1 = next(&rng);
 	rd2 = next(&rng);
@@ -517,7 +517,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 //	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, shared);
 
 	// Repeat for a number of generations.
-	for (g = 0; g < c_ng; ++g)
+	for (g = 0; g < nbi; ++g)
 	{
 		// Mutate s0x into s1x
 		o0  = gid;
