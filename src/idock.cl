@@ -110,7 +110,7 @@ uint next(mwc64x_state_t *s)
 #define assert(arg)
 
 inline
-bool evaluate(__global float* e, __global float* g, __global float* a, __global float* q, __global float* c, __global float* d, __global float* f, __global float* t, __global const float* x, const int nf, const int na, const int np, const float eub, __local const int* shared, __global const float* sfe, __global const float* sfd, const int sfs, const float3 cr0, const float3 cr1, const int3 npr, const float gri, __global const float* const x00, __global const float* const x01, __global const float* const x02, __global const float* const x03, __global const float* const x04, __global const float* const x05, __global const float* const x06, __global const float* const x07, __global const float* const x08, __global const float* const x09, __global const float* const x10, __global const float* const x11, __global const float* const x12, __global const float* const x13, __global const float* const x14)
+bool evaluate(__global float* e, __global float* g, __global float* a, __global float* q, __global float* c, __global float* d, __global float* f, __global float* t, __global const float* x, const int nf, const int na, const int np, const float eub, __local const int* shared, __global const float* sfe, __global const float* sfd, const int sfs, const float3 cr0, const float3 cr1, const int3 npr, const float gri, __global const float* const mps[15])
 {
 	const int gid = get_global_id(0);
 	const int gds = get_global_size(0);
@@ -238,54 +238,7 @@ bool evaluate(__global float* e, __global float* g, __global float* a, __global 
 			k0 = npr.x * (npr.y * k2 + k1) + k0;
 
 			// Retrieve the grid map and lookup the value
-			switch (xst[i])
-			{
-				case  0:
-					map = x00;
-					break;
-				case  1:
-					map = x01;
-					break;
-				case  2:
-					map = x02;
-					break;
-				case  3:
-					map = x03;
-					break;
-				case  4:
-					map = x04;
-					break;
-				case  5:
-					map = x05;
-					break;
-				case  6:
-					map = x06;
-					break;
-				case  7:
-					map = x07;
-					break;
-				case  8:
-					map = x08;
-					break;
-				case  9:
-					map = x09;
-					break;
-				case 10:
-					map = x10;
-					break;
-				case 11:
-					map = x11;
-					break;
-				case 12:
-					map = x12;
-					break;
-				case 13:
-					map = x13;
-					break;
-				case 14:
-					map = x14;
-					break;
-			}
+			 map = mps[xst[i]];
 			e000 = map[k0];
 			e100 = map[k0 + 1];
 			e010 = map[k0 + npr.x];
@@ -509,6 +462,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 	float yhy, yps, ryp, pco, bpj, bmj, ppj;
 	int g, i, j, o0, o1, o2;
 	mwc64x_state_t rng;
+	__global const float* const mps[15] = { x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14 };
 
 #ifdef CL_LOCAL
 	// Load ligand into local memory.
@@ -561,7 +515,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 		s0x[o0 += gds] = 0.0f;
 	}
 */
-	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14);
+	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, mps);
 
 	// Repeat for a number of generations.
 	for (g = 0; g < nbi; ++g)
@@ -579,7 +533,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 			o0 += gds;
 			s1x[o0] = s0x[o0];
 		}
-		evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14);
+		evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, mps);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
@@ -682,7 +636,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 				// Evaluate x2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, nf, na, np, s1e[gid] + alp * pga, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14))
+				if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, nf, na, np, s1e[gid] + alp * pga, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, mps))
 				{
 					o0 = gid;
 					pg2 = bfp[o0] * s2g[o0];
