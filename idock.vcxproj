@@ -15,7 +15,6 @@
   </PropertyGroup>
   <ItemGroup>
     <ClInclude Include="src\atom.hpp" />
-    <ClInclude Include="src\cl_helper.h" />
     <ClInclude Include="src\cu_helper.h" />
     <ClInclude Include="src\io_service_pool.hpp" />
     <ClInclude Include="src\ligand.hpp" />
@@ -43,10 +42,10 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\idock.cu">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"%CUDA_PATH%\bin\nvcc" -arch=compute_11 -fatbin -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(OutDir)idock.fatbin $(ProjectDir)\src\idock.cu</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_11,code=compute_11 -fatbin -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(OutDir)idock.fatbin $(ProjectDir)\src\idock.cu</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">idock.fatbin</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">idock.fatbin</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"%CUDA_PATH%\bin\nvcc" -arch=compute_11 -fatbin -G -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(OutDir)idock.fatbin $(ProjectDir)\src\idock.cu</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_11,code=compute_11 -fatbin -G -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(OutDir)idock.fatbin $(ProjectDir)\src\idock.cu</Command>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />

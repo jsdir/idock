@@ -64,9 +64,6 @@
     <ClInclude Include="src\random_forest.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\cl_helper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\io_service_pool.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
