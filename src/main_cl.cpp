@@ -249,9 +249,7 @@ int main(int argc, char* argv[])
 	vector<vector<size_t>> xst(num_devices);
 	vector<cl_mem> sfed(num_devices);
 	vector<cl_mem> sfdd(num_devices);
-	vector<cl_mem> mpsv(num_devices);
-	vector<cl_mem> slnv(num_devices);
-	vector<cl_mem> ligv(num_devices);
+	vector<vector<cl_mem>> mpsd(num_devices, vector<cl_mem>(sf.n));
 	vector<cl_mem> ligd(num_devices);
 	vector<cl_mem> slnd(num_devices);
 	vector<size_t> lig_elems(num_devices, 2601);
@@ -388,10 +386,9 @@ int main(int argc, char* argv[])
 			const size_t map_bytes = sizeof(float) * rec.num_probes_product;
 			for (const auto t : xs)
 			{
-//				CUdeviceptr mapd;
-//				checkCudaErrors(cuMemAlloc(&mapd, map_bytes));
-//				checkCudaErrors(cuMemcpyHtoD(mapd, rec.maps[t].data(), map_bytes));
-//				checkCudaErrors(cuMemcpyHtoD(mpsv[dev] + sizeof(mapd) * t, &mapd, sizeof(mapd)));
+				mpsd[dev][t] = clCreateBuffer(contexts[dev], CL_MEM_READ_ONLY, map_bytes, NULL, &error);
+				checkOclErrors(error);
+				checkOclErrors(clEnqueueWriteBuffer(queues[dev], mpsd[dev][t], CL_TRUE, 0, map_bytes, rec.maps[t].data(), 0, NULL, NULL));
 			}
 		}
 
@@ -440,15 +437,25 @@ int main(int argc, char* argv[])
 		}
 
 		// Launch kernel.
-		checkOclErrors(clSetKernelArg(kernels[dev], 0, sizeof(cl_mem), &slnd[dev]));
-		checkOclErrors(clSetKernelArg(kernels[dev], 1, sizeof(cl_mem), &ligd[dev]));
-		checkOclErrors(clSetKernelArg(kernels[dev], 2, lig_bytes, NULL));
-		checkOclErrors(clSetKernelArg(kernels[dev], 3, sizeof(cl_mem), &sfed[dev]));
-		checkOclErrors(clSetKernelArg(kernels[dev], 4, sizeof(cl_mem), &sfdd[dev]));
-		checkOclErrors(clSetKernelArg(kernels[dev], 5, sizeof(int), &lig.nv));
-		checkOclErrors(clSetKernelArg(kernels[dev], 6, sizeof(int), &lig.nf));
-		checkOclErrors(clSetKernelArg(kernels[dev], 7, sizeof(int), &lig.na));
-		checkOclErrors(clSetKernelArg(kernels[dev], 8, sizeof(int), &lig.np));
+		checkOclErrors(clSetKernelArg(kernels[dev],  0, sizeof(cl_mem), &slnd[dev]));
+		checkOclErrors(clSetKernelArg(kernels[dev],  1, sizeof(cl_mem), &ligd[dev]));
+		checkOclErrors(clSetKernelArg(kernels[dev],  2, sizeof(int), &lig.nv));
+		checkOclErrors(clSetKernelArg(kernels[dev],  3, sizeof(int), &lig.nf));
+		checkOclErrors(clSetKernelArg(kernels[dev],  4, sizeof(int), &lig.na));
+		checkOclErrors(clSetKernelArg(kernels[dev],  5, sizeof(int), &lig.np));
+		checkOclErrors(clSetKernelArg(kernels[dev],  6, sizeof(int), &num_bfgs_iterations));
+		checkOclErrors(clSetKernelArg(kernels[dev],  7, lig_bytes, NULL));
+		checkOclErrors(clSetKernelArg(kernels[dev],  8, sizeof(cl_mem), &sfed[dev]));
+		checkOclErrors(clSetKernelArg(kernels[dev],  9, sizeof(cl_mem), &sfdd[dev]));
+		checkOclErrors(clSetKernelArg(kernels[dev], 10, sizeof(int), &sf.ns));
+		checkOclErrors(clSetKernelArg(kernels[dev], 11, sizeof(cl_float3), rec.corner0.data()));
+		checkOclErrors(clSetKernelArg(kernels[dev], 12, sizeof(cl_float3), rec.corner1.data()));
+		checkOclErrors(clSetKernelArg(kernels[dev], 13, sizeof(cl_float3), rec.num_probes.data()));
+		checkOclErrors(clSetKernelArg(kernels[dev], 14, sizeof(rec.granularity_inverse), &rec.granularity_inverse));
+		for (size_t t = 0; t < sf.n; ++t)
+		{
+			checkOclErrors(clSetKernelArg(kernels[dev], 15 + t, sizeof(cl_mem), &mpsd[dev][t]));
+		}
 		const size_t gws = num_mc_tasks;
 		const size_t lws = 32;
 		cl_event kernel_event;
@@ -456,12 +463,13 @@ int main(int argc, char* argv[])
 
 		// Reallocate cnfh should the current conformation elements exceed the default size.
 		const size_t this_cnf_elems = lig.get_cnf_elems();
-/*		if (this_cnf_elems > cnf_elems[dev])
+		if (this_cnf_elems > cnf_elems[dev])
 		{
-			checkCudaErrors(cuMemFreeHost(cnfh[dev]));
+//			checkOclErrors(clReleaseMemObject(cnfh[dev]));
 			cnf_elems[dev] = this_cnf_elems;
-			checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, 0));
-		}*/
+//			cnfh[dev] = clCreateBuffer(contexts[dev], CL_MEM_ALLOC_HOST_PTR, sizeof(float) * cnf_elems[dev] * num_mc_tasks, NULL, &error);
+//			checkOclErrors(error);
+		}
 
 		// Copy conformations from device memory to host memory.
 		cl_event output_event;
@@ -535,11 +543,10 @@ int main(int argc, char* argv[])
 	// Release resources.
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
-/*		for (size_t t = 0; t < sf_n; ++t)
+		for (auto mapd : mpsd[dev])
 		{
-			const cl_mem d_m = d_maps[t];
-			if (d_m) checkOclErrors(clReleaseMemObject(d_m));
-		}*/
+			if (mapd) checkOclErrors(clReleaseMemObject(mapd));
+		}
 		if (cbex[dev]) checkOclErrors(clReleaseEvent(cbex[dev]));
 		checkOclErrors(clReleaseMemObject(sfdd[dev]));
 		checkOclErrors(clReleaseMemObject(sfed[dev]));
