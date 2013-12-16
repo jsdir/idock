@@ -109,7 +109,7 @@ uint next(mwc64x_state_t *s)
 // Use Array Notation with int32 Indices
 
 inline
-bool evaluate(__local float* e, __local float* g, __local float* a, __local float* q, __local float* c, __local float* d, __local float* f, __local float* t, __local const float* x, const int nf, const int na, const int np, const float eub, __local const int* shared)
+bool evaluate(__global float* e, __global float* g, __global float* a, __global float* q, __global float* c, __global float* d, __global float* f, __global float* t, __global const float* x, const int nf, const int na, const int np, const float eub, __local const int* shared, __global const float* sfe, __global const float* sfd, const int sfs, const float3 cr0, const float3 cr1, const int3 npr, const float gri, __global const float* const x00, __global const float* const x01, __global const float* const x02, __global const float* const x03, __global const float* const x04, __global const float* const x05, __global const float* const x06, __global const float* const x07, __global const float* const x08, __global const float* const x09, __global const float* const x10, __global const float* const x11, __global const float* const x12, __global const float* const x13, __global const float* const x14)
 {
 	const int gid = get_global_id(0);
 	const int gds = get_global_size(0);
@@ -237,7 +237,54 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 			k0 = npr.x * (npr.y * k2 + k1) + k0;
 
 			// Retrieve the grid map and lookup the value
-			map = mps[xst[i]];
+			switch (xst[i])
+			{
+				case  0:
+					map = x00;
+					break;
+				case  1:
+					map = x01;
+					break;
+				case  2:
+					map = x02;
+					break;
+				case  3:
+					map = x03;
+					break;
+				case  4:
+					map = x04;
+					break;
+				case  5:
+					map = x05;
+					break;
+				case  6:
+					map = x06;
+					break;
+				case  7:
+					map = x07;
+					break;
+				case  8:
+					map = x08;
+					break;
+				case  9:
+					map = x09;
+					break;
+				case 10:
+					map = x10;
+					break;
+				case 11:
+					map = x11;
+					break;
+				case 12:
+					map = x12;
+					break;
+				case 13:
+					map = x13;
+					break;
+				case 14:
+					map = x14;
+					break;
+			}
 			e000 = map[k0];
 			e100 = map[k0 + 1];
 			e010 = map[k0 + npr.x];
@@ -306,7 +353,7 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 		v1 = c[k1] - c[i1];
 		v2 = c[k2] - c[i2];
 		vs = v0*v0 + v1*v1 + v2*v2;
-		if (vs < 64.0)
+		if (vs < 64.0f)
 		{
 			j = ipp[i] + (int)(sfs * vs);
 			y += sfe[j];
@@ -421,7 +468,7 @@ bool evaluate(__local float* e, __local float* g, __local float* a, __local floa
 }
 
 __kernel //__attribute__((reqd_work_group_size(X, Y, Z))) // X <= 16 (i.e. half warp or quarter wavefront) informs the compiler to optimize out barrier. Compile-time work group size helps the compiler to optimize register allocation.
-void monte_carlo(__global float* const restrict s0e, __global const int* const restrict lig, const int nv, const int nf, const int na, const int np, __local int* shared, __constant const float* sfe, __constant const float* sfd, __constant int sfs, __constant float3 cr0, __constant float3 cr1, __constant int3 npr, __constant float gri, __constant float* mps[15], __constant int nbi, __constant unsigned long sed)
+void monte_carlo(__global float* const restrict s0e, __global const int* const restrict lig, const int nv, const int nf, const int na, const int np, __local int* const shared, __global const float* const sfe, __global const float* const sfd, const int sfs, const float3 cr0, const float3 cr1, const int3 npr, const float gri, __global const float* const x00, __global const float* const x01, __global const float* const x02, __global const float* const x03, __global const float* const x04, __global const float* const x05, __global const float* const x06, __global const float* const x07, __global const float* const x08, __global const float* const x09, __global const float* const x10, __global const float* const x11, __global const float* const x12, __global const float* const x13, __global const float* const x14, const int nbi, const unsigned long sed)
 {
 	const int gid = get_global_id(0);
 	const int gds = get_global_size(0);
@@ -481,7 +528,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 #endif
 
 	// Randomize s0x.
-	seed(&rng, 0, 1e+4);
+	seed(&rng, 0, 9999);
 	rd0 = next(&rng);
 	s0x[o0  = gid] = rd0 * cr1.x + (1 - rd0) * cr0.x;
 	rd0 = next(&rng);
@@ -514,7 +561,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 		s0x[o0 += gds] = 0.0f;
 	}
 */
-//	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, shared);
+	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14);
 
 	// Repeat for a number of generations.
 	for (g = 0; g < nbi; ++g)
@@ -532,7 +579,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 			o0 += gds;
 			s1x[o0] = s0x[o0];
 		}
-//		evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub, shared);
+		evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
@@ -637,7 +684,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 				// Evaluate x2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-//				if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, nf, na, np, s1e[gid] + alp * pga, shared))
+				if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, nf, na, np, s1e[gid] + alp * pga, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14))
 				{
 					o0 = gid;
 					pg2 = bfp[o0] * s2g[o0];
