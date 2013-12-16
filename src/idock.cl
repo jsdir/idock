@@ -1,4 +1,8 @@
 /*
+The idock kernel for OpenCL uses the MWC64X random number generator.
+
+MWC64X
+http://cas.ee.ic.ac.uk/people/dt10/research/rngs-gpu-mwc64x.html
 Copyright (c) 2011, David Thomas
 All rights reserved.
 
