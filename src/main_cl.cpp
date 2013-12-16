@@ -211,13 +211,13 @@ int main(int argc, char* argv[])
 	checkOclErrors(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, num_devices, devices.data(), NULL));
 	vector<bool> cl12(num_devices);
 	vector<cl_bool> host_unified_memory(num_devices);
-	cout << "D               Name  CL CU GMEM(MB) LMEM(KB) CMEM(KB) UNIFIEDMEM LMEMTYPE ECC" << endl;
+	cout << "D                 Name  CL CU GMEM(MB) LMEM(KB) CMEM(KB) UNIFIEDMEM LMEMTYPE ECC" << endl;
 	const char* local_mem_types[] = { "NONE", "LOCAL", "GLOBAL" };
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
 		const auto device = devices[dev];
 		char name[256];
-		char opencl_c_version[13]; // = sizeof("OpenCL C 1.2") = strlen("OpenCL C 1.2") + 1
+		char opencl_c_version[14];
 		cl_uint max_compute_units;
 		cl_ulong global_mem_size;
 		cl_ulong local_mem_size;
@@ -233,9 +233,8 @@ int main(int argc, char* argv[])
 		checkOclErrors(clGetDeviceInfo(device, CL_DEVICE_ERROR_CORRECTION_SUPPORT, sizeof(error_correction_support), &error_correction_support, NULL));
 		checkOclErrors(clGetDeviceInfo(device, CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(host_unified_memory[dev]), &host_unified_memory[dev], NULL));
 		checkOclErrors(clGetDeviceInfo(device, CL_DEVICE_LOCAL_MEM_TYPE, sizeof(local_mem_type), &local_mem_type, NULL));
-		char version[4];
-		cl12[dev] = !strcmp(strcpy(version, opencl_c_version + 9), "1.2");
-		cout << dev << setw(19) << name << setw(2) << version << setw(3) << max_compute_units << setw(9) << global_mem_size / 1048576 << setw(9) << local_mem_size / 1024 << setw(9) << max_constant_buffer_size / 1024 << setw(11) << host_unified_memory[dev] << setw(9) << local_mem_types[local_mem_type] << setw(4) << error_correction_support << endl;
+		cl12[dev] = opencl_c_version[9] > '1' || opencl_c_version[11] >= '2';
+		cout << dev << setw(21) << name << ' ' << opencl_c_version[9] << '.' << opencl_c_version[11] << setw(3) << max_compute_units << setw(9) << global_mem_size / 1048576 << setw(9) << local_mem_size / 1024 << setw(9) << max_constant_buffer_size / 1024 << setw(11) << host_unified_memory[dev] << setw(9) << local_mem_types[local_mem_type] << setw(4) << error_correction_support << endl;
 	}
 
 	cout << "Create contexts and compiling module " << module_path << " for " << num_devices << " devices" << endl;
@@ -408,7 +407,7 @@ int main(int argc, char* argv[])
 
 		// Encode the current ligand.
 		cl_event input_events[2];
-		int* ligh = (int*)clEnqueueMapBuffer(queues[dev], ligd[dev], CL_TRUE, CL_MAP_WRITE_INVALIDATE_REGION, 0, lig_bytes, 0, NULL, NULL, &error);
+		int* ligh = (int*)clEnqueueMapBuffer(queues[dev], ligd[dev], CL_TRUE, cl12[dev] ? CL_MAP_WRITE_INVALIDATE_REGION : CL_MAP_WRITE, 0, lig_bytes, 0, NULL, NULL, &error);
 		checkOclErrors(error);
 		lig.encode(ligh);
 		checkOclErrors(clEnqueueUnmapMemObject(queues[dev], ligd[dev], ligh, 0, NULL, &input_events[0]));
@@ -431,7 +430,7 @@ int main(int argc, char* argv[])
 		}
 		else
 		{
-			float* slnh = (float*)clEnqueueMapBuffer(queues[dev], slnd[dev], CL_TRUE, CL_MAP_WRITE_INVALIDATE_REGION, 0, sizeof(float) * sln_elems[dev] * num_mc_tasks, 0, NULL, NULL, &error);
+			float* slnh = (float*)clEnqueueMapBuffer(queues[dev], slnd[dev], CL_TRUE, CL_MAP_WRITE, 0, sizeof(float) * sln_elems[dev] * num_mc_tasks, 0, NULL, NULL, &error);
 			checkOclErrors(error);
 			memset(slnh, 0, sizeof(float) * sln_elems[dev] * num_mc_tasks);
 			checkOclErrors(clEnqueueUnmapMemObject(queues[dev], slnd[dev], slnh, 0, NULL, &input_events[1]));
