@@ -184,6 +184,7 @@ int main(int argc, char* argv[])
 		});
 	}
 	cnt.wait();
+	const int sfs = sf.ns;
 
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
@@ -447,7 +448,7 @@ int main(int argc, char* argv[])
 		checkOclErrors(clSetKernelArg(kernels[dev],  7, lig_bytes, NULL));
 		checkOclErrors(clSetKernelArg(kernels[dev],  8, sizeof(cl_mem), &sfed[dev]));
 		checkOclErrors(clSetKernelArg(kernels[dev],  9, sizeof(cl_mem), &sfdd[dev]));
-		checkOclErrors(clSetKernelArg(kernels[dev], 10, sizeof(int), &sf.ns));
+		checkOclErrors(clSetKernelArg(kernels[dev], 10, sizeof(int), &sfs));
 		checkOclErrors(clSetKernelArg(kernels[dev], 11, sizeof(cl_float3), rec.corner0.data()));
 		checkOclErrors(clSetKernelArg(kernels[dev], 12, sizeof(cl_float3), rec.corner1.data()));
 		checkOclErrors(clSetKernelArg(kernels[dev], 13, sizeof(cl_float3), rec.num_probes.data()));
