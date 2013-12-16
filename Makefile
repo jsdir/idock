@@ -22,4 +22,4 @@ bin/%.fatbin: src/%.cu
 	$(NVCC) -o $@ $< -fatbin -gencode arch=compute_11,code=compute_11
 
 clean:
-	rm -f bin/* obj/*
+	rm -f bin/idock_cu bin/idock.fatbin bin/idock_cl obj/*.o
