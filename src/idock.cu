@@ -218,7 +218,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 		v1 = c[k1] - c[i1];
 		v2 = c[k2] - c[i2];
 		vs = v0*v0 + v1*v1 + v2*v2;
-		if (vs < 64.0)
+		if (vs < 64.0f)
 		{
 			j = ipp[i] + static_cast<int>(sfs * vs);
 			y += sfe[j];
