@@ -29,9 +29,9 @@
     <ClCompile Include="src\io_service_pool.cpp" />
     <ClCompile Include="src\ligand.cpp" />
     <ClCompile Include="src\log.cpp" />
-    <ClCompile Include="src\main.cpp">
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(BOOST_ROOT);$(CUDA_PATH)\include</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(BOOST_ROOT);$(CUDA_PATH)\include</AdditionalIncludeDirectories>
+    <ClCompile Include="src\main_cu.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(CUDA_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(CUDA_PATH)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <ClCompile Include="src\random_forest.cpp" />
     <ClCompile Include="src\random_forest_x.cpp" />

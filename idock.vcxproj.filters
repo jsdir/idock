@@ -14,7 +14,7 @@
     <ClCompile Include="src\ligand.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\main.cpp">
+    <ClCompile Include="src\main_cu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\scoring_function.cpp">
