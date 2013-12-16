@@ -211,7 +211,7 @@ int main(int argc, char* argv[])
 	checkOclErrors(clGetDeviceIDs(platform, CL_DEVICE_TYPE_ALL, num_devices, devices.data(), NULL));
 	vector<bool> cl12(num_devices);
 	vector<cl_bool> host_unified_memory(num_devices);
-	cout << "D                 Name  CL CU GMEM(MB) LMEM(KB) CMEM(KB) UNIFIEDMEM LMEMTYPE ECC" << endl;
+	cout << "D                           Name  CL CU GMEM(MB) LMEM(KB) CMEM(KB) LMEMTYPE ECC" << endl;
 	const char* local_mem_types[] = { "NONE", "LOCAL", "GLOBAL" };
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
@@ -234,7 +234,9 @@ int main(int argc, char* argv[])
 		checkOclErrors(clGetDeviceInfo(device, CL_DEVICE_HOST_UNIFIED_MEMORY, sizeof(host_unified_memory[dev]), &host_unified_memory[dev], NULL));
 		checkOclErrors(clGetDeviceInfo(device, CL_DEVICE_LOCAL_MEM_TYPE, sizeof(local_mem_type), &local_mem_type, NULL));
 		cl12[dev] = opencl_c_version[9] > '1' || opencl_c_version[11] >= '2';
-		cout << dev << setw(21) << name << ' ' << opencl_c_version[9] << '.' << opencl_c_version[11] << setw(3) << max_compute_units << setw(9) << global_mem_size / 1048576 << setw(9) << local_mem_size / 1024 << setw(9) << max_constant_buffer_size / 1024 << setw(11) << host_unified_memory[dev] << setw(9) << local_mem_types[local_mem_type] << setw(4) << error_correction_support << endl;
+		const string name_str(name);
+		const size_t name_len = name_str.size();
+		cout << dev << setw(31) << (name_len <= 30 ? name_str : name_str.substr(name_str.find(' ', name_len - 31) + 1)) << ' ' << opencl_c_version[9] << '.' << opencl_c_version[11] << setw(3) << max_compute_units << setw(9) << global_mem_size / 1048576 << setw(9) << local_mem_size / 1024 << setw(9) << max_constant_buffer_size / 1024 << setw(9) << local_mem_types[local_mem_type] << setw(4) << error_correction_support << endl;
 	}
 
 	cout << "Create contexts and compiling module " << module_path << " for " << num_devices << " devices" << endl;
