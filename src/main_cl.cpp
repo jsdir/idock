@@ -258,15 +258,15 @@ int main(int argc, char* argv[])
 	vector<cl_command_queue> queues(num_devices);
 	vector<cl_program> programs(num_devices);
 	vector<cl_kernel> kernels(num_devices);
-	vector<vector<size_t>> xst(num_devices);
 	vector<cl_mem> sfed(num_devices);
 	vector<cl_mem> sfdd(num_devices);
-	vector<vector<cl_mem>> mpsd(num_devices, vector<cl_mem>(sf.n));
 	vector<cl_mem> ligd(num_devices);
 	vector<cl_mem> slnd(num_devices);
 	vector<size_t> lig_elems(num_devices, 2601);
 	vector<size_t> sln_elems(num_devices, 3438);
 	vector<size_t> cnf_elems(num_devices,   43);
+	vector<vector<cl_mem>> mpsd(num_devices, vector<cl_mem>(sf.n));
+	vector<vector<size_t>> xst(num_devices);
 	cl_int error;
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
@@ -298,6 +298,7 @@ int main(int argc, char* argv[])
 		checkOclErrors(error);
 		kernels[dev] = kernel;
 
+		// Create buffers for sfe and sfd.
 		const size_t sfe_bytes = sizeof(float) * sf.e.size();
 		const size_t sfd_bytes = sizeof(float) * sf.d.size();
 		sfed[dev] = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sfe_bytes, sf.e.data(), &error);
@@ -305,14 +306,30 @@ int main(int argc, char* argv[])
 		sfdd[dev] = clCreateBuffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sfd_bytes, sf.d.data(), &error);
 		checkOclErrors(error);
 
-		// Reserve space for xst.
-		xst[dev].reserve(sf.n);
-
-		// Allocate ligh, ligd, slnd and cnfh.
+		// Create buffers for ligh, ligd, slnd and cnfh.
 		ligd[dev] = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int) * lig_elems[dev], NULL, &error);
 		checkOclErrors(error);
 		slnd[dev] = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * sln_elems[dev] * num_mc_tasks, NULL, &error);
 		checkOclErrors(error);
+
+		// Set kernel arguments.
+		checkOclErrors(clSetKernelArg(kernel,  0, sizeof(cl_mem), &slnd[dev]));
+		checkOclErrors(clSetKernelArg(kernel,  1, sizeof(cl_mem), &ligd[dev]));
+		checkOclErrors(clSetKernelArg(kernel,  7, sizeof(int), &num_bfgs_iterations));
+		checkOclErrors(clSetKernelArg(kernel,  8, sizeof(cl_mem), &sfed[dev]));
+		checkOclErrors(clSetKernelArg(kernel,  9, sizeof(cl_mem), &sfdd[dev]));
+		checkOclErrors(clSetKernelArg(kernel, 10, sizeof(int), &sfs));
+		checkOclErrors(clSetKernelArg(kernel, 11, sizeof(cl_float3), rec.corner0.data()));
+		checkOclErrors(clSetKernelArg(kernel, 12, sizeof(cl_float3), rec.corner1.data()));
+		checkOclErrors(clSetKernelArg(kernel, 13, sizeof(cl_float3), rec.num_probes.data()));
+		checkOclErrors(clSetKernelArg(kernel, 14, sizeof(rec.granularity_inverse), &rec.granularity_inverse));
+		for (size_t t = 0; t < sf.n; ++t)
+		{
+			checkOclErrors(clSetKernelArg(kernel, 15 + t, sizeof(cl_mem), &mpsd[dev][t]));
+		}
+
+		// Reserve space for xst.
+		xst[dev].reserve(sf.n);
 	}
 	source.clear();
 	sf.clear();
@@ -401,6 +418,7 @@ int main(int argc, char* argv[])
 				mpsd[dev][t] = clCreateBuffer(contexts[dev], CL_MEM_READ_ONLY, map_bytes, NULL, &error);
 				checkOclErrors(error);
 				checkOclErrors(clEnqueueWriteBuffer(queues[dev], mpsd[dev][t], CL_TRUE, 0, map_bytes, rec.maps[t].data(), 0, NULL, NULL));
+				checkOclErrors(clSetKernelArg(kernels[dev], 15 + t, sizeof(cl_mem), &mpsd[dev][t]));
 			}
 		}
 
@@ -412,6 +430,7 @@ int main(int argc, char* argv[])
 			lig_elems[dev] = this_lig_elems;
 			ligd[dev] = clCreateBuffer(contexts[dev], CL_MEM_READ_ONLY, sizeof(int) * lig_elems[dev], NULL, &error);
 			checkOclErrors(error);
+			checkOclErrors(clSetKernelArg(kernels[dev], 1, sizeof(cl_mem), &ligd[dev]));
 		}
 
 		// Compute the number of local memory bytes.
@@ -432,6 +451,7 @@ int main(int argc, char* argv[])
 			sln_elems[dev] = this_sln_elems;
 			slnd[dev] = clCreateBuffer(contexts[dev], CL_MEM_READ_WRITE, sizeof(float) * sln_elems[dev] * num_mc_tasks, NULL, &error);
 			checkOclErrors(error);
+			checkOclErrors(clSetKernelArg(kernels[dev], 0, sizeof(cl_mem), &slnd[dev]));
 		}
 
 		// Clear the solution buffer.
@@ -449,25 +469,11 @@ int main(int argc, char* argv[])
 		}
 
 		// Launch kernel.
-		checkOclErrors(clSetKernelArg(kernels[dev],  0, sizeof(cl_mem), &slnd[dev]));
-		checkOclErrors(clSetKernelArg(kernels[dev],  1, sizeof(cl_mem), &ligd[dev]));
 		checkOclErrors(clSetKernelArg(kernels[dev],  2, sizeof(int), &lig.nv));
 		checkOclErrors(clSetKernelArg(kernels[dev],  3, sizeof(int), &lig.nf));
 		checkOclErrors(clSetKernelArg(kernels[dev],  4, sizeof(int), &lig.na));
 		checkOclErrors(clSetKernelArg(kernels[dev],  5, sizeof(int), &lig.np));
-		checkOclErrors(clSetKernelArg(kernels[dev],  6, sizeof(int), &num_bfgs_iterations));
-		checkOclErrors(clSetKernelArg(kernels[dev],  7, lig_bytes, NULL));
-		checkOclErrors(clSetKernelArg(kernels[dev],  8, sizeof(cl_mem), &sfed[dev]));
-		checkOclErrors(clSetKernelArg(kernels[dev],  9, sizeof(cl_mem), &sfdd[dev]));
-		checkOclErrors(clSetKernelArg(kernels[dev], 10, sizeof(int), &sfs));
-		checkOclErrors(clSetKernelArg(kernels[dev], 11, sizeof(cl_float3), rec.corner0.data()));
-		checkOclErrors(clSetKernelArg(kernels[dev], 12, sizeof(cl_float3), rec.corner1.data()));
-		checkOclErrors(clSetKernelArg(kernels[dev], 13, sizeof(cl_float3), rec.num_probes.data()));
-		checkOclErrors(clSetKernelArg(kernels[dev], 14, sizeof(rec.granularity_inverse), &rec.granularity_inverse));
-		for (size_t t = 0; t < sf.n; ++t)
-		{
-			checkOclErrors(clSetKernelArg(kernels[dev], 15 + t, sizeof(cl_mem), &mpsd[dev][t]));
-		}
+		checkOclErrors(clSetKernelArg(kernels[dev],  6, lig_bytes, NULL));
 		const size_t gws = num_mc_tasks;
 		const size_t lws = 32;
 		cl_event kernel_event;
