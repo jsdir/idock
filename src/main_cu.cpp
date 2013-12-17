@@ -242,6 +242,7 @@ int main(int argc, char* argv[])
 	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
 	vector<array<CUdeviceptr, sf.n>> mpsd(num_devices);
+	for (const auto d : mpsd[0]) cout << d << ','; cout << endl;
 	vector<CUdeviceptr> mpsv(num_devices);
 	vector<CUdeviceptr> slnv(num_devices);
 	vector<CUdeviceptr> ligv(num_devices);
@@ -355,9 +356,6 @@ int main(int argc, char* argv[])
 		assert(seds == sizeof(seed));
 		checkCudaErrors(cuMemcpyHtoD(nbic, &nbih, nbis));
 		checkCudaErrors(cuMemcpyHtoD(sedc, &seed, seds));
-
-		// Reserve space for xst.
-		xst[dev].reserve(sf.n);
 
 		// Allocate ligh, ligd, slnd and cnfh.
 		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems[dev], CU_MEMHOSTALLOC_DEVICEMAP));
