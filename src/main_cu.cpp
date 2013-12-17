@@ -235,7 +235,7 @@ int main(int argc, char* argv[])
 		return 2;
 	}
 
-	cout << "Create contexts and compiling module " << module_path << " for " << num_devices << " devices" << endl;
+	cout << "Creating contexts and compiling module " << module_path << " for " << num_devices << " devices" << endl;
 	boost::filesystem::ifstream ifs(module_path, ios::binary);
 	vector<char> image((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	vector<CUcontext> contexts(num_devices);
