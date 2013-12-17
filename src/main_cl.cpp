@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	cout << "Create contexts and compiling module " << module_path << " for " << num_devices << " devices" << endl;
+	cout << "Creating contexts and compiling module " << module_path << " for " << num_devices << " devices" << endl;
 	boost::filesystem::ifstream ifs(module_path);
 	vector<char> source((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	const char* sources[] = { source.data() };
