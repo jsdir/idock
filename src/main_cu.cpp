@@ -242,7 +242,6 @@ int main(int argc, char* argv[])
 	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
 	vector<array<CUdeviceptr, sf.n>> mpsd(num_devices);
-	for (const auto d : mpsd[0]) cout << d << ','; cout << endl;
 	vector<CUdeviceptr> mpsv(num_devices);
 	vector<CUdeviceptr> slnv(num_devices);
 	vector<CUdeviceptr> ligv(num_devices);
@@ -441,7 +440,6 @@ int main(int argc, char* argv[])
 		// Push the context of the chosen device.
 		checkCudaErrors(cuCtxPushCurrent(contexts[dev]));
 
-		// Find atom types that are presented in the current ligand but are not yet copied to device memory.
 		// Copy grid maps from host memory to device memory if necessary.
 		for (size_t t = 0; t < sf.n; ++t)
 		{
