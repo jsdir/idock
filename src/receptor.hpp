@@ -21,6 +21,7 @@ public:
 	const float granularity_inverse; ///< 1 / granularity.
 	array<int, 3> num_probes; ///< Number of probes.
 	size_t num_probes_product; ///< Product of num_probes[0,1,2]
+	size_t map_bytes; ///< Number of bytes in a map.
 	vector<vector<size_t>> p_offset;
 	vector<vector<float>> maps;
 

@@ -38,6 +38,7 @@ public:
 	path filename; ///< Path to the input ligand.
 	vector<frame> frames; ///< ROOT and BRANCH frames.
 	vector<atom> atoms; ///< Heavy atoms. Coordinates are relative to frame origin, which is the first atom by default.
+	array<bool, scoring_function::n> xs; ///< Presence of XScore atom types.
 	size_t nv; ///< Number of variables to optimize.
 	size_t nf; ///< Number of frames.
 	size_t na; ///< Number of atoms.

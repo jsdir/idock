@@ -98,6 +98,7 @@ ligand::ligand(const path& p) : filename(p.filename()), nv(6)
 
 				// Save the heavy atom.
 				atoms.push_back(move(a));
+				xs[a.xs] = true;
 			}
 		}
 		else if (record == "BRANCH")

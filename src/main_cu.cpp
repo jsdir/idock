@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
 	vector<CUcontext> contexts(num_devices);
 	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
-	vector<vector<size_t>> xst(num_devices);
+	vector<array<CUdeviceptr, sf.n>> mpsd(num_devices);
 	vector<CUdeviceptr> mpsv(num_devices);
 	vector<CUdeviceptr> slnv(num_devices);
 	vector<CUdeviceptr> ligv(num_devices);
@@ -409,10 +409,9 @@ int main(int argc, char* argv[])
 
 		// Find atom types that are presented in the current ligand but not presented in the grid maps.
 		vector<size_t> xs;
-		for (const atom& a : lig.atoms)
+		for (size_t t = 0; t < sf.n; ++t)
 		{
-			const size_t t = a.xs;
-			if (rec.maps[t].empty())
+			if (lig.xs[t] && rec.maps[t].empty())
 			{
 				rec.maps[t].resize(rec.num_probes_product);
 				xs.push_back(t);
@@ -445,27 +444,14 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuCtxPushCurrent(contexts[dev]));
 
 		// Find atom types that are presented in the current ligand but are not yet copied to device memory.
-		xs.clear();
-		for (const atom& a : lig.atoms)
-		{
-			const size_t t = a.xs;
-			if (find(xst[dev].cbegin(), xst[dev].cend(), t) == xst[dev].cend())
-			{
-				xst[dev].push_back(t);
-				xs.push_back(t);
-			}
-		}
-
 		// Copy grid maps from host memory to device memory if necessary.
-		if (xs.size())
+		for (size_t t = 0; t < sf.n; ++t)
 		{
-			const size_t map_bytes = sizeof(float) * rec.num_probes_product;
-			for (const auto t : xs)
+			if (lig.xs[t] && !mpsd[dev][t])
 			{
-				CUdeviceptr mapd;
-				checkCudaErrors(cuMemAlloc(&mapd, map_bytes));
-				checkCudaErrors(cuMemcpyHtoD(mapd, rec.maps[t].data(), map_bytes));
-				checkCudaErrors(cuMemcpyHtoD(mpsv[dev] + sizeof(mapd) * t, &mapd, sizeof(mapd)));
+				checkCudaErrors(cuMemAlloc(&mpsd[dev][t], rec.map_bytes));
+				checkCudaErrors(cuMemcpyHtoD(mpsd[dev][t], rec.maps[t].data(), rec.map_bytes));
+				checkCudaErrors(cuMemcpyHtoD(mpsv[dev] + sizeof(CUdeviceptr) * t, &mpsd[dev][t], sizeof(CUdeviceptr)));
 			}
 		}
 

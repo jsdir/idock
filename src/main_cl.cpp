@@ -265,8 +265,7 @@ int main(int argc, char* argv[])
 	vector<size_t> lig_elems(num_devices, 2601);
 	vector<size_t> sln_elems(num_devices, 3438);
 	vector<size_t> cnf_elems(num_devices,   43);
-	vector<vector<cl_mem>> mpsd(num_devices, vector<cl_mem>(sf.n));
-	vector<vector<size_t>> xst(num_devices);
+	vector<array<cl_mem, sf.n>> mpsd(num_devices);
 	cl_int error;
 	for (int dev = 0; dev < num_devices; ++dev)
 	{
@@ -327,9 +326,6 @@ int main(int argc, char* argv[])
 		{
 			checkOclErrors(clSetKernelArg(kernel, 15 + t, sizeof(cl_mem), &mpsd[dev][t]));
 		}
-
-		// Reserve space for xst.
-		xst[dev].reserve(sf.n);
 	}
 	source.clear();
 	sf.clear();
@@ -365,10 +361,9 @@ int main(int argc, char* argv[])
 
 		// Find atom types that are presented in the current ligand but not presented in the grid maps.
 		vector<size_t> xs;
-		for (const atom& a : lig.atoms)
+		for (size_t t = 0; t < sf.n; ++t)
 		{
-			const size_t t = a.xs;
-			if (rec.maps[t].empty())
+			if (lig.xs[t] && rec.maps[t].empty())
 			{
 				rec.maps[t].resize(rec.num_probes_product);
 				xs.push_back(t);
@@ -397,27 +392,14 @@ int main(int argc, char* argv[])
 		// Wait until a device is ready for execution.
 		const int dev = idle.safe_pop_back();
 
-		// Find atom types that are presented in the current ligand but are not yet copied to device memory.
-		xs.clear();
-		for (const atom& a : lig.atoms)
-		{
-			const size_t t = a.xs;
-			if (find(xst[dev].cbegin(), xst[dev].cend(), t) == xst[dev].cend())
-			{
-				xst[dev].push_back(t);
-				xs.push_back(t);
-			}
-		}
-
 		// Copy grid maps from host memory to device memory if necessary.
-		if (xs.size())
+		for (size_t t = 0; t < sf.n; ++t)
 		{
-			const size_t map_bytes = sizeof(float) * rec.num_probes_product;
-			for (const auto t : xs)
+			if (lig.xs[t] && !mpsd[dev][t])
 			{
-				mpsd[dev][t] = clCreateBuffer(contexts[dev], CL_MEM_READ_ONLY, map_bytes, NULL, &error);
+				mpsd[dev][t] = clCreateBuffer(contexts[dev], CL_MEM_READ_ONLY, rec.map_bytes, NULL, &error);
 				checkOclErrors(error);
-				checkOclErrors(clEnqueueWriteBuffer(queues[dev], mpsd[dev][t], CL_TRUE, 0, map_bytes, rec.maps[t].data(), 0, NULL, NULL));
+				checkOclErrors(clEnqueueWriteBuffer(queues[dev], mpsd[dev][t], CL_TRUE, 0, rec.map_bytes, rec.maps[t].data(), 0, NULL, NULL));
 				checkOclErrors(clSetKernelArg(kernels[dev], 15 + t, sizeof(cl_mem), &mpsd[dev][t]));
 			}
 		}

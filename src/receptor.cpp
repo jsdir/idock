@@ -13,6 +13,7 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 		num_probes[i] = static_cast<size_t>(size[i] * granularity_inverse) + 2;
 		num_probes_product *= num_probes[i];
 	}
+	map_bytes = sizeof(float) * num_probes_product;
 
 	// Parse the receptor line by line.
 	atoms.reserve(2000); // A receptor typically consists of <= 2,000 atoms within bound.
