@@ -98,7 +98,6 @@ ligand::ligand(const path& p) : filename(p.filename()), nv(6)
 
 				// Save the heavy atom.
 				atoms.push_back(move(a));
-				xs[a.xs] = true;
 			}
 		}
 		else if (record == "BRANCH")
@@ -202,6 +201,12 @@ ligand::ligand(const path& p) : filename(p.filename()), nv(6)
 	frames.back().childYidx = na = atoms.size();
 	nf = frames.size();
 	assert(nf >= 1 + nv - 6);
+
+	// Detect the presence of XScore atom types.
+	for (const auto& a : atoms)
+	{
+		xs[a.xs] = true;
+	}
 
 	// Update atoms[].coord relative to frame origin.
 	for (const frame& f : frames)
