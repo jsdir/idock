@@ -22,6 +22,7 @@
     <ClInclude Include="src\random_forest.hpp" />
     <ClInclude Include="src\scoring_function.hpp" />
     <ClInclude Include="src\receptor.hpp" />
+    <ClInclude Include="src\source.hpp" />
     <ClInclude Include="src\utility.hpp" />
   </ItemGroup>
   <ItemGroup>
@@ -38,6 +39,7 @@
     <ClCompile Include="src\random_forest_y.cpp" />
     <ClCompile Include="src\scoring_function.cpp" />
     <ClCompile Include="src\receptor.cpp" />
+    <ClCompile Include="src\source_cl.cpp" />
     <ClCompile Include="src\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
