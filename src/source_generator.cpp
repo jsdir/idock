@@ -8,16 +8,13 @@ int main()
 "\
 #include \"source.hpp\"\n\
 \n\
-template <typename T>\n\
-source<T>::source() : vector<T>({";
+source::source() : vector<char>({";
 	for (char c; cin.get(c);)
 	{
-		cout << static_cast<unsigned int>(c) << ',';
+		cout << static_cast<int>(c) << ',';
 	}
 	cout << "})\n\
 {\n\
 }\n\
-\n\
-template class source<char>;\n\
 ";
 }

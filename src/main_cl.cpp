@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 	}
 
 	cout << "Creating contexts and compiling kernel source for " << num_devices << " devices" << endl;
-	source<char> src;
+	source src;
 	const char* sources[] = { src.data() };
 	const size_t source_length = src.size();
 	vector<cl_context> contexts(num_devices);

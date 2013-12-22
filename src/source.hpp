@@ -6,8 +6,7 @@
 using namespace std;
 
 /// Represents the kernel source as a char vector.
-template <typename T>
-class source : public vector<T>
+class source : public vector<char>
 {
 public:
 	source();

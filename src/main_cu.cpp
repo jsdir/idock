@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
 	}
 
 	cout << "Creating contexts and compiling kernel source for " << num_devices << " devices" << endl;
-	source<unsigned char> src;
+	source src;
 	vector<CUcontext> contexts(num_devices);
 	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
