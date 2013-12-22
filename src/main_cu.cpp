@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
 
 	cout << "Creating contexts and compiling module " << module_path << " for " << num_devices << " devices" << endl;
 	boost::filesystem::ifstream ifs(module_path, ios::binary);
-	vector<char> image((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
+	vector<char> source((istreambuf_iterator<char>(ifs)), istreambuf_iterator<char>());
 	vector<CUcontext> contexts(num_devices);
 	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
@@ -277,7 +277,7 @@ int main(int argc, char* argv[])
 
 		// Load the module into the current context.
 		CUmodule module;
-		checkCudaErrors(cuModuleLoadDataEx(&module, image.data(), num_jit_options, jit_keys.data(), jit_vals.data()));
+		checkCudaErrors(cuModuleLoadDataEx(&module, source.data(), num_jit_options, jit_keys.data(), jit_vals.data()));
 
 		// Get functions from module.
 		checkCudaErrors(cuModuleGetFunction(&functions[dev], module, "monte_carlo"));
@@ -373,7 +373,7 @@ int main(int argc, char* argv[])
 		// Pop the current context.
 		checkCudaErrors(cuCtxPopCurrent(NULL));
 	}
-	image.clear();
+	source.clear();
 	sf.clear();
 
 	// Initialize a vector of idle devices.
