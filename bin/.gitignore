@@ -1,4 +1,6 @@
 idock
+idock_cu
+idock_cl
 Debug
 Release
 !.gitignore
