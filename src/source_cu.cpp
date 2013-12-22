@@ -1,9 +1,12 @@
 #include <cstdlib>
 #include <fstream>
-#include "source_cu.hpp"
+#include "source.hpp"
 
-source::source()
+template <typename T>
+source<T>::source()
 {
 	ifstream ifs(getenv("idock_cu"), ios::binary);
-	insert(begin(), istreambuf_iterator<char>(ifs), istreambuf_iterator<char>());
+	this->insert(this->begin(), istreambuf_iterator<char>(ifs), istreambuf_iterator<char>());
 }
+
+template class source<unsigned char>;

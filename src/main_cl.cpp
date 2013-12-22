@@ -13,7 +13,7 @@
 #include "utility.hpp"
 #include "random_forest.hpp"
 #include "log.hpp"
-#include "source_cl.hpp"
+#include "source.hpp"
 
 template <typename T>
 class callback_data
@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
 	}
 
 	cout << "Creating contexts and compiling kernel source for " << num_devices << " devices" << endl;
-	source src;
+	source<char> src;
 	const char* sources[] = { src.data() };
 	const size_t source_length = src.size();
 	vector<cl_context> contexts(num_devices);

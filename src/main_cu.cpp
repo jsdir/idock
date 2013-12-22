@@ -12,7 +12,7 @@
 #include "utility.hpp"
 #include "random_forest.hpp"
 #include "log.hpp"
-#include "source_cu.hpp"
+#include "source.hpp"
 
 template <typename T>
 class callback_data
@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
 	}
 
 	cout << "Creating contexts and compiling kernel source for " << num_devices << " devices" << endl;
-	source src;
+	source<unsigned char> src;
 	vector<CUcontext> contexts(num_devices);
 	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
