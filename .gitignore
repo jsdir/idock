@@ -53,3 +53,4 @@ pipeline.cpp
 *.csv
 *.xlsb
 pdb
+src/idock.fatbin
