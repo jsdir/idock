@@ -1,6 +1,7 @@
 *.user
 *.suo
 *.sdf
+*.opensdf
 *.csv
 *.xlsb
 *.tar.bz2
