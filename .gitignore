@@ -5,6 +5,7 @@
 *.xlsb
 *.tar.bz2
 *.tgz
+*.nvprof
 log.*
 logo.*
 output
