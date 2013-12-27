@@ -355,7 +355,8 @@ void ligand::write(const float* const ex, const path& output_folder_path, const 
 	solutions.reserve(max_conformations);
 	affinities.reserve(max_conformations);
 	boost::filesystem::ofstream ofs(output_folder_path / filename);
-	ofs << fixed << ios::floatfield << setprecision(3);
+	ofs.setf(ios::fixed, ios::floatfield);
+	ofs << setprecision(3);
 	for (const size_t r : rank)
 	{
 		// Recover q and c from x.

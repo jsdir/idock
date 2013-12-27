@@ -343,8 +343,9 @@ int main(int argc, char* argv[])
 	// Perform docking for each ligand in the input folder.
 	log_engine log;
 	vector<cl_event> cbex(num_devices);
+	cout.setf(ios::fixed, ios::floatfield);
 	cout << "Executing " << num_mc_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl
-	     << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << fixed << ios::floatfield << setprecision(2);
+	     << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
 		// Parse the ligand. Don't declare it const as it will be moved to the callback data wrapper.
