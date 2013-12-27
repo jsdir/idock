@@ -21,11 +21,11 @@ public:
 	//! Constructs an empty scoring function.
 	explicit scoring_function();
 
-	//! Aggregates the five term values evaluated at (t1, t2, r2).
-	void score(float* const x, const size_t t1, const size_t t2, const float r2) const;
+	//! Aggregates the five term values evaluated at (t0, t1, r2).
+	void score(float* const x, const size_t t0, const size_t t1, const float r2) const;
 
-	//! Precalculates the scoring function values of sample points for the type combination of t1 and t2.
-	void precalculate(const size_t t1, const size_t t2);
+	//! Precalculates the scoring function values of sample points for the type combination of t0 and t1.
+	void precalculate(const size_t t0, const size_t t1);
 
 	//! Clears precalculated values.
 	void clear();

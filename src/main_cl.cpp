@@ -167,12 +167,12 @@ int main(int argc, char* argv[])
 	cout << "Precalculating a scoring function of " << scoring_function::n << " atom types in parallel" << endl;
 	scoring_function sf;
 	cnt.init(sf.n * (sf.n + 1) >> 1);
-	for (size_t t2 = 0; t2 < sf.n; ++t2)
-	for (size_t t1 = 0; t1 <=  t2; ++t1)
+	for (size_t t1 = 0; t1 < sf.n; ++t1)
+	for (size_t t0 = 0; t0 <=  t1; ++t0)
 	{
-		io.post([&,t1,t2]()
+		io.post([&,t0,t1]()
 		{
-			sf.precalculate(t1, t2);
+			sf.precalculate(t0, t1);
 			cnt.increment();
 		});
 	}
