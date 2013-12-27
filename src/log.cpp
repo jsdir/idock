@@ -1,4 +1,5 @@
 #include <iomanip>
+#include <boost/filesystem/fstream.hpp>
 #include "log.hpp"
 
 void log_engine::write(const path& log_path) const

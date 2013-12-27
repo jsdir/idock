@@ -3,7 +3,7 @@
 #define IDOCK_LOG_HPP
 
 #include <boost/ptr_container/ptr_vector.hpp>
-#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/path.hpp>
 using namespace std;
 using namespace boost::filesystem;
 
