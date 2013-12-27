@@ -4,7 +4,7 @@
 
 void tree::train(const size_t mtry, const function<float()> u01)
 {
-	// Create bootstrap samples with replacement
+	// Create bootstrap samples with replacement.
 	reserve(ns);
 	emplace_back();
 	node& root = front();
@@ -14,32 +14,32 @@ void tree::train(const size_t mtry, const function<float()> u01)
 		s = static_cast<size_t>(u01() * ns);
 	}
 
-	// Populate nodes
+	// Populate nodes.
 	for (size_t k = 0; k < size(); ++k)
 	{
 		node& n = (*this)[k];
 
-		// Evaluate node y and purity
+		// Evaluate node y and purity.
 		float sum = 0.0f;
 		for (const size_t s : n.samples) sum += y[s];
 		n.y = sum / n.samples.size();
-		n.p = n.y * n.y * n.samples.size(); // Equivalent to sum * sum / n.samples.size()
+		n.p = n.y * n.y * n.samples.size(); // Equivalent to sum * sum / n.samples.size().
 
-		// Do not split the node if it contains too few samples
+		// Do not split the node if it contains too few samples.
 		if (n.samples.size() <= 5) continue;
 
-		// Find the best split that has the highest increase in node purity
+		// Find the best split that has the highest increase in node purity.
 		float bestChildNodePurity = n.p;
 		array<size_t, nv> mind;
 		iota(mind.begin(), mind.end(), 0);
 		for (size_t i = 0; i < mtry; ++i)
 		{
-			// Randomly select a variable without replacement
+			// Randomly select a variable without replacement.
 			const size_t j = static_cast<size_t>(u01() * (nv - i));
 			const size_t v = mind[j];
 			mind[j] = mind[nv - i - 1];
 
-			// Sort the samples in ascending order of the selected variable
+			// Sort the samples in ascending order of the selected variable.
 			vector<size_t> ncase(n.samples.size());
 			iota(ncase.begin(), ncase.end(), 0);
 			sort(ncase.begin(), ncase.end(), [&n, v](const size_t val1, const size_t val2)
@@ -47,7 +47,7 @@ void tree::train(const size_t mtry, const function<float()> u01)
 				return x[n.samples[val1]][v] < x[n.samples[val2]][v];
 			});
 
-			// Search through the gaps in the selected variable
+			// Search through the gaps in the selected variable.
 			float suml = 0.0f;
 			float sumr = sum;
 			size_t popl = 0;
@@ -70,10 +70,10 @@ void tree::train(const size_t mtry, const function<float()> u01)
 			}
 		}
 
-		// Do not split the node if purity does not increase
+		// Do not split the node if purity does not increase.
 		if (bestChildNodePurity == n.p) continue;
 
-		// Create two child nodes and distribute samples
+		// Create two child nodes and distribute samples.
 		n.children[0] = size();
 		emplace_back();
 		n.children[1] = size();

@@ -16,8 +16,8 @@ ligand::ligand(const path& p) : filename(p.filename()), nv(6)
 	atoms.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 
 	// Initialize helper variables for parsing.
-	vector<atom> hydrogens; ///< Unsaved hydrogens of ROOT frame.
-	vector<vector<size_t>> bonds; ///< Covalent bonds.
+	vector<atom> hydrogens; // Unsaved hydrogens of ROOT frame.
+	vector<vector<size_t>> bonds; // Covalent bonds.
 	bonds.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 	size_t current = 0; // Index of current frame, initialized to ROOT frame.
 	frame* f = &frames.front(); // Pointer to the current frame.
@@ -329,17 +329,17 @@ void ligand::encode(int* const p) const
 	assert(c == p + get_lig_elems());
 }
 
-/// Represents a result found by BFGS local optimization for later clustering.
+//! Represents a solution found by BFGS local optimization for later clustering.
 class solution
 {
 public:
-//	float e; ///< Free energy.
-//	vector<float> x; ///< Conformation vector.
-	vector<array<float, 4>> q; ///< Frame quaternions.
-	vector<array<float, 3>> c; ///< Heavy atom coordinates.
+//	float e; //!< Free energy.
+//	vector<float> x; //!< Conformation vector.
+	vector<array<float, 4>> q; //!< Frame quaternions.
+	vector<array<float, 3>> c; //!< Heavy atom coordinates.
 };
 
-void ligand::write(const float* ex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf)
+void ligand::write(const float* const ex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf)
 {
 	// Sort solutions in ascending order of e.
 	vector<size_t> rank(num_mc_tasks);
@@ -355,8 +355,7 @@ void ligand::write(const float* ex, const path& output_folder_path, const size_t
 	solutions.reserve(max_conformations);
 	affinities.reserve(max_conformations);
 	boost::filesystem::ofstream ofs(output_folder_path / filename);
-	ofs.setf(ios::fixed, ios::floatfield);
-	ofs << setprecision(3);
+	ofs << fixed << ios::floatfield << setprecision(3);
 	for (const size_t r : rank)
 	{
 		// Recover q and c from x.

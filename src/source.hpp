@@ -5,11 +5,11 @@
 #include <vector>
 using namespace std;
 
-/// Represents the kernel source as a char vector.
+//! Represents the kernel source as a char vector.
 class source : public vector<char>
 {
 public:
-	source();
+	explicit source();
 };
 
 #endif

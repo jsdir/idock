@@ -3,7 +3,7 @@
 #include "utility.hpp"
 #include "atom.hpp"
 
-/// AutoDock4 atom type names.
+//! AutoDock4 atom type strings, e.g. H, HD, C, A.
 const array<string, atom::n> atom::ad_strings =
 {
 	"H" , //  0
@@ -38,7 +38,7 @@ const array<string, atom::n> atom::ad_strings =
 	"U" , // 29
 };
 
-/// AutoDock4 covalent radii, factorized by 1.1 for extra allowance.
+//! Covalent radii of AutoDock4 atom types, factorized by 1.1 for extra allowance.
 const array<float, atom::n> atom::ad_covalent_radii =
 {
 	0.407f, //  0 = H , 0.407 = 1.1 * 0.37
@@ -73,7 +73,7 @@ const array<float, atom::n> atom::ad_covalent_radii =
 	2.156f, // 29 = U , 2.156 = 1.1 * 1.96
 };
 
-/// Mapping from AutoDock4 atom type to XScore atom type.
+//! Mapping from AutoDock4 atom types to XScore atom types.
 const array<size_t, atom::n> atom::ad_to_xs =
 {
 	 n, //  0 = H  -> dummy
@@ -108,7 +108,7 @@ const array<size_t, atom::n> atom::ad_to_xs =
 	14, // 29 = U  -> Met_D = 14, Metal, hydrogen bond donor.
 };
 
-/// Mapping from AutoDock4 atom type to RF-Score atom type.
+//! Mapping from AutoDock4 atom types to RF-Score atom types.
 const array<size_t, atom::n> atom::ad_to_rf =
 {
 	n, //  0 = H  -> dummy
@@ -146,58 +146,56 @@ const array<size_t, atom::n> atom::ad_to_rf =
 atom::atom(const string& line) :
 	serial(stoul(line.substr(6, 5))),
 	name(line.substr(12, 4)),
+	coord({ stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8)) }),
 	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
 	xs(ad_to_xs[ad]),
 	rf(ad_to_rf[ad])
 {
-	coord[0] = stof(line.substr(30, 8));
-	coord[1] = stof(line.substr(38, 8));
-	coord[2] = stof(line.substr(46, 8));
 }
 
-/// Returns true if the AutoDock4 atom type is not supported.
+//! Returns true if the AutoDock4 atom type is not supported.
 bool atom::ad_unsupported() const
 {
 	return ad == n;
 }
 
-/// Returns true if the XScore atom type is not supported.
+//! Returns true if the XScore atom type is not supported.
 bool atom::xs_unsupported() const
 {
 	return xs == n;
 }
 
-/// Returns true if the RF-Score atom type is not supported.
+//! Returns true if the RF-Score atom type is not supported.
 bool atom::rf_unsupported() const
 {
 	return rf == n;
 }
 
-/// Returns true if the atom is a nonpolar hydrogen atom.
+//! Returns true if the atom is a nonpolar hydrogen atom.
 bool atom::is_nonpolar_hydrogen() const
 {
 	return ad == 0;
 }
 
-/// Returns true if the atom is a polar hydrogen atom.
+//! Returns true if the atom is a polar hydrogen atom.
 bool atom::is_polar_hydrogen() const
 {
 	return ad == 1;
 }
 
-/// Returns true if the atom is a hydrogen atom.
+//! Returns true if the atom is a hydrogen atom.
 bool atom::is_hydrogen() const
 {
 	return ad <= 1;
 }
 
-/// Returns true if the atom is a hetero atom, i.e. non-carbon heavy atom.
+//! Returns true if the atom is a hetero atom, i.e. non-carbon heavy atom.
 bool atom::is_hetero() const
 {
 	return ad >= 4;
 }
 
-/// For nitrogen and oxygen, revises the XScore atom type to make it a hydrogen bond donor.
+//! For nitrogen and oxygen, revises the XScore atom type to make it a hydrogen bond donor.
 void atom::donorize()
 {
 	switch (xs)
@@ -208,14 +206,14 @@ void atom::donorize()
 	}
 }
 
-/// For carbon, revises the XScore atom type to make it non-hydrophobic.
+//! For carbon, revises the XScore atom type to make it non-hydrophobic.
 void atom::dehydrophobicize()
 {
 	assert(xs <= 1);
 	xs = 1; // Carbon, bonded to a hetero atom.
 }
 
-/// Returns the covalent radius of current AutoDock4 atom type.
+//! Returns the covalent radius of current AutoDock4 atom type.
 float atom::covalent_radius() const
 {
 	return ad_covalent_radii[ad];
@@ -227,7 +225,7 @@ bool atom::has_covalent_bond(const atom& a) const
 	return distance_sqr(coord, a.coord) < s * s;
 }
 
-void atom::output(boost::filesystem::ofstream& ofs, const array<float, 3>& c) const
+void atom::output(boost::filesystem::ofstream& ofs, const array<float, 3>& coord) const
 {
-	ofs << "ATOM  " << setw(5) << serial << ' ' << name << setw(14) << "" << setw(8) << c[0] << setw(8) << c[1] << setw(8) << c[2] << setw(23) << "" << ad_strings[ad] << (ad_strings[ad].size() == 1 ? " " : "") << '\n';
+	ofs << "ATOM  " << setw(5) << serial << ' ' << name << setw(14) << "" << setw(8) << coord[0] << setw(8) << coord[1] << setw(8) << coord[2] << setw(23) << "" << ad_strings[ad] << (ad_strings[ad].size() == 1 ? " " : "") << '\n';
 }

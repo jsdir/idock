@@ -6,34 +6,35 @@
 #include <vector>
 using namespace std;
 
+//! Represents the scoring function used in idock.
 class scoring_function
 {
 public:
-	static const size_t n = 15;
-	static const size_t np = n*(n+1)>>1;
-	static const size_t ns = 1024;
-	static const size_t cutoff = 8;
-	static const size_t nr = ns*cutoff*cutoff+1;
-	static const size_t ne = nr*np;
-	static const float cutoff_sqr;
+	static const size_t n = 15; //!< Number of XScore atom types.
+	static const size_t np = n*(n+1)>>1; //!< Number of XScore atom type pairs.
+	static const size_t ns = 1024; //!< Number of samples in a unit distance.
+	static const size_t cutoff = 8; //!< Atom type pair distance cutoff.
+	static const size_t nr = ns*cutoff*cutoff+1; //!< Number of samples within the entire cutoff.
+	static const size_t ne = nr*np; //!< Number of values to precalculate.
+	static const float cutoff_sqr; //!< Cutoff square.
 
-	/// Constructs an empty scoring function.
-	scoring_function();
+	//! Constructs an empty scoring function.
+	explicit scoring_function();
 
-	/// Return the scoring function evaluated at (t1, t2, r).
+	//! Aggregates the five term values evaluated at (t1, t2, r2).
 	void score(float* const x, const size_t t1, const size_t t2, const float r2) const;
 
-	/// Precalculates the scoring function values of sample points for the type combination of t1 and t2.
+	//! Precalculates the scoring function values of sample points for the type combination of t1 and t2.
 	void precalculate(const size_t t1, const size_t t2);
 
-	/// Clears e, d, and rs.
+	//! Clears precalculated values.
 	void clear();
 
-	vector<float> e;
-	vector<float> d;
+	vector<float> e; //!< Scoring function values.
+	vector<float> d; //!< Scoring function derivatives divided by distance.
 private:
-	static const array<float, n> vdw;
-	vector<float> rs;
+	static const array<float, n> vdw; //!< Van der Waals distances for XScore atom types.
+	vector<float> rs; //!< Distance samples.
 };
 
 #endif
