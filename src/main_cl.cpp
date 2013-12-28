@@ -19,7 +19,7 @@ template <typename T>
 class callback_data
 {
 public:
-	callback_data(io_service_pool& io, cl_event cbex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, float* const cnfh, ligand&& lig_, cl_command_queue queue, cl_mem slnd, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), cbex(cbex), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), queue(queue), slnd(slnd), safe_print(safe_print), log(log), idle(idle) {}
+	callback_data(io_service_pool& io, cl_event cbex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, float* const cnfh, ligand&& lig_, cl_mem slnd, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), cbex(cbex), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), slnd(slnd), safe_print(safe_print), log(log), idle(idle) {}
 	io_service_pool& io;
 	cl_event cbex;
 	const path& output_folder_path;
@@ -31,7 +31,6 @@ public:
 	const T dev;
 	float* const cnfh;
 	ligand lig;
-	cl_command_queue queue;
 	cl_mem slnd;
 	safe_function& safe_print;
 	log_engine& log;
@@ -477,6 +476,8 @@ int main(int argc, char* argv[])
 		checkOclErrors(clSetEventCallback(output_event, CL_COMPLETE, [](cl_event event, cl_int command_exec_status, void* data)
 		{
 			assert(command_exec_status == CL_COMPLETE);
+			cl_command_queue queue;
+			checkOclErrors(clGetEventInfo(event, CL_EVENT_COMMAND_QUEUE, sizeof(queue), &queue, 0));
 			const shared_ptr<callback_data<int>> cbd(reinterpret_cast<callback_data<int>*>(data));
 			cbd->io.post([=]()
 			{
@@ -489,7 +490,6 @@ int main(int argc, char* argv[])
 				const auto  dev = cbd->dev;
 				const auto cnfh = cbd->cnfh;
 				auto& lig = cbd->lig;
-				auto queue = cbd->queue;
 				auto slnd = cbd->slnd;
 				auto& safe_print = cbd->safe_print;
 				auto& log = cbd->log;
@@ -518,7 +518,7 @@ int main(int argc, char* argv[])
 				idle.safe_push_back(dev);
 			});
 			checkOclErrors(clSetUserEventStatus(cbd->cbex, CL_COMPLETE));
-		}, new callback_data<int>(io, cbex[dev], output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh, move(lig), queues[dev], slnd[dev], safe_print, log, idle)));
+		}, new callback_data<int>(io, cbex[dev], output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh, move(lig), slnd[dev], safe_print, log, idle)));
 	}
 
 	// Synchronize queues and callback events.
