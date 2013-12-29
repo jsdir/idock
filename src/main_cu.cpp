@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
 //		checkCudaErrors(cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE));
 
 		// Create a stream.
-		checkCudaErrors(cuStreamCreate(&streams[dev], CU_STREAM_NON_BLOCKING));
+		checkCudaErrors(cuStreamCreate(&streams[dev], CU_STREAM_DEFAULT));
 
 		// Initialize just-in-time compilation options.
 		const unsigned int num_jit_options = 2;
