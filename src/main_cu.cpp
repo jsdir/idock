@@ -231,7 +231,6 @@ int main(int argc, char* argv[])
 	cout << "Creating contexts and compiling kernel source for " << num_devices << " devices" << endl;
 	source src;
 	vector<CUcontext> contexts(num_devices);
-	vector<CUstream> streams(num_devices);
 	vector<CUfunction> functions(num_devices);
 	vector<array<CUdeviceptr, sf.n>> mpsd(num_devices);
 	vector<CUdeviceptr> mpsv(num_devices);
@@ -250,9 +249,6 @@ int main(int argc, char* argv[])
 		checkCudaErrors(cuCtxCreate(&contexts[dev], CU_CTX_SCHED_AUTO/*CU_CTX_SCHED_YIELD*/ | CU_CTX_MAP_HOST, devices[dev]));
 //		checkCudaErrors(cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_L1));
 //		checkCudaErrors(cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE));
-
-		// Create a stream.
-		checkCudaErrors(cuStreamCreate(&streams[dev], CU_STREAM_DEFAULT));
 
 		// Initialize just-in-time compilation options.
 		const unsigned int num_jit_options = 2;
@@ -471,11 +467,11 @@ int main(int argc, char* argv[])
 		}
 
 		// Clear the solution buffer.
-		checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems[dev] * num_mc_tasks, streams[dev]));
+		checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems[dev] * num_mc_tasks, NULL));
 
 		// Launch kernel.
 		void* params[] = { &lig.nv, &lig.nf, &lig.na, &lig.np };
-		checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, streams[dev], params, NULL));
+		checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, NULL, params, NULL));
 
 		// Reallocate cnfh should the current conformation elements exceed the default size.
 		const size_t this_cnf_elems = lig.get_cnf_elems();
@@ -487,10 +483,10 @@ int main(int argc, char* argv[])
 		}
 
 		// Copy conformations from device memory to host memory.
-		checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, streams[dev]));
+		checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, NULL));
 
 		// Add a callback to the compute stream.
-		checkCudaErrors(cuStreamAddCallback(streams[dev], [](CUstream stream, CUresult error, void* data)
+		checkCudaErrors(cuStreamAddCallback(NULL, [](CUstream stream, CUresult error, void* data)
 		{
 			checkCudaErrors(error);
 			const shared_ptr<callback_data<int>> cbd(reinterpret_cast<callback_data<int>*>(data));
