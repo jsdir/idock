@@ -1222,6 +1222,7 @@ const array<float, tree::ns> tree::y =
 	 7.43f,
 	 7.69f,
 	 5.55f,
+	 9.30f,
 	 6.68f,
 	 6.00f,
 	 3.52f,
