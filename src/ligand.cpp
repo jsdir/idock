@@ -410,8 +410,7 @@ void ligand::write(const float* const ex, const path& output_folder_path, const 
 		if (!representative) continue;
 
 		// Rescore conformations with random forest.
-		array<float, tree::nv> x;
-		x.fill(0);
+		array<float, tree::nv> x{};
 		for (size_t i = 0; i < na; ++i)
 		{
 			const atom& la = atoms[i];
@@ -430,6 +429,7 @@ void ligand::write(const float* const ex, const path& output_folder_path, const 
 				}
 			}
 		}
+		x.back() = 1 / (1 + 0.05846f * (nv - 6 + 0.5f * (nf - 1 - (nv - 6))));
 		affinities.push_back(ex[r]);
 //		affinities.push_back(f(x));
 
