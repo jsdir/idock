@@ -18,6 +18,9 @@ public:
 	size_t var; //!< Variable used for node split.
 	float val; //!< Value used for node split.
 	array<size_t, 2> children; //!< Two child nodes.
+
+	//! Constructs an empty node.
+	explicit node() : children{} {}
 };
 
 //! Represents a tree in a forest.

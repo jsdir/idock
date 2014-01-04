@@ -8,7 +8,7 @@ void frame::output(boost::filesystem::ofstream& ofs) const
 	ofs << "BRANCH"    << setw(4) << rotorXsrn << setw(4) << rotorYsrn << '\n';
 }
 
-ligand::ligand(const path& p) : filename(p.filename()), nv(6)
+ligand::ligand(const path& p) : filename(p.filename()), xs{}, nv(6)
 {
 	// Initialize necessary variables for constructing a ligand.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
