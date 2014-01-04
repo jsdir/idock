@@ -14,9 +14,6 @@ size_t mr(const size_t x, const size_t y);
 //! Returns the flattened 1D index of a triangular 2D index (x, y) where either x or y is the lowest dimension.
 size_t mp(const size_t x, const size_t y);
 
-//! Returns an array containing 3 given floats.
-array<float, 3> make_array(const float d0, const float d1, const float d2);
-
 //! Returns the square norm.
 float norm_sqr(const array<float, 3>& a);
 
@@ -50,9 +47,6 @@ array<float, 3> operator*(const array<float, 3>& a, const array<float, 3>& b);
 //! Returns the square distance between two arrays.
 float distance_sqr(const array<float, 3>& a, const array<float, 3>& b);
 
-//! Returns an array containing 4 given floats.
-array<float, 4> make_array(const float d0, const float d1, const float d2, const float d3);
-
 //! Returns the square norm of current quaternion.
 float norm_sqr(const array<float, 4>& a);
 
@@ -70,9 +64,6 @@ array<float, 4> vec4_to_qtn4(const array<float, 3>& axis, const float angle);
 
 //! Returns the product of two quaternions.
 array<float, 4> operator*(const array<float, 4>& a, const array<float, 4>& b);
-
-//! Returns an array containing 9 given floats.
-array<float, 9> make_array(const float d0, const float d1, const float d2, const float d3, const float d4, const float d5, const float d6, const float d7, const float d8);
 
 //! Transforms the current quaternion into a 3x3 transformation matrix, e.g. quaternion(1, 0, 0, 0) => identity matrix.
 array<float, 9> qtn4_to_mat3(const array<float, 4>& a);
