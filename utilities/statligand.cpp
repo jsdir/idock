@@ -1,3 +1,4 @@
+#include <iostream>
 #include <array>
 #include <string>
 #include <algorithm>
@@ -286,11 +287,8 @@ bool atom::has_covalent_bond(const atom& a) const
 class ligand : public vector<atom>
 {
 public:
-	/// Load current ligand from a file
-	void load(const string path);
-
 	/// Load current ligand from an ifstream
-	void load(ifstream& ifs);
+	explicit ligand(istream& ifs);
 
 	/// Variables to calculate Nrot.
 	size_t num_active_torsions;
@@ -309,13 +307,7 @@ public:
 	explicit frame(const size_t parent, const size_t rotorXidx, const size_t rotorYidx) : parent(parent), rotorXidx(rotorXidx), rotorYidx(rotorYidx) {}
 };
 
-void ligand::load(const string path)
-{
-	ifstream ifs(path);
-	load(ifs);
-}
-
-void ligand::load(ifstream& ifs)
+ligand::ligand(istream& ifs)
 {
 	// Initialize necessary variables for constructing a ligand.
 	num_active_torsions = num_inactive_torsions = 0;
@@ -458,4 +450,5 @@ void ligand::load(ifstream& ifs)
 
 int main(int argc, char* argv[])
 {
+	ligand lig(cin);
 }
