@@ -247,7 +247,6 @@ ligand::ligand(istream& ifs)
 	reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 
 	// Initialize helper variables for parsing.
-	vector<atom> hydrogens; ///< Unsaved hydrogens of ROOT frame.
 	size_t current = 0; // Index of current frame, initialized to ROOT frame.
 	frame* f = &frames.front(); // Pointer to the current frame.
 
