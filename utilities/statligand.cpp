@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <vector>
 #include <fstream>
+#include <limits>
 #include <cassert>
 using namespace std;
 
@@ -261,6 +262,8 @@ public:
 	size_t num_active_torsions;
 	size_t num_inactive_torsions;
 	float molecular_weight;
+	vector<float> mn;
+	vector<float> mx;
 };
 
 /// Represents a ROOT or a BRANCH in PDBQT structure.
@@ -274,7 +277,7 @@ public:
 	explicit frame(const size_t parent, const size_t rotorYidx) : parent(parent), rotorYidx(rotorYidx) {}
 };
 
-ligand::ligand(istream& ifs) : num_hydrogens(0), num_hydrogen_bond_donors(0), num_hydrogen_bond_acceptors(0), num_active_torsions(0), num_inactive_torsions(0), molecular_weight(0)
+ligand::ligand(istream& ifs) : num_hydrogens(0), num_hydrogen_bond_donors(0), num_hydrogen_bond_acceptors(0), num_active_torsions(0), num_inactive_torsions(0), molecular_weight(0), mn(3, numeric_limits<float>::max()), mx(3, numeric_limits<float>::lowest())
 {
 	// Initialize necessary variables for constructing a ligand.
 	vector<frame> frames; ///< ROOT and BRANCH frames.
@@ -316,6 +319,11 @@ ligand::ligand(istream& ifs) : num_hydrogens(0), num_hydrogen_bond_donors(0), nu
 				push_back(move(a));
 			}
 			molecular_weight += a.atomic_weight();
+			for (size_t i = 0; i < 3; ++i)
+			{
+				mn[i] = min<float>(mn[i], a.coord[i]);
+				mx[i] = max<float>(mx[i], a.coord[i]);
+			}
 		}
 		else if (record == "BRANCH")
 		{
@@ -359,11 +367,11 @@ int main(int argc, char* argv[])
 	ligand lig(cin);
 	if (lig.empty())
 	{
-		cout << "H,HA,HBD,HBA,NAT,NIT,MWT" << endl;
+		cout << "H,HA,HBD,HBA,NAT,NIT,MWT,corner0_x,corner0_y,corner0_z,corner1_x,corner1_y,corner1_z" << endl;
 	}
 	else
 	{
 		cout.setf(ios::fixed, ios::floatfield);
-		cout << lig.num_hydrogens + lig.size() << ',' << lig.size() << ',' << lig.num_hydrogen_bond_donors << ',' << lig.num_hydrogen_bond_acceptors << ',' << lig.num_active_torsions << ',' << lig.num_inactive_torsions << ',' << setprecision(3) << lig.molecular_weight << endl;
+		cout << lig.num_hydrogens + lig.size() << ',' << lig.size() << ',' << lig.num_hydrogen_bond_donors << ',' << lig.num_hydrogen_bond_acceptors << ',' << lig.num_active_torsions << ',' << lig.num_inactive_torsions << ',' << setprecision(3) << lig.molecular_weight << ',' << lig.mn[0] << ',' << lig.mn[1] << ',' << lig.mn[2] << ',' << lig.mx[0] << ',' << lig.mx[1] << ',' << lig.mx[2] << endl;
 	}
 }
