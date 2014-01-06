@@ -351,12 +351,19 @@ ligand::ligand(istream& ifs) : num_hydrogens(0), num_hydrogen_bond_donors(0), nu
 	}
 	assert(1 + num_active_torsions + num_inactive_torsions == frames.size());
 	assert(num_hydrogen_bond_acceptors <= size());
-	assert(num_hydrogens + size() < molecular_weight);
+	assert(num_hydrogen_bond_donors + num_hydrogen_bond_acceptors <= num_hydrogens + size());
 }
 
 int main(int argc, char* argv[])
 {
 	ligand lig(cin);
-	cout.setf(ios::fixed, ios::floatfield);
-	cout << lig.num_hydrogens + lig.size() << ',' << lig.size() << ',' << lig.num_hydrogen_bond_donors << ',' << lig.num_hydrogen_bond_acceptors << ',' << lig.num_active_torsions << ',' << lig.num_inactive_torsions << ',' << setprecision(3) << lig.molecular_weight << endl;
+	if (lig.empty())
+	{
+		cout << "H,HA,HBD,HBA,NAT,NIT,MWT" << endl;
+	}
+	else
+	{
+		cout.setf(ios::fixed, ios::floatfield);
+		cout << lig.num_hydrogens + lig.size() << ',' << lig.size() << ',' << lig.num_hydrogen_bond_donors << ',' << lig.num_hydrogen_bond_acceptors << ',' << lig.num_active_torsions << ',' << lig.num_inactive_torsions << ',' << setprecision(3) << lig.molecular_weight << endl;
+	}
 }
