@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iomanip>
 #include <array>
 #include <string>
 #include <algorithm>
@@ -13,6 +14,7 @@ private:
 	static const size_t n = 31;
 	static const array<string, n> ad_strings;
 	static const array<float, n> ad_covalent_radii;
+	static const array<float, n> ad_atomic_weights;
 	static const array<size_t, n> ad_to_xs;
 public:
 	size_t serial;
@@ -26,23 +28,17 @@ public:
 	/// Returns true if the AutoDock4 atom type is not supported.
 	bool ad_unsupported() const;
 
-	/// Returns true if the XScore atom type is not supported.
-	bool xs_unsupported() const;
-
 	/// Returns true if the atom is a nonpolar hydrogen atom.
 	bool is_nonpolar_hydrogen() const;
 
 	/// Returns true if the atom is a polar hydrogen atom.
 	bool is_polar_hydrogen() const;
 
-	/// Returns true if the atom is a hydrogen atom.
-	bool is_hydrogen() const;
-
-	/// Returns true if the atom is a hetero atom, i.e. non-carbon heavy atom.
-	bool is_hetero() const;
-
 	/// Returns the covalent radius of current AutoDock4 atom type.
 	float covalent_radius() const;
+
+	/// Returns the atomic weight of current AutoDock4 atom type.
+	float atomic_weight() const;
 
 	/// Returns true if the current atom is covalently bonded to a given atom.
 	bool has_covalent_bond(const atom& a) const;
@@ -120,6 +116,42 @@ const array<float, atom::n> atom::ad_covalent_radii =
 	2.475f, // 30 = Cs, 2.475 = 1.1 * 2.25
 };
 
+/// AutoDock4 atomic weights.
+const array<float, atom::n> atom::ad_atomic_weights =
+{
+	  1.008,//  0 = H
+	  1.008,//  1 = HD
+	 12.01, //  2 = C
+	 12.01, //  3 = A
+	 14.01, //  4 = N
+	 14.01, //  5 = NA
+	 16.00, //  6 = OA
+	 32.07, //  7 = S
+	 32.07, //  8 = SA
+	 78.96, //  9 = Se
+	 30.97, // 10 = P
+	 19.00, // 11 = F
+	 35.45, // 12 = Cl
+	 79.90, // 13 = Br
+	126.90, // 14 = I
+	 65.38, // 15 = Zn
+	 55.85, // 16 = Fe
+	 24.31, // 17 = Mg
+	 40.08, // 18 = Ca
+	 54.94, // 19 = Mn
+	 63.55, // 20 = Cu
+	 22.99, // 21 = Na
+	 39.10, // 22 = K
+	200.59, // 23 = Hg
+	 58.69, // 24 = Ni
+	 58.93, // 25 = Co
+	112.41, // 26 = Cd
+	 74.92, // 27 = As
+	 87.62, // 28 = Sr
+	238.03, // 29 = U
+	132.91, // 30 = Cs
+};
+
 /// Mapping from AutoDock4 atom type to XScore atom type.
 const array<size_t, atom::n> atom::ad_to_xs =
 {
@@ -157,7 +189,6 @@ const array<size_t, atom::n> atom::ad_to_xs =
 };
 
 atom::atom(const string& line) :
-	serial(stoul(line.substr(6, 5))),
 	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
 	xs(ad_to_xs[ad])
 {
@@ -172,12 +203,6 @@ bool atom::ad_unsupported() const
 	return ad == n;
 }
 
-/// Returns true if the XScore atom type is not supported.
-bool atom::xs_unsupported() const
-{
-	return xs == n;
-}
-
 /// Returns true if the atom is a nonpolar hydrogen atom.
 bool atom::is_nonpolar_hydrogen() const
 {
@@ -190,22 +215,16 @@ bool atom::is_polar_hydrogen() const
 	return ad == 1;
 }
 
-/// Returns true if the atom is a hydrogen atom.
-bool atom::is_hydrogen() const
-{
-	return ad <= 1;
-}
-
-/// Returns true if the atom is a hetero atom, i.e. non-carbon heavy atom.
-bool atom::is_hetero() const
-{
-	return ad >= 4;
-}
-
 /// Returns the covalent radius of current AutoDock4 atom type.
 float atom::covalent_radius() const
 {
 	return ad_covalent_radii[ad];
+}
+
+/// Returns the atomic weight of current AutoDock4 atom type.
+float atom::atomic_weight() const
+{
+	return ad_atomic_weights[ad];
 }
 
 bool atom::has_covalent_bond(const atom& a) const
@@ -217,15 +236,31 @@ bool atom::has_covalent_bond(const atom& a) const
 	return d0 * d0 + d1 * d1 + d2 * d2 < s * s;
 }
 
+//! Returns true if the XScore atom type is a hydrogen bond donor.
+inline bool is_hbdonor(const size_t t)
+{
+	return t == 14;
+}
+
+//! Returns true if the XScore atom type is a hydrogen bond acceptor.
+inline bool is_hbacceptor(const size_t t)
+{
+	return t ==  4 || t ==  5 || t ==  6 || t ==  7;
+}
+
 class ligand : public vector<atom>
 {
 public:
 	/// Load current ligand from an ifstream
 	explicit ligand(istream& ifs);
 
-	/// Variables to calculate Nrot.
+	/// Ligand properties.
+	size_t num_hydrogens;
+	size_t num_hydrogen_bond_donors;
+	size_t num_hydrogen_bond_acceptors;
 	size_t num_active_torsions;
 	size_t num_inactive_torsions;
+	float molecular_weight;
 };
 
 /// Represents a ROOT or a BRANCH in PDBQT structure.
@@ -233,20 +268,18 @@ class frame
 {
 public:
 	size_t parent; ///< Frame array index pointing to the parent of current frame. For ROOT frame, this field is not used.
-	size_t rotorXidx; ///< Index pointing to the parent frame atom which forms a rotatable bond with the rotorY atom of current frame.
 	size_t rotorYidx; ///< Index pointing to the current frame atom which forms a rotatable bond with the rotorX atom of parent frame.
 
 	/// Constructs an active frame, and relates it to its parent frame.
-	explicit frame(const size_t parent, const size_t rotorXidx, const size_t rotorYidx) : parent(parent), rotorXidx(rotorXidx), rotorYidx(rotorYidx) {}
+	explicit frame(const size_t parent, const size_t rotorYidx) : parent(parent), rotorYidx(rotorYidx) {}
 };
 
-ligand::ligand(istream& ifs)
+ligand::ligand(istream& ifs) : num_hydrogens(0), num_hydrogen_bond_donors(0), num_hydrogen_bond_acceptors(0), num_active_torsions(0), num_inactive_torsions(0), molecular_weight(0)
 {
 	// Initialize necessary variables for constructing a ligand.
-	num_active_torsions = num_inactive_torsions = 0;
 	vector<frame> frames; ///< ROOT and BRANCH frames.
 	frames.reserve(30); // A ligand typically consists of <= 30 frames.
-	frames.emplace_back(0, 0, 0); // ROOT is also treated as a frame. The parent, rotorXsrn, rotorYsrn, rotorXidx of ROOT frame are dummy.
+	frames.emplace_back(0, 0); // ROOT is also treated as a frame. The parent of ROOT frame is dummy.
 	reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 
 	// Initialize helper variables for parsing.
@@ -265,36 +298,29 @@ ligand::ligand(istream& ifs)
 			// Skip unsupported atom types.
 			if (a.ad_unsupported()) continue;
 
-			// Skip non-polar hydrogens.
-			if (a.is_nonpolar_hydrogen()) continue;
-
-			// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
-			if (a.is_polar_hydrogen())
+			// Count statistics.
+			if (a.is_nonpolar_hydrogen())
 			{
-//				++;
+				++num_hydrogens;
+			}
+			else if (a.is_polar_hydrogen())
+			{
+				++num_hydrogens;
+				++num_hydrogen_bond_donors;
 			}
 			else // Current atom is a heavy atom.
 			{
+				num_hydrogen_bond_donors += is_hbdonor(a.xs);
+				num_hydrogen_bond_acceptors += is_hbacceptor(a.xs);
 				// Save the heavy atom.
 				push_back(move(a));
 			}
+			molecular_weight += a.atomic_weight();
 		}
 		else if (record == "BRANCH")
 		{
-			// Parse "BRANCH   X   Y". X and Y are right-justified and 4 characters wide.
-			const size_t rotorXsrn = stoul(line.substr( 6, 4));
-			const size_t rotorYsrn = stoul(line.substr(10, 4));
-
-			// Find the corresponding heavy atom with x as its atom serial number in the current frame.
-			for (size_t i = f->rotorYidx; true; ++i)
-			{
-				if ((*this)[i].serial == rotorXsrn)
-				{
-					// Insert a new frame whose parent is the current frame.
-					frames.push_back(frame(current, i, size()));
-					break;
-				}
-			}
+			// Insert a new frame whose parent is the current frame.
+			frames.push_back(frame(current, size()));
 
 			// Now the current frame is the newly inserted BRANCH frame.
 			current = frames.size() - 1;
@@ -324,9 +350,13 @@ ligand::ligand(istream& ifs)
 		else if (record == "TORSDO") break;
 	}
 	assert(1 + num_active_torsions + num_inactive_torsions == frames.size());
+	assert(num_hydrogen_bond_acceptors <= size());
+	assert(num_hydrogens + size() < molecular_weight);
 }
 
 int main(int argc, char* argv[])
 {
 	ligand lig(cin);
+	cout.setf(ios::fixed, ios::floatfield);
+	cout << lig.num_hydrogens + lig.size() << ',' << lig.size() << ',' << lig.num_hydrogen_bond_donors << ',' << lig.num_hydrogen_bond_acceptors << ',' << lig.num_active_torsions << ',' << lig.num_inactive_torsions << ',' << setprecision(3) << lig.molecular_weight << endl;
 }
