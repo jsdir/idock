@@ -264,6 +264,7 @@ public:
 	float molecular_weight;
 	vector<float> mn;
 	vector<float> mx;
+	vector<float> sz;
 };
 
 /// Represents a ROOT or a BRANCH in PDBQT structure.
@@ -277,7 +278,7 @@ public:
 	explicit frame(const size_t parent, const size_t rotorYidx) : parent(parent), rotorYidx(rotorYidx) {}
 };
 
-ligand::ligand(istream& ifs) : num_hydrogens(0), num_hydrogen_bond_donors(0), num_hydrogen_bond_acceptors(0), num_active_torsions(0), num_inactive_torsions(0), molecular_weight(0), mn(3, numeric_limits<float>::max()), mx(3, numeric_limits<float>::lowest())
+ligand::ligand(istream& ifs) : num_hydrogens(0), num_hydrogen_bond_donors(0), num_hydrogen_bond_acceptors(0), num_active_torsions(0), num_inactive_torsions(0), molecular_weight(0), mn(3, numeric_limits<float>::max()), mx(3, numeric_limits<float>::lowest()), sz(3)
 {
 	// Initialize necessary variables for constructing a ligand.
 	vector<frame> frames; ///< ROOT and BRANCH frames.
@@ -360,6 +361,10 @@ ligand::ligand(istream& ifs) : num_hydrogens(0), num_hydrogen_bond_donors(0), nu
 	assert(1 + num_active_torsions + num_inactive_torsions == frames.size());
 	assert(num_hydrogen_bond_acceptors <= size());
 	assert(num_hydrogen_bond_donors + num_hydrogen_bond_acceptors <= num_hydrogens + size());
+	for (size_t i = 0; i < 3; ++i)
+	{
+		sz[i] = 1.5f * (mx[i] - mn[i]);
+	}
 }
 
 int main(int argc, char* argv[])
@@ -367,11 +372,11 @@ int main(int argc, char* argv[])
 	ligand lig(cin);
 	if (lig.empty())
 	{
-		cout << "H,HA,HBD,HBA,NAT,NIT,MWT,corner0_x,corner0_y,corner0_z,corner1_x,corner1_y,corner1_z" << endl;
+		cout << "H,HA,HBD,HBA,NAT,NIT,MWT,size_x,size_y,size_z" << endl;
 	}
 	else
 	{
 		cout.setf(ios::fixed, ios::floatfield);
-		cout << lig.num_hydrogens + lig.size() << ',' << lig.size() << ',' << lig.num_hydrogen_bond_donors << ',' << lig.num_hydrogen_bond_acceptors << ',' << lig.num_active_torsions << ',' << lig.num_inactive_torsions << ',' << setprecision(3) << lig.molecular_weight << ',' << lig.mn[0] << ',' << lig.mn[1] << ',' << lig.mn[2] << ',' << lig.mx[0] << ',' << lig.mx[1] << ',' << lig.mx[2] << endl;
+		cout << lig.num_hydrogens + lig.size() << ',' << lig.size() << ',' << lig.num_hydrogen_bond_donors << ',' << lig.num_hydrogen_bond_acceptors << ',' << lig.num_active_torsions << ',' << lig.num_inactive_torsions << ',' << setprecision(3) << lig.molecular_weight << ',' << lig.sz[0] << ',' << lig.sz[1] << ',' << lig.sz[2] << endl;
 	}
 }
