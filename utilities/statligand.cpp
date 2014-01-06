@@ -14,13 +14,11 @@ private:
 	static const array<string, n> ad_strings;
 	static const array<float, n> ad_covalent_radii;
 	static const array<size_t, n> ad_to_xs;
-	static const array<size_t, n> ad_to_rf;
 public:
 	size_t serial;
 	array<float, 3> coord;
 	size_t ad;
 	size_t xs;
-	size_t rf;
 
 	// Constructs an atom from an ATOM/HETATM line in PDBQT format.
 	explicit atom(const string& line);
@@ -30,9 +28,6 @@ public:
 
 	/// Returns true if the XScore atom type is not supported.
 	bool xs_unsupported() const;
-
-	/// Returns true if the RF-Score atom type is not supported.
-	bool rf_unsupported() const;
 
 	/// Returns true if the atom is a nonpolar hydrogen atom.
 	bool is_nonpolar_hydrogen() const;
@@ -164,46 +159,10 @@ const array<size_t, atom::n> atom::ad_to_xs =
 	14, // 29 = U  -> Met_D = 14, Metal, hydrogen bond donor.
 };
 
-/// Mapping from AutoDock4 atom type to RF-Score atom type.
-const array<size_t, atom::n> atom::ad_to_rf =
-{
-	n, //  0 = H  -> dummy
-	n, //  1 = HD -> dummy
-	0, //  2 = C  -> C  = 0
-	0, //  3 = A  -> C  = 0
-	1, //  4 = N  -> N  = 1
-	1, //  5 = NA -> N  = 1
-	2, //  6 = OA -> O  = 2
-	3, //  7 = S  -> S  = 3
-	3, //  8 = SA -> S  = 3
-	n, //  9 = Se -> dummy
-	4, // 10 = P  -> P  = 4
-	5, // 11 = F  -> F  = 5
-	6, // 12 = Cl -> Cl = 6
-	7, // 13 = Br -> Br = 7
-	8, // 14 = I  -> I  = 8
-	n, // 15 = Zn -> dummy
-	n, // 16 = Fe -> dummy
-	n, // 17 = Mg -> dummy
-	n, // 18 = Ca -> dummy
-	n, // 19 = Mn -> dummy
-	n, // 20 = Cu -> dummy
-	n, // 21 = Na -> dummy
-	n, // 22 = K  -> dummy
-	n, // 23 = Hg -> dummy
-	n, // 24 = Ni -> dummy
-	n, // 25 = Co -> dummy
-	n, // 26 = Cd -> dummy
-	n, // 27 = As -> dummy
-	n, // 28 = Sr -> dummy
-	n, // 29 = U  -> dummy
-};
-
 atom::atom(const string& line) :
 	serial(stoul(line.substr(6, 5))),
 	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
-	xs(ad_to_xs[ad]),
-	rf(ad_to_rf[ad])
+	xs(ad_to_xs[ad])
 {
 	coord[0] = stof(line.substr(30, 8));
 	coord[1] = stof(line.substr(38, 8));
@@ -220,12 +179,6 @@ bool atom::ad_unsupported() const
 bool atom::xs_unsupported() const
 {
 	return xs == n;
-}
-
-/// Returns true if the RF-Score atom type is not supported.
-bool atom::rf_unsupported() const
-{
-	return rf == n;
 }
 
 /// Returns true if the atom is a nonpolar hydrogen atom.
