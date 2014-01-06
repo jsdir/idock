@@ -1,6 +1,6 @@
 CC=clang++ -std=c++11 -O2
 
-all: combinelog combinelog2 extractelitists extractmodel findbox multiply parsetime pdbqt2csv rmsd statligand substr
+all: combinelog combinelog2 extractelitists extractmodel filter findbox multiply parsetime pdbqt2csv rmsd statligand substr
 
 combinelog: combinelog.cpp
 	$(CC) -o $@ $< -lboost_system -lboost_filesystem
@@ -13,6 +13,9 @@ extractelitists: extractelitists.cpp
 
 extractmodel: extractmodel.cpp
 	$(CC) -o $@ $< -lboost_system -lboost_filesystem
+
+filter: filter.cpp
+	$(CC) -o $@ $<
 
 findbox: findbox.cpp
 	$(CC) -o $@ $<
