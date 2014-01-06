@@ -30,7 +30,7 @@ float norm(const array<float, 3>& a)
 //! Returns true if the norm equals 1.
 bool normalized(const array<float, 3>& a)
 {
-	return norm_sqr(a) - 1.0f < 2e-3f;
+	return norm_sqr(a) - 1.0f < 3e-3f;
 }
 
 //! Normalize the vector.
@@ -129,7 +129,7 @@ float norm(const array<float, 4>& a)
 //! Returns true if the current quaternion is normalized.
 bool normalized(const array<float, 4>& a)
 {
-	return fabs(norm_sqr(a) - 1.0f) < 2e-3f;
+	return fabs(norm_sqr(a) - 1.0f) < 3e-3f;
 }
 
 //! Returns a normalized quaternion of current quaternion.
