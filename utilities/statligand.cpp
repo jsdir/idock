@@ -10,7 +10,7 @@ using namespace std;
 class atom
 {
 private:
-	static const size_t n = 30;
+	static const size_t n = 31;
 	static const array<string, n> ad_strings;
 	static const array<float, n> ad_covalent_radii;
 	static const array<size_t, n> ad_to_xs;
@@ -81,6 +81,7 @@ const array<string, atom::n> atom::ad_strings =
 	"As", // 27
 	"Sr", // 28
 	"U" , // 29
+	"Cs", // 30
 };
 
 /// AutoDock4 covalent radii, factorized by 1.1 for extra allowance.
@@ -116,6 +117,7 @@ const array<float, atom::n> atom::ad_covalent_radii =
 	1.309f, // 27 = As, 1.309 = 1.1 * 1.19
 	2.112f, // 28 = Sr, 2.112 = 1.1 * 1.92
 	2.156f, // 29 = U , 2.156 = 1.1 * 1.96
+	2.475f, // 30 = Cs, 2.475 = 1.1 * 2.25
 };
 
 /// Mapping from AutoDock4 atom type to XScore atom type.
@@ -151,6 +153,7 @@ const array<size_t, atom::n> atom::ad_to_xs =
 	14, // 27 = As -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 28 = Sr -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 29 = U  -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 30 = Cs -> Met_D = 14, Metal, hydrogen bond donor.
 };
 
 atom::atom(const string& line) :
