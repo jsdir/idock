@@ -41,12 +41,6 @@ public:
 	/// Returns true if the atom is a hetero atom, i.e. non-carbon heavy atom.
 	bool is_hetero() const;
 
-	/// For nitrogen and oxygen, revises the XScore atom type to make it a hydrogen bond donor.
-	void donorize();
-
-	/// For carbon, revises the XScore atom type to make it non-hydrophobic.
-	void dehydrophobicize();
-
 	/// Returns the covalent radius of current AutoDock4 atom type.
 	float covalent_radius() const;
 
@@ -205,23 +199,6 @@ bool atom::is_hetero() const
 	return ad >= 4;
 }
 
-/// For nitrogen and oxygen, revises the XScore atom type to make it a hydrogen bond donor.
-void atom::donorize()
-{
-	switch (xs)
-	{
-		case 2 : xs = 3; break; // Nitrogen, hydrogen bond donor.
-		case 4 : xs = 5; break; // Nitrogen, both hydrogen bond donor and acceptor.
-		case 6 : xs = 7; break; // Oxygen, both hydrogen bond donor and acceptor.
-	}
-}
-
-/// For carbon, revises the XScore atom type to make it non-hydrophobic.
-void atom::dehydrophobicize()
-{
-	xs = 1; // Carbon, bonded to a hetero atom.
-}
-
 /// Returns the covalent radius of current AutoDock4 atom type.
 float atom::covalent_radius() const
 {
@@ -292,43 +269,10 @@ ligand::ligand(istream& ifs)
 			// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
 			if (a.is_polar_hydrogen())
 			{
-				bool unsaved = true;
-				for (size_t i = size(); i > f->rotorYidx;)
-				{
-					atom& b = (*this)[--i];
-					if (a.has_covalent_bond(b))
-					{
-						b.donorize();
-						unsaved = false;
-						break;
-					}
-				}
-				if (unsaved)
-				{
-					hydrogens.push_back(move(a));
-				}
+//				++;
 			}
 			else // Current atom is a heavy atom.
 			{
-				// Find bonds between the current atom and the other atoms of the same frame.
-				for (size_t i = size(); i > f->rotorYidx;)
-				{
-					atom& b = (*this)[--i];
-					if (a.has_covalent_bond(b))
-					{
-						// If carbon atom b is bonded to hetero atom a, b is no longer a hydrophobic atom.
-						if (a.is_hetero() && !b.is_hetero())
-						{
-							b.dehydrophobicize();
-						}
-						// If carbon atom a is bonded to hetero atom b, a is no longer a hydrophobic atom.
-						else if (!a.is_hetero() && b.is_hetero())
-						{
-							a.dehydrophobicize();
-						}
-					}
-				}
-
 				// Save the heavy atom.
 				push_back(move(a));
 			}
@@ -369,32 +313,11 @@ ligand::ligand(istream& ifs)
 				++num_active_torsions;
 			}
 
-			// Dehydrophobicize rotorX and rotorY if necessary.
-			atom& rotorY = (*this)[f->rotorYidx];
-			atom& rotorX = (*this)[f->rotorXidx];
-			if (rotorY.is_hetero() && !rotorX.is_hetero()) rotorX.dehydrophobicize();
-			if (rotorX.is_hetero() && !rotorY.is_hetero()) rotorY.dehydrophobicize();
-
 			// Now the parent of the following frame is the parent of current frame.
 			current = f->parent;
 
 			// Update the pointer to the current frame.
 			f = &frames[current];
-		}
-		else if (record == "ENDROO")
-		{
-			for (const atom& a : hydrogens)
-			{
-				for (size_t i = size(); i > f->rotorYidx;)
-				{
-					atom& b = (*this)[--i];
-					if (a.has_covalent_bond(b))
-					{
-						b.donorize();
-						break;
-					}
-				}
-			}
 		}
 		else if (record == "TORSDO") break;
 	}
