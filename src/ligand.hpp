@@ -57,7 +57,7 @@ public:
 	size_t num_frames; ///< Number of frames.
 	size_t num_torsions; ///< Number of torsions.
 	size_t num_active_torsions; ///< Number of active torsions.
-	fl flexibility_penalty_factor; ///< A value in (0, 1] to penalize ligand flexibility.
+	double flexibility_penalty_factor; ///< A value in (0, 1] to penalize ligand flexibility.
 
 	/// Constructs a ligand by parsing a ligand file in pdbqt format.
 	/// @exception parsing_error Thrown when an atom type is not recognized or an empty branch is detected.
@@ -67,16 +67,16 @@ public:
 	vector<size_t> get_atom_types() const;
 
 	/// Evaluates free energy e, force f, and change g. Returns true if the conformation is accepted.
-	bool evaluate(const conformation& conf, const scoring_function& sf, const box& b, const vector<array3d<fl>>& grid_maps, const fl e_upper_bound, fl& e, fl& f, change& g) const;
+	bool evaluate(const conformation& conf, const scoring_function& sf, const box& b, const vector<array3d<double>>& grid_maps, const double e_upper_bound, double& e, double& f, change& g) const;
 
 	/// Composes a result from free energy, inter-molecular free energy f, and conformation conf.
-	result compose_result(const fl e, const fl f, const conformation& conf) const;
+	result compose_result(const double e, const double f, const conformation& conf) const;
 
 	/// Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	void write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const vector<array3d<fl>>& grid_maps);
+	void write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const vector<array3d<double>>& grid_maps);
 
 private:
-	fl num_heavy_atoms_inverse; ///< 1 / num_heavy_atoms.
+	double num_heavy_atoms_inverse; ///< 1 / num_heavy_atoms.
 
 	/// Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.
 	class interacting_pair

@@ -3,37 +3,29 @@
 using namespace std;
 //using std::random::mt19937_64;
 
-void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const box& b, const vector<array3d<fl>>& grid_maps)
+void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const box& b, const vector<array3d<double>>& grid_maps)
 {
 	// Define constants.
 	const size_t num_mc_iterations = 100 * lig.num_heavy_atoms; ///< The number of iterations correlates to the complexity of ligand.
 	const size_t num_entities  = 2 + lig.num_active_torsions; // Number of entities to mutate.
 	const size_t num_variables = 6 + lig.num_active_torsions; // Number of variables to optimize.
-	const fl e_upper_bound = static_cast<fl>(4 * lig.num_heavy_atoms); // A conformation will be droped if its free energy is not better than e_upper_bound.
-	const fl required_square_error = static_cast<fl>(1 * lig.num_heavy_atoms); // Ligands with RMSD < 1.0 will be clustered into the same cluster.
-	const fl pi = static_cast<fl>(3.1415926535897932); ///< Pi.
+	const double e_upper_bound = static_cast<double>(4 * lig.num_heavy_atoms); // A conformation will be droped if its free energy is not better than e_upper_bound.
+	const double required_square_error = static_cast<double>(1 * lig.num_heavy_atoms); // Ligands with RMSD < 1.0 will be clustered into the same cluster.
+	const double pi = static_cast<double>(3.1415926535897932); ///< Pi.
 
 	mt19937_64 eng(seed);
-	uniform_real_distribution<fl> uniform_01_gen(  0,  1);
-	uniform_real_distribution<fl> uniform_11_gen( -1,  1);
-	uniform_real_distribution<fl> uniform_pi_gen(-pi, pi);
-	uniform_real_distribution<fl> uniform_box0_gen(b.corner1[0], b.corner2[0]);
-	uniform_real_distribution<fl> uniform_box1_gen(b.corner1[1], b.corner2[1]);
-	uniform_real_distribution<fl> uniform_box2_gen(b.corner1[2], b.corner2[2]);
+	uniform_real_distribution<double> uniform_01_gen(  0,  1);
+	uniform_real_distribution<double> uniform_11_gen( -1,  1);
+	uniform_real_distribution<double> uniform_pi_gen(-pi, pi);
+	uniform_real_distribution<double> uniform_box0_gen(b.corner1[0], b.corner2[0]);
+	uniform_real_distribution<double> uniform_box1_gen(b.corner1[1], b.corner2[1]);
+	uniform_real_distribution<double> uniform_box2_gen(b.corner1[2], b.corner2[2]);
 	uniform_int_distribution<size_t> uniform_entity_gen(0, num_entities - 1);
-	normal_distribution<fl> normal_01_gen(0, 1);
-/*	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_01_gen(eng, uniform_real_distribution<fl>(  0,  1));
-	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_11_gen(eng, uniform_real_distribution<fl>( -1,  1));
-	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_pi_gen(eng, uniform_real_distribution<fl>(-pi, pi));
-	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_box0_gen(eng, uniform_real_distribution<fl>(b.corner1[0], b.corner2[0]));
-	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_box1_gen(eng, uniform_real_distribution<fl>(b.corner1[1], b.corner2[1]));
-	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_box2_gen(eng, uniform_real_distribution<fl>(b.corner1[2], b.corner2[2]));
-	variate_generator<mt19937_64&, uniform_int_distribution<size_t>> uniform_entity_gen(eng, uniform_int_distribution<size_t>(0, num_entities - 1));
-	variate_generator<mt19937_64&, normal_distribution<fl>> normal_01_gen(eng, normal_distribution<fl>(0, 1));*/
+	normal_distribution<double> normal_01_gen(0, 1);
 
 	// Generate an initial random conformation c0, and evaluate it.
 	conformation c0(lig.num_active_torsions);
-	fl e0, f0;
+	double e0, f0;
 	change g0(lig.num_active_torsions);
 	bool valid_conformation = false;
 	for (size_t i = 0; (i < 1000) && (!valid_conformation); ++i)
@@ -48,29 +40,29 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 		valid_conformation = lig.evaluate(c0, sf, b, grid_maps, e_upper_bound, e0, f0, g0);
 	}
 	if (!valid_conformation) return;
-	fl best_e = e0; // The best free energy so far.
+	double best_e = e0; // The best free energy so far.
 
 	// Initialize necessary variables for BFGS.
 	conformation c1(lig.num_active_torsions), c2(lig.num_active_torsions); // c2 = c1 + ap.
-	fl e1, f1, e2, f2;
+	double e1, f1, e2, f2;
 	change g1(lig.num_active_torsions), g2(lig.num_active_torsions);
 	change p(lig.num_active_torsions); // Descent direction.
-	fl alpha, pg1, pg2; // pg1 = p * g1. pg2 = p * g2.
+	double alpha, pg1, pg2; // pg1 = p * g1. pg2 = p * g2.
 	size_t num_alpha_trials;
 
 	// Initialize the inverse Hessian matrix to identity matrix.
 	// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
 	// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
 	// See N&R for a recipe to find this initializer.
-	triangular_matrix<fl> identity_hessian(num_variables, 0); // Symmetric triangular matrix.
+	triangular_matrix<double> identity_hessian(num_variables, 0); // Symmetric triangular matrix.
 	for (size_t i = 0; i < num_variables; ++i)
 		identity_hessian[triangular_matrix_restrictive_index(i, i)] = 1;
 
 	// Initialize necessary variables for updating the Hessian matrix h.
-	triangular_matrix<fl> h(identity_hessian);
+	triangular_matrix<double> h(identity_hessian);
 	change y(lig.num_active_torsions); // y = g2 - g1.
 	change mhy(lig.num_active_torsions); // mhy = -h * y.
-	fl yhy, yp, ryp, pco;
+	double yhy, yp, ryp, pco;
 
 	for (size_t mc_i = 0; mc_i < num_mc_iterations; ++mc_i)
 	{
@@ -96,7 +88,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 			}
 			else // Mutate orientation.
 			{
-				c1.orientation = qtn4(static_cast<fl>(0.01) * vec3(uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng))) * c1.orientation;
+				c1.orientation = qtn4(static_cast<double>(0.01) * vec3(uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng))) * c1.orientation;
 				BOOST_ASSERT(c1.orientation.is_normalized());
 			}
 			++num_mutations;
@@ -115,7 +107,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 			// Calculate p = -h*g, where p is for descent direction, h for Hessian, and g for gradient.
 			for (size_t i = 0; i < num_variables; ++i)
 			{
-				fl sum = 0;
+				double sum = 0;
 				for (size_t j = 0; j < num_variables; ++j)
 					sum += h[triangular_matrix_permissive_index(i, j)] * g1[j];
 				p[i] = -sum;
@@ -166,7 +158,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 				y[i] = g2[i] - g1[i];
 			for (size_t i = 0; i < num_variables; ++i) // Calculate mhy = -h * y.
 			{
-				fl sum = 0;
+				double sum = 0;
 				for (size_t j = 0; j < num_variables; ++j)
 					sum += h[triangular_matrix_permissive_index(i, j)] * y[j];
 				mhy[i] = -sum;
@@ -193,7 +185,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 		}
 
 		// Accept c1 according to Metropolis criteria.
-		const fl delta = e0 - e1;
+		const double delta = e0 - e1;
 		if ((delta > 0) || (uniform_01_gen(eng) < exp(delta)))
 		{
 			// best_e is the best energy of all the conformations in the container.

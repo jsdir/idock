@@ -183,7 +183,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	num_hydrogens = hydrogens.size();
 	frames.back().haend = num_heavy_atoms;
 	frames.back().hyend = num_hydrogens;
-	num_heavy_atoms_inverse = static_cast<fl>(1) / num_heavy_atoms;
+	num_heavy_atoms_inverse = static_cast<double>(1) / num_heavy_atoms;
 
 	// Determine num_frames, num_torsions, flexibility_penalty_factor.
 	num_frames = frames.size();
@@ -281,7 +281,7 @@ vector<size_t> ligand::get_atom_types() const
 	return atom_types;
 }
 
-bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const box& b, const vector<array3d<fl>>& grid_maps, const fl e_upper_bound, fl& e, fl& f, change& g) const
+bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const box& b, const vector<array3d<double>>& grid_maps, const double e_upper_bound, double& e, double& f, change& g) const
 {
 	if (!b.within(conf.position))
 		return false;
@@ -376,7 +376,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	for (size_t i = 0; i < num_heavy_atoms; ++i)
 	{
 		// Retrieve the grid map in need.
-		const array3d<fl>& grid_map = grid_maps[heavy_atoms[i].xs];
+		const array3d<double>& grid_map = grid_maps[heavy_atoms[i].xs];
 		BOOST_ASSERT(grid_map.initialized());
 
 		// Find the index and fraction of the current coordinates.
@@ -391,12 +391,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const size_t x0 = index[0];
 		const size_t y0 = index[1];
 		const size_t z0 = index[2];
-		const fl e000 = grid_map(x0, y0, z0);
+		const double e000 = grid_map(x0, y0, z0);
 
 		// The derivative of probe atoms can be precalculated at the cost of massive memory storage.
-		const fl e100 = grid_map(x0 + 1, y0,     z0    );
-		const fl e010 = grid_map(x0,     y0 + 1, z0    );
-		const fl e001 = grid_map(x0,     y0,     z0 + 1);
+		const double e100 = grid_map(x0 + 1, y0,     z0    );
+		const double e010 = grid_map(x0,     y0 + 1, z0    );
+		const double e001 = grid_map(x0,     y0,     z0 + 1);
 		derivatives[i][0] = (e100 - e000) * b.grid_granularity_inverse;
 		derivatives[i][1] = (e010 - e000) * b.grid_granularity_inverse;
 		derivatives[i][2] = (e001 - e000) * b.grid_granularity_inverse;
@@ -413,7 +413,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	{
 		const interacting_pair& p = interacting_pairs[i];
 		const vec3 r = coordinates[p.i2] - coordinates[p.i1];
-		const fl r2 = r.norm_sqr();
+		const double r2 = r.norm_sqr();
 		if (r2 < scoring_function::Cutoff_Sqr)
 		{
 			const scoring_function_element element = sf.evaluate(p.type_pair_index, r2);
@@ -472,7 +472,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	return true;
 }
 
-result ligand::compose_result(const fl e, const fl f, const conformation& conf) const
+result ligand::compose_result(const double e, const double f, const conformation& conf) const
 {
 	vector<vec3> origins(num_frames);
 	vector<qtn4> orientations_q(num_frames);
@@ -521,7 +521,7 @@ result ligand::compose_result(const fl e, const fl f, const conformation& conf) 
 	return result(e, f, static_cast<vector<vec3>&&>(heavy_atoms), static_cast<vector<vec3>&&>(hydrogens));
 }
 
-void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const vector<array3d<fl>>& grid_maps)
+void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const vector<array3d<double>>& grid_maps)
 {
 	BOOST_ASSERT(num_conformations > 0);
 	BOOST_ASSERT(num_conformations <= results.size());
@@ -547,7 +547,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			const string& line = lines[j];
 			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
 			{
-				const fl   free_energy = line[77] == 'H' ? 0 : grid_maps[heavy_atoms[heavy_atom].xs](b.grid_index(r.heavy_atoms[heavy_atom]));
+				const double   free_energy = line[77] == 'H' ? 0 : grid_maps[heavy_atoms[heavy_atom].xs](b.grid_index(r.heavy_atoms[heavy_atom]));
 				const vec3& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]

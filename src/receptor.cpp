@@ -112,7 +112,7 @@ receptor::receptor(const path& p, const box& b) : partitions(b.num_partitions)
 		{
 			const size_t i = receptor_atoms_within_cutoff[l];
 			const atom& a = atoms[i];
-			const fl proj_dist_sqr = b.project_distance_sqr(corner1, corner2, a.coordinate);
+			const double proj_dist_sqr = b.project_distance_sqr(corner1, corner2, a.coordinate);
 			if (proj_dist_sqr < scoring_function::Cutoff_Sqr)
 			{
 				par.push_back(i);

@@ -106,7 +106,7 @@ inline bool ad_is_donor_acceptor(const size_t ad)
 // http://en.wikipedia.org/wiki/Covalent_radius
 // The above two references have inconsistent values for covalent radius.
 // The following definitions use the first reference, while OpenBabel uses the second.
-const fl ad_covalent_radii[] = ///< AutoDock4 covalent radii, factorized by 1.1 for extra allowance.
+const double ad_covalent_radii[] = ///< AutoDock4 covalent radii, factorized by 1.1 for extra allowance.
 {
 	0.407, //  0 = AD_TYPE_H , 0.407 = 1.1 * 0.37
 	0.407, //  1 = AD_TYPE_HD, 0.407 = 1.1 * 0.37
@@ -140,7 +140,7 @@ const fl ad_covalent_radii[] = ///< AutoDock4 covalent radii, factorized by 1.1 
 };
 
 /// Returns covalent radius from an AutoDock4 atom type.
-inline fl ad_covalent_radius(const size_t ad)
+inline double ad_covalent_radius(const size_t ad)
 {
 	return ad_covalent_radii[ad];
 }
@@ -163,7 +163,7 @@ const size_t XS_TYPE_I_H   = 13; ///< Iodine, hydrophobic.
 const size_t XS_TYPE_Met_D = 14; ///< Metal, hydrogen bond donor.
 const size_t XS_TYPE_SIZE  = 15; ///< Number of supported XScore atom types.
 
-const fl xs_vdw_radii[] = ///< Van der Waals radii for XScore atom types.
+const double xs_vdw_radii[] = ///< Van der Waals radii for XScore atom types.
 {
 	1.9, //  0 = XS_TYPE_C_H
 	1.9, //  1 = XS_TYPE_C_P
@@ -183,7 +183,7 @@ const fl xs_vdw_radii[] = ///< Van der Waals radii for XScore atom types.
 };
 
 /// Returns Van der Waals radius from an XScore atom type.
-inline fl xs_vdw_radius(const size_t xs)
+inline double xs_vdw_radius(const size_t xs)
 {
 	BOOST_ASSERT(xs < XS_TYPE_SIZE);
 	return xs_vdw_radii[xs];
@@ -282,7 +282,7 @@ public:
 	explicit atom(const size_t serial, const string& name, const vec3& coordinate, const size_t ad) : serial(serial), name(name), coordinate(coordinate), ad(ad), xs(ad_to_xs[ad]) {}
 
 	/// Returns the covalent radius of current AutoDock4 atom type.
-	fl covalent_radius() const
+	double covalent_radius() const
 	{
 		return ad_covalent_radius(ad);
 	}
@@ -303,7 +303,7 @@ public:
 	bool is_neighbor(const atom& a) const
 	{
 		BOOST_ASSERT(this != &a);
-		const fl r = covalent_radius() + a.covalent_radius();
+		const double r = covalent_radius() + a.covalent_radius();
 		return distance_sqr(coordinate, a.coordinate) < r * r;
 	}
 

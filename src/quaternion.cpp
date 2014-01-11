@@ -1,12 +1,12 @@
 #include "quaternion.hpp"
 
-qtn4::qtn4(const fl a, const fl b, const fl c, const fl d) : a(a), b(b), c(c), d(d) {}
+qtn4::qtn4(const double a, const double b, const double c, const double d) : a(a), b(b), c(c), d(d) {}
 
-qtn4::qtn4(const vec3& axis, const fl angle)
+qtn4::qtn4(const vec3& axis, const double angle)
 {
 	BOOST_ASSERT(axis.normalized());
 	a = cos(angle * 0.5);
-	const fl s = sin(angle * 0.5);
+	const double s = sin(angle * 0.5);
 	b = s * axis[0];
 	c = s * axis[1];
 	d = s * axis[2];
@@ -20,18 +20,18 @@ qtn4::qtn4(const vec3& rotation)
 	}
 	else
 	{
-		const fl angle = rotation.norm();
+		const double angle = rotation.norm();
 		const vec3 axis = (1 / angle) * rotation;
 		*this = qtn4(axis, angle);
 	}
 }
 
-fl qtn4::norm_sqr() const
+double qtn4::norm_sqr() const
 {
 	return a * a + b * b + c * c + d * d;
 }
 
-fl qtn4::norm() const
+double qtn4::norm() const
 {
 	return sqrt(norm_sqr());
 }
@@ -43,23 +43,23 @@ bool qtn4::is_normalized() const
 
 qtn4 qtn4::normalize() const
 {
-	const fl norm_inv = static_cast<fl>(1) / norm();
+	const double norm_inv = 1.0 / norm();
 	return qtn4(a * norm_inv, b * norm_inv, c * norm_inv, d * norm_inv);
 }
 
 mat3 qtn4::to_mat3() const
 {
 	BOOST_ASSERT(this->is_normalized());
-	const fl aa = a*a;
-	const fl ab = a*b;
-	const fl ac = a*c;
-	const fl ad = a*d;
-	const fl bb = b*b;
-	const fl bc = b*c;
-	const fl bd = b*d;
-	const fl cc = c*c;
-	const fl cd = c*d;
-	const fl dd = d*d;
+	const double aa = a*a;
+	const double ab = a*b;
+	const double ac = a*c;
+	const double ad = a*d;
+	const double bb = b*b;
+	const double bc = b*c;
+	const double bd = b*d;
+	const double cc = c*c;
+	const double cd = c*d;
+	const double dd = d*d;
 
 	// http://www.boost.org/doc/libs/1_46_1/libs/math/quaternion/TQE.pdf
 	// http://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation

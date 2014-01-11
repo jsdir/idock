@@ -17,9 +17,9 @@ using namespace std;
 int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
-	fl center_x, center_y, center_z, size_x, size_y, size_z;
+	double center_x, center_y, center_z, size_x, size_y, size_z;
 	size_t num_threads, seed, num_mc_tasks, max_conformations;
-	fl grid_granularity;
+	double grid_granularity;
 
 	// Process program options.
 	try
@@ -34,18 +34,18 @@ int main(int argc, char* argv[])
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_mc_tasks = 32;
 		const size_t default_max_conformations = 9;
-		const fl default_grid_granularity = 0.15625;
+		const double default_grid_granularity = 0.15625;
 
 		options_description input_options("input (required)");
 		input_options.add_options()
 			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
 			("input_folder", value<path>(&input_folder_path)->required(), "folder of ligands in PDBQT format")
-			("center_x", value<fl>(&center_x)->required(), "x coordinate of the search space center")
-			("center_y", value<fl>(&center_y)->required(), "y coordinate of the search space center")
-			("center_z", value<fl>(&center_z)->required(), "z coordinate of the search space center")
-			("size_x", value<fl>(&size_x)->required(), "size in the x dimension in Angstrom")
-			("size_y", value<fl>(&size_y)->required(), "size in the y dimension in Angstrom")
-			("size_z", value<fl>(&size_z)->required(), "size in the z dimension in Angstrom")
+			("center_x", value<double>(&center_x)->required(), "x coordinate of the search space center")
+			("center_y", value<double>(&center_y)->required(), "y coordinate of the search space center")
+			("center_z", value<double>(&center_z)->required(), "z coordinate of the search space center")
+			("size_x", value<double>(&size_x)->required(), "size in the x dimension in Angstrom")
+			("size_y", value<double>(&size_y)->required(), "size in the y dimension in Angstrom")
+			("size_z", value<double>(&size_z)->required(), "size in the z dimension in Angstrom")
 			;
 
 		options_description output_options("output (optional)");
@@ -60,7 +60,7 @@ int main(int argc, char* argv[])
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
 			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
-			("granularity", value<fl>(&grid_granularity)->default_value(default_grid_granularity), "density of probe atoms of grid maps")
+			("granularity", value<double>(&grid_granularity)->default_value(default_grid_granularity), "density of probe atoms of grid maps")
 			("help", "help information")
 			("version", "version information")
 			("config", value<path>(), "options can be loaded from a configuration file")
@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
 	results.reserve(max_results * num_mc_tasks);
 
 	// Initialize a vector of empty grid maps. Each grid map corresponds to an XScore atom type.
-	vector<array3d<fl>> grid_maps(XS_TYPE_SIZE);
+	vector<array3d<double>> grid_maps(XS_TYPE_SIZE);
 	vector<size_t> atom_types_to_populate;
 	atom_types_to_populate.reserve(XS_TYPE_SIZE);
 
@@ -226,7 +226,7 @@ int main(int argc, char* argv[])
 	scoring_function sf;
 	{
 		// Precalculate reciprocal square root values.
-		vector<fl> rs(scoring_function::Num_Samples, 0);
+		vector<double> rs(scoring_function::Num_Samples, 0);
 		for (size_t i = 0; i < scoring_function::Num_Samples; ++i)
 		{
 			rs[i] = sqrt(i * scoring_function::Factor_Inverse);
@@ -284,7 +284,7 @@ int main(int argc, char* argv[])
 		{
 			const size_t t = ligand_atom_types[i];
 			BOOST_ASSERT(t < XS_TYPE_SIZE);
-			array3d<fl>& grid_map = grid_maps[t];
+			array3d<double>& grid_map = grid_maps[t];
 			if (grid_map.initialized()) continue; // The grid map of XScore atom type t has already been populated.
 			grid_map.resize(b.num_probes); // An exception may be thrown in case memory is exhausted.
 			atom_types_to_populate.push_back(t);  // The grid map of XScore atom type t has not been populated and should be populated now.
@@ -327,7 +327,7 @@ int main(int argc, char* argv[])
 
 		// Merge results from all the tasks into one single result container.
 		BOOST_ASSERT(results.empty());
-		const fl required_square_error = static_cast<fl>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
+		const double required_square_error = static_cast<double>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
 			ptr_vector<result>& task_results = result_containers[i];
@@ -349,7 +349,7 @@ int main(int argc, char* argv[])
 		// Adjust free energy relative to the best conformation and flexibility.
 		const size_t num_results = min<size_t>(results.size(), max_conformations);
 		const result& best_result = results.front();
-		const fl best_result_intra_e = best_result.e - best_result.f;
+		const double best_result_intra_e = best_result.e - best_result.f;
 		for (size_t i = 0; i < num_results; ++i)
 		{
 			results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
@@ -366,7 +366,7 @@ int main(int argc, char* argv[])
 		}
 
 		// Add a log record.
-		vector<fl> affinities(num_results);
+		vector<double> affinities(num_results);
 		for (size_t i = 0; i < num_results; ++i)
 		{
 			affinities[i] = results[i].e_nd;

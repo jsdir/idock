@@ -11,14 +11,14 @@ using boost::ptr_vector;
 class result
 {
 public:
-	fl e; ///< Free energy.
-	fl f; ///< Inter-molecular free energy.
-	fl e_nd; ///< Normalized free energy, only for output purpose.
+	double e; ///< Free energy.
+	double f; ///< Inter-molecular free energy.
+	double e_nd; ///< Normalized free energy, only for output purpose.
 	vector<vec3> heavy_atoms; ///< Heavy atom coordinates.
 	vector<vec3> hydrogens; ///< Hydrogen atom coordinates.
 
 	/// Constructs a result from free energy e, force f, heavy atom coordinates and hydrogen atom coordinates.
-	explicit result(const fl e, const fl f, vector<vec3>&& heavy_atoms_, vector<vec3>&& hydrogens_) : e(e), f(f), heavy_atoms(static_cast<vector<vec3>&&>(heavy_atoms_)), hydrogens(static_cast<vector<vec3>&&>(hydrogens_)) {}
+	explicit result(const double e, const double f, vector<vec3>&& heavy_atoms_, vector<vec3>&& hydrogens_) : e(e), f(f), heavy_atoms(static_cast<vector<vec3>&&>(heavy_atoms_)), hydrogens(static_cast<vector<vec3>&&>(hydrogens_)) {}
 
 	/// Move constructor.
 	result(result&& r) : e(r.e), f(r.f), heavy_atoms(static_cast<vector<vec3>&&>(r.heavy_atoms)), hydrogens(static_cast<vector<vec3>&&>(r.hydrogens)) {}
@@ -33,7 +33,7 @@ public:
 // TODO: Do not inline large functions.
 // TODO: Consider using double linked list std::list<> to store results because of frequent insertions and deletions.
 /// Clusters a result into an existing result set with a minimum RMSD requirement.
-inline void add_to_result_container(ptr_vector<result>& results, result&& r, const fl required_square_error)
+inline void add_to_result_container(ptr_vector<result>& results, result&& r, const double required_square_error)
 {
 	// If this is the first result, simply save it.
 	if (results.empty())
@@ -44,10 +44,10 @@ inline void add_to_result_container(ptr_vector<result>& results, result&& r, con
 
 	// If the container is not empty, find in a coordinate that is closest to the given newly found r.coordinate.
 	size_t index = 0;
-	fl best_square_error = distance_sqr(r.heavy_atoms, results.front().heavy_atoms);
+	double best_square_error = distance_sqr(r.heavy_atoms, results.front().heavy_atoms);
 	for (size_t i = 1; i < results.size(); ++i)
 	{
-		const fl this_square_error = distance_sqr(r.heavy_atoms, results[i].heavy_atoms);
+		const double this_square_error = distance_sqr(r.heavy_atoms, results[i].heavy_atoms);
 		if (this_square_error < best_square_error)
 		{
 			index = i;
