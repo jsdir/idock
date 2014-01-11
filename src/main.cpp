@@ -4,10 +4,11 @@
 #include "seed.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
-#include "thread_pool.hpp"
+#include "io_service_pool.hpp"
 #include "grid_map_task.hpp"
 #include "monte_carlo_task.hpp"
 #include "summary.hpp"
+#include "utility.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -207,8 +208,6 @@ int main(int argc, char* argv[])
 
 	// Reserve storage for task containers.
 	const size_t num_gm_tasks = b.num_probes[0];
-	ptr_vector<packaged_task<void>> gm_tasks(num_gm_tasks);
-	ptr_vector<packaged_task<void>> mc_tasks(num_mc_tasks);
 
 	// Reserve storage for result containers. ptr_vector<T> is used for fast sorting.
 	const size_t max_results = 20; // Maximum number of results obtained from a single Monte Carlo task.
@@ -227,8 +226,9 @@ int main(int argc, char* argv[])
 	atom_types_to_populate.reserve(XS_TYPE_SIZE);
 
 	// Initialize a thread pool and create worker threads for later use.
-	cout << "Creating a thread pool of " << num_threads << " worker thread" << ((num_threads == 1) ? "" : "s") << '\n';
-	thread_pool tp(num_threads);
+	cout << "Creating an io service pool of " << num_threads << " worker thread" << ((num_threads == 1) ? "" : "s") << '\n';
+	io_service_pool io(num_threads);
+	safe_counter<size_t> cnt;
 
 	// Precalculate the scoring function in parallel.
 	cout << "Precalculating scoring function in parallel ";
@@ -245,19 +245,18 @@ int main(int argc, char* argv[])
 
 		// Populate the scoring function task container.
 		const size_t num_sf_tasks = ((XS_TYPE_SIZE + 1) * XS_TYPE_SIZE) >> 1;
-		ptr_vector<packaged_task<void>> sf_tasks(num_sf_tasks);
-		for (size_t t1 =  0; t1 < XS_TYPE_SIZE; ++t1)
-		for (size_t t2 = t1; t2 < XS_TYPE_SIZE; ++t2)
+		cnt.init(num_sf_tasks);
+		for (size_t t0 =  0; t0 < XS_TYPE_SIZE; ++t0)
+		for (size_t t1 = t0; t1 < XS_TYPE_SIZE; ++t1)
 		{
-			sf_tasks.push_back(new packaged_task<void>(boost::bind<void>(&scoring_function::precalculate, boost::ref(sf), t1, t2, boost::cref(rs))));
+//			sf_tasks.push_back(new packaged_task<void>(boost::bind<void>(&scoring_function::precalculate, boost::ref(sf), t0, t1, boost::cref(rs))));
+			io.post([&,t0,t1]()
+			{
+				sf.precalculate(t0, t1, rs);
+				cnt.increment();
+			});
 		}
-		BOOST_ASSERT(sf_tasks.size() == num_sf_tasks);
-
-		// Run the scoring function tasks in parallel asynchronously and display the progress bar with hashes.
-		tp.run(sf_tasks);
-
-		// Wait until all the scoring function tasks are completed.
-		tp.sync();
+		cnt.wait();
 	}
 	cout << '\n';
 
@@ -312,24 +311,19 @@ int main(int argc, char* argv[])
 				cout << "Creating " << std::setw(2) << num_atom_types_to_populate << " grid map" << ((num_atom_types_to_populate == 1) ? ' ' : 's') << "    " << std::flush;
 
 				// Populate the grid map task container.
-				BOOST_ASSERT(gm_tasks.empty());
+				cnt.init(num_gm_tasks);
 				for (size_t x = 0; x < num_gm_tasks; ++x)
 				{
-					gm_tasks.push_back(new packaged_task<void>(boost::bind<void>(grid_map_task, boost::ref(grid_maps), boost::cref(atom_types_to_populate), x, boost::cref(sf), boost::cref(b), boost::cref(rec))));
-				}
-
-				// Run the grid map tasks in parallel asynchronously and display the progress bar with hashes.
-				tp.run(gm_tasks);
-
-				// Propagate possible exceptions thrown by grid_map_task().
-				for (size_t i = 0; i < num_gm_tasks; ++i)
-				{
-					gm_tasks[i].get_future().get();
+//					gm_tasks.push_back(new packaged_task<void>(boost::bind<void>(grid_map_task, boost::ref(grid_maps), boost::cref(atom_types_to_populate), x, boost::cref(sf), boost::cref(b), boost::cref(rec))));
+					io.post([&,x]()
+					{
+						grid_map_task(grid_maps, atom_types_to_populate, x, sf, b, rec);
+						cnt.increment();
+					});
 				}
 
 				// Block until all the grid map tasks are completed.
-				tp.sync();
-				gm_tasks.clear();
+				cnt.wait();
 				atom_types_to_populate.clear();
 
 				// Clear the current line and reset the cursor to the beginning.
@@ -340,22 +334,24 @@ int main(int argc, char* argv[])
 			cout << std::setw(7) << num_ligands << " | " << std::setw(12) << stem << " | " << std::flush;
 
 			// Populate the Monte Carlo task container.
-			BOOST_ASSERT(mc_tasks.empty());
+			cnt.init(num_mc_tasks);
 			for (size_t i = 0; i < num_mc_tasks; ++i)
 			{
 				BOOST_ASSERT(result_containers[i].empty());
-				mc_tasks.push_back(new packaged_task<void>(boost::bind<void>(monte_carlo_task, boost::ref(result_containers[i]), boost::cref(lig), eng(), boost::cref(sf), boost::cref(b), boost::cref(grid_maps))));
+//				mc_tasks.push_back(new packaged_task<void>(boost::bind<void>(monte_carlo_task, boost::ref(result_containers[i]), boost::cref(lig), eng(), boost::cref(sf), boost::cref(b), boost::cref(grid_maps))));
+				io.post([&,i]()
+				{
+					monte_carlo_task(result_containers[i], lig, eng(), sf, b, grid_maps);
+					cnt.increment();
+				});
 			}
-
-			// Run the Monte Carlo tasks in parallel asynchronously and display the progress bar with hashes.
-			tp.run(mc_tasks);
+			cnt.wait();
 
 			// Merge results from all the tasks into one single result container.
 			BOOST_ASSERT(results.empty());
 			const fl required_square_error = static_cast<fl>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
 			for (size_t i = 0; i < num_mc_tasks; ++i)
 			{
-				mc_tasks[i].get_future().get();
 				ptr_vector<result>& task_results = result_containers[i];
 				const size_t num_task_results = task_results.size();
 				for (size_t j = 0; j < num_task_results; ++j)
@@ -364,10 +360,6 @@ int main(int argc, char* argv[])
 				}
 				task_results.clear();
 			}
-
-			// Block until all the Monte Carlo tasks are completed.
-			tp.sync();
-			mc_tasks.clear();
 
 			// Proceed to number of conformations.
 			cout << " | ";
@@ -460,7 +452,7 @@ int main(int argc, char* argv[])
 	for (directory_iterator dir_iter(output_folder_path); dir_iter != end_dir_iter; ++dir_iter)
 	{
 		const path p = dir_iter->path();
-		ifstream in(p); // Parsing starts. Open the file stream as late as possible.
+		boost::filesystem::ifstream in(p); // Parsing starts. Open the file stream as late as possible.
 		while (getline(in, line))
 		{
 			if (starts_with(line, "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:"))
@@ -498,7 +490,7 @@ int main(int argc, char* argv[])
 	// Dump ligand summaries to the csv file.
 	const size_t num_summaries = summaries.size();
 	cout << "Writing summary of " << num_summaries << " ligands to " << csv_path << '\n';
-	ofstream csv(csv_path);
+	boost::filesystem::ofstream csv(csv_path);
 	csv << "Ligand,Conf";
 	for (size_t i = 1; i <= max_conformations; ++i)
 	{
