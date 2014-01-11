@@ -266,22 +266,18 @@ const size_t ad_to_xs[] =
 	XS_TYPE_Met_D, // 28 = AD_TYPE_Sr
 };
 
-/// Distance requirement of forming hydrogen bonds.
-const fl hbond_dist_sqr = sqr(3.5);
-
 /// Represents an atom by very simple fields.
 class atom
 {
 public:
 	size_t serial; ///< Serial number.
 	string name; ///< Atom name;
-	string id; ///< Unique identifier, e.g. A:SER35:N for receptor and O1 for ligand.
 	vec3 coordinate; ///< 3D coordinate.
 	size_t ad; ///< AutoDock4 atom type.
 	size_t xs; ///< XScore atom type.
 
 	/// Constructs an atom with 3D coordinate and AutoDock4 atom type.
-	explicit atom(const size_t serial, const string& name, const string& id, const vec3& coordinate, const size_t ad) : serial(serial), name(name), id(id), coordinate(coordinate), ad(ad), xs(ad_to_xs[ad]) {}
+	explicit atom(const size_t serial, const string& name, const vec3& coordinate, const size_t ad) : serial(serial), name(name), coordinate(coordinate), ad(ad), xs(ad_to_xs[ad]) {}
 
 	/// Returns the covalent radius of current AutoDock4 atom type.
 	fl covalent_radius() const
@@ -305,7 +301,8 @@ public:
 	bool is_neighbor(const atom& a) const
 	{
 		BOOST_ASSERT(this != &a);
-		return (distance_sqr(coordinate, a.coordinate) < sqr(covalent_radius() + a.covalent_radius()));
+		const fl r = covalent_radius() + a.covalent_radius();
+		return distance_sqr(coordinate, a.coordinate) < r * r;
 	}
 
 	/// For nitrogen and oxygen, revises the XScore atom type to make it a hydrogen bond donor.

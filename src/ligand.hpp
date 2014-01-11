@@ -9,6 +9,7 @@
 #include "box.hpp"
 #include "array3d.hpp"
 #include "result.hpp"
+using boost::filesystem::path;
 
 /// Represents a ROOT or a BRANCH in PDBQT structure.
 class frame

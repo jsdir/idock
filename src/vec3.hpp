@@ -7,6 +7,13 @@
 
 using boost::array;
 
+/// Returns the square of a generic value.
+template<typename T>
+inline T sqr(const T x)
+{
+	return x * x;
+}
+
 /// Represents a vector of 3 floating point elements.
 class vec3 : private array<fl, 3>
 {

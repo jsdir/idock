@@ -1,4 +1,3 @@
-#include <boost/algorithm/string.hpp>
 #include "ligand.hpp"
 
 ligand::ligand(const path& p) : num_active_torsions(0)
@@ -18,14 +17,14 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	f->rotorYidx = 0; // Assume the rotorY of ROOT frame is the first atom.
 	size_t num_lines = 0; // Used to track line number for reporting parsing errors, if any.
 	string line;
-	line.reserve(79); // According to PDBQT specification, the last item AutoDock atom type locates at 1-based [78, 79].
 
 	// Parse ROOT, ATOM/HETATM, ENDROOT, BRANCH, ENDBRANCH, TORSDOF.
-	ifstream in(p); // Parsing starts. Open the file stream as late as possible.
+	boost::filesystem::ifstream in(p); // Parsing starts. Open the file stream as late as possible.
 	while (getline(in, line))
 	{
 		++num_lines;
-		if (starts_with(line, "ATOM") || starts_with(line, "HETATM"))
+		const string record = line.substr(0, 6);
+		if (record == "ATOM  " || record == "HETATM")
 		{
 			// Whenever an ATOM/HETATM line shows up, the current frame must be the last one.
 			BOOST_ASSERT(current == frames.size() - 1);
@@ -40,9 +39,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			if (ad == AD_TYPE_SIZE) continue;
 
 			// Parse the Cartesian coordinate.
-			string name = line.substr(12, 4);
-			boost::algorithm::trim(name);
-			atom a(right_cast<size_t>(line, 7, 11), name, name, vec3(right_cast<fl>(line, 31, 38), right_cast<fl>(line, 39, 46), right_cast<fl>(line, 47, 54)), ad);
+			atom a(stoul(line.substr(6, 5)), line.substr(12, 4), vec3(stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))), ad);
 
 			if (a.is_hydrogen()) // Current atom is a hydrogen.
 			{
@@ -101,14 +98,14 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 				heavy_atoms.push_back(a);
 			}
 		}
-		else if (starts_with(line, "BRANCH"))
+		else if (record == "BRANCH")
 		{
 			// This line will be dumped to the output ligand file.
 			lines.push_back(line);
 
 			// Parse "BRANCH   X   Y". X and Y are right-justified and 4 characters wide.
-			const size_t rotorXsrn = right_cast<size_t>(line,  7, 10);
-			const size_t rotorYsrn = right_cast<size_t>(line, 11, 14);
+			const size_t rotorXsrn = stoul(line.substr( 6, 4));
+			const size_t rotorYsrn = stoul(line.substr(10, 4));
 
 			// Find the corresponding heavy atom with x as its atom serial number in the current frame.
 			for (size_t i = f->habegin; true; ++i)
@@ -131,7 +128,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			frames[current - 1].haend = f->habegin;
 			frames[current - 1].hyend = f->hybegin;
 		}
-		else if (starts_with(line, "ENDBRANCH"))
+		else if (record == "ENDBRA")
 		{
 			// This line will be dumped to the output ligand file.
 			lines.push_back(line);
@@ -172,7 +169,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			// Update the pointer to the current frame.
 			f = &frames[current];
 		}
-		else if (starts_with(line, "ROOT") || starts_with(line, "ENDROOT") || starts_with(line, "TORSDOF"))
+		else if (record == "ROOT" || record == "ENDROO" || record == "TORSDO")
 		{
 			// This line will be dumped to the output ligand file.
 			lines.push_back(line);
@@ -541,20 +538,12 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 	for (size_t i = 0; i < num_conformations; ++i)
 	{
 		const result& r = results[i];
-		const size_t num_hbonds = r.hbonds.size();
 		out << "MODEL     " << setw(4) << (i + 1) << '\n'
 			<< "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
 			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
 			<< "REMARK     INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
 			<< "REMARK     INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL\n"
-			<< "REMARK            LIGAND EFFICIENCY PREDICTED BY IDOCK:" << setw(8) << (r.f * num_heavy_atoms_inverse) << " KCAL/MOL\n"
-			<< "REMARK               HYDROGEN BONDS PREDICTED BY IDOCK:" << setw(4) << num_hbonds;
-		for (size_t i = 0; i < num_hbonds; ++i)
-		{
-			const hbond& hb = r.hbonds[i];
-			out << " | " << hb.receptor << " - " << hb.ligand;
-		}
-		out << '\n';
+			<< "REMARK            LIGAND EFFICIENCY PREDICTED BY IDOCK:" << setw(8) << (r.f * num_heavy_atoms_inverse) << " KCAL/MOL\n";
 		for (size_t j = 0, heavy_atom = 0, hydrogen = 0; j < num_lines; ++j)
 		{
 			const string& line = lines[j];

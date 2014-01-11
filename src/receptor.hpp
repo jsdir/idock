@@ -5,6 +5,7 @@
 #include "atom.hpp"
 #include "array3d.hpp"
 #include "box.hpp"
+using boost::filesystem::path;
 
 /// Represents a receptor.
 class receptor

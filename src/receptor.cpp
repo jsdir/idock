@@ -1,4 +1,3 @@
-#include <boost/algorithm/string.hpp>
 #include <boost/filesystem/fstream.hpp>
 #include "scoring_function.hpp"
 #include "receptor.hpp"
@@ -16,11 +15,12 @@ receptor::receptor(const path& p, const box& b) : partitions(b.num_partitions)
 	line.reserve(79); // According to PDBQT specification, the last item AutoDock atom type locates at 1-based [78, 79].
 
 	// Parse ATOM/HETATM.
-	ifstream in(p); // Parsing starts. Open the p stream as late as possible.
+	boost::filesystem::ifstream in(p); // Parsing starts. Open the p stream as late as possible.
 	while (getline(in, line))
 	{
 		++num_lines;
-		if (starts_with(line, "ATOM") || starts_with(line, "HETATM"))
+		const string record = line.substr(0, 6);
+		if (record == "ATOM  " || record == "HETATM")
 		{
 			// Parse the residue sequence located at 1-based [23, 26].
 			if ((line[25] != residue[3]) || (line[24] != residue[2]) || (line[23] != residue[1]) || (line[22] != residue[0])) // This line is the start of a new residue.
@@ -41,9 +41,7 @@ receptor::receptor(const path& p, const box& b) : partitions(b.num_partitions)
 			if (ad == AD_TYPE_H) continue;
 
 			// Parse the Cartesian coordinate.
-			string name = line.substr(12, 4);
-			boost::algorithm::trim(name);
-			atom a(right_cast<size_t>(line, 7, 11), name, line.substr(21, 1) + ':' + line.substr(17, 3) + right_cast<string>(line, 23, 26) + ':' + name, vec3(right_cast<fl>(line, 31, 38), right_cast<fl>(line, 39, 46), right_cast<fl>(line, 47, 54)), ad);
+			atom a(stoul(line.substr(6, 5)), line.substr(12, 4), vec3(stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))), ad);
 
 			// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
 			if (ad == AD_TYPE_HD)
@@ -83,7 +81,7 @@ receptor::receptor(const path& p, const box& b) : partitions(b.num_partitions)
 			}
 			atoms.push_back(a);
 		}
-		else if (starts_with(line, "TER"))
+		else if (record == "TER   ")
 		{
 			residue = "XXXX";
 		}
