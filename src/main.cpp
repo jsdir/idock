@@ -6,10 +6,9 @@
 #include "io_service_pool.hpp"
 #include "grid_map_task.hpp"
 #include "monte_carlo_task.hpp"
-#include "summary.hpp"
 #include "utility.hpp"
 //#include "random_forest.hpp"
-//#include "log.hpp"
+#include "log.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -17,10 +16,10 @@ int main(int argc, char* argv[])
 	using std::cerr;
 	using std::endl;
 
-	path receptor_path, input_folder_path, output_folder_path, csv_path;
+	path receptor_path, input_folder_path, output_folder_path, log_path;
 	fl center_x, center_y, center_z, size_x, size_y, size_z;
 	size_t num_threads, seed, num_mc_tasks, max_conformations;
-	fl energy_range, grid_granularity;
+	fl grid_granularity;
 
 	// Process program options.
 	try
@@ -29,14 +28,12 @@ int main(int argc, char* argv[])
 
 		// Initialize the default values of optional arguments.
 		const path default_output_folder_path = "output";
-		const path default_log_path = "log.txt";
-		const path default_csv_path = "log.csv";
+		const path default_log_path = "log.csv";
 		const unsigned int concurrency = thread::hardware_concurrency();
 		const size_t default_num_threads = concurrency;
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_mc_tasks = 32;
 		const size_t default_max_conformations = 9;
-		const fl default_energy_range = 3.0;
 		const fl default_grid_granularity = 0.15625;
 
 		options_description input_options("input (required)");
@@ -54,7 +51,7 @@ int main(int argc, char* argv[])
 		options_description output_options("output (optional)");
 		output_options.add_options()
 			("output_folder", value<path>(&output_folder_path)->default_value(default_output_folder_path), "folder of output models in PDBQT format")
-			("csv", value<path>(&csv_path)->default_value(default_csv_path), "csv file")
+			("log", value<path>(&log_path)->default_value(default_log_path), "log file")
 			;
 
 		options_description miscellaneous_options("options (optional)");
@@ -63,7 +60,6 @@ int main(int argc, char* argv[])
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
 			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
-			("energy_range", value<fl>(&energy_range)->default_value(default_energy_range), "maximum energy difference in kcal/mol between the best binding conformation and the worst one")
 			("granularity", value<fl>(&grid_granularity)->default_value(default_grid_granularity), "density of probe atoms of grid maps")
 			("help", "help information")
 			("version", "version information")
@@ -155,10 +151,10 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		// Validate csv_path.
-		if (is_directory(csv_path))
+		// Validate log_path.
+		if (is_directory(log_path))
 		{
-			cerr << "csv path " << csv_path << " is a directory\n";
+			cerr << "log path " << log_path << " is a directory\n";
 			return 1;
 		}
 
@@ -176,11 +172,6 @@ int main(int argc, char* argv[])
 		if (!max_conformations)
 		{
 			cerr << "Option max_conformations must be 1 or greater\n";
-			return 1;
-		}
-		if (energy_range < 0)
-		{
-			cerr << "Option energy_range must be 0 or greater\n";
 			return 1;
 		}
 		if (grid_granularity <= 0)
@@ -262,10 +253,10 @@ int main(int argc, char* argv[])
 	cout << "Running " << num_mc_tasks << " Monte Carlo task" << ((num_mc_tasks == 1) ? "" : "s") << " per ligand\n";
 
 	// Perform docking for each file in the ligand folder.
+	log_engine log;
 	cout.setf(std::ios::fixed, std::ios::floatfield);
 	cout << "   Index        Ligand    pKd 1     2     3     4     5     6     7     8     9" << endl << std::setprecision(2);
 	path input_ligand_path;
-	size_t num_ligands = 0; // Ligand counter.
 	size_t num_conformations; // Number of conformation to output.
 	using namespace boost::filesystem;
 	const directory_iterator end_dir_iter; // A default constructed directory_iterator acts as the end iterator.
@@ -280,8 +271,6 @@ int main(int argc, char* argv[])
 		// Filter files with .pdbqt extension name.
 		if (input_ligand_path.extension() != ".pdbqt") continue;
 
-		// Increment the ligand counter.
-		++num_ligands;
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 
 		// Parse the ligand.
@@ -319,9 +308,9 @@ int main(int argc, char* argv[])
 			atom_types_to_populate.clear();
 		}
 
-		// Dump the ligand filename.
-//		cout << std::setw(7) << num_ligands << " | " << std::setw(12) << input_ligand_path.stem().string() << " | " << std::flush;
-		cout << std::setw(8) << num_ligands << std::setw(14) << input_ligand_path.stem().string() << "   " << std::flush;
+		// Dump the ligand file stem.
+		string stem = input_ligand_path.stem().string();
+		cout << std::setw(8) << log.size() + 1 << std::setw(14) << stem << "   " << std::flush;
 
 		// Populate the Monte Carlo task container.
 		cnt.init(num_mc_tasks);
@@ -351,14 +340,14 @@ int main(int argc, char* argv[])
 		}
 
 		// If no conformation can be found, skip the current ligand and proceed with the next one.
-		const size_t num_results = std::min<size_t>(results.size(), max_conformations);
-		if (!num_results) // Possible if and only if results.size() == 0 because max_conformations >= 1 is enforced when parsing command line arguments.
+		if (results.empty())
 		{
-			cout << std::setw(4) << 0 << " |\n";
+			cout << endl;
 			continue;
 		}
 
 		// Adjust free energy relative to the best conformation and flexibility.
+		const size_t num_results = std::min<size_t>(results.size(), max_conformations);
 		const result& best_result = results.front();
 		const fl best_result_intra_e = best_result.e - best_result.f;
 		for (size_t i = 0; i < num_results; ++i)
@@ -366,77 +355,33 @@ int main(int argc, char* argv[])
 			results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
 		}
 
-		// Determine the number of conformations to output according to user-supplied max_conformations and energy_range.
-		const fl energy_upper_bound = best_result.e_nd + energy_range;
-		for (num_conformations = 1; (num_conformations < num_results) && (results[num_conformations].e_nd <= energy_upper_bound); ++num_conformations);
+		// Write models to file.
+		lig.write_models(output_ligand_path, results, num_results, b, grid_maps);
 
-		if (num_conformations)
+		// Display the free energies of the top 4 conformations.
+		const size_t num_energies = std::min<size_t>(num_results, 9);
+		for (size_t i = 0; i < num_energies; ++i)
 		{
-			// Write models to file.
-			lig.write_models(output_ligand_path, results, num_conformations, b, grid_maps);
-
-			// Display the free energies of the top 4 conformations.
-			const size_t num_energies = std::min<size_t>(num_conformations, 9);
-			for (size_t i = 0; i < num_energies; ++i)
-			{
-				cout << std::setw(6) << results[i].e_nd;
-			}
+			cout << std::setw(6) << results[i].e_nd;
 		}
+
+		// Add a log record.
+		vector<fl> affinities(num_results);
+		for (size_t i = 0; i < num_results; ++i)
+		{
+			affinities[i] = results[i].e_nd;
+		}
+		log.push_back(new log_record(move(stem), move(affinities)));
+
 		cout << endl;
 
 		// Clear the results of the current ligand.
 		results.clear();
 	}
 
-	// Initialize necessary variables for storing ligand summaries.
-	ptr_vector<summary> summaries(num_ligands);
-	vector<fl> energies;
-	energies.reserve(max_conformations);
-	string line;
-
-	// Scan the output folder to retrieve ligand summaries.
-	for (directory_iterator dir_iter(output_folder_path); dir_iter != end_dir_iter; ++dir_iter)
-	{
-		const path p = dir_iter->path();
-		boost::filesystem::ifstream in(p); // Parsing starts. Open the file stream as late as possible.
-		while (getline(in, line))
-		{
-			if (starts_with(line, "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:"))
-			{
-				energies.push_back(right_cast<fl>(line, 56, 63));
-			}
-		}
-		in.close(); // Parsing finishes. Close the file stream as soon as possible.
-		summaries.push_back(new summary(p.stem().string(), static_cast<vector<fl>&&>(energies)));
-	}
-
-	// Sort the summaries.
-	summaries.sort();
-
-	// Dump ligand summaries to the csv file.
-	const size_t num_summaries = summaries.size();
-	cout << "Writing summary of " << num_summaries << " ligands to " << csv_path << '\n';
-	boost::filesystem::ofstream csv(csv_path);
-	csv << "Ligand,Conf";
-	for (size_t i = 1; i <= max_conformations; ++i)
-	{
-		csv << ",FE" << i;
-	}
-	csv.setf(std::ios::fixed, std::ios::floatfield);
-	csv << '\n' << std::setprecision(3);
-	for (size_t i = 0; i < num_summaries; ++i)
-	{
-		const summary& s = summaries[i];
-		const size_t num_conformations = s.energies.size();
-		csv << s.stem << ',' << num_conformations;
-		for (size_t j = 0; j < num_conformations; ++j)
-		{
-			csv << ',' << s.energies[j];
-		}
-		for (size_t j = num_conformations; j < max_conformations; ++j)
-		{
-			csv << ",";
-		}
-		csv << '\n';
-	}
+	// Sort and write ligand log records to the log file.
+	if (log.empty()) return 0;
+	cout << "Writing log records of " << log.size() << " ligands to " << log_path << endl;
+	log.sort();
+	log.write(log_path);
 }
