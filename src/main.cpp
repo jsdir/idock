@@ -15,7 +15,7 @@ int main(int argc, char* argv[])
 	using std::cerr;
 	using std::endl;
 
-	path receptor_path, ligand_folder_path, output_folder_path, csv_path;
+	path receptor_path, input_folder_path, output_folder_path, csv_path;
 	fl center_x, center_y, center_z, size_x, size_y, size_z;
 	size_t num_threads, seed, num_mc_tasks, max_conformations;
 	fl energy_range, grid_granularity;
@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
 		options_description input_options("input (required)");
 		input_options.add_options()
 			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
-			("ligand_folder", value<path>(&ligand_folder_path)->required(), "folder of ligands in PDBQT format")
+			("input_folder", value<path>(&input_folder_path)->required(), "folder of ligands in PDBQT format")
 			("center_x", value<fl>(&center_x)->required(), "x coordinate of the search space center")
 			("center_y", value<fl>(&center_y)->required(), "y coordinate of the search space center")
 			("center_z", value<fl>(&center_z)->required(), "z coordinate of the search space center")
@@ -111,15 +111,15 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-		// Validate ligand_folder.
-		if (!exists(ligand_folder_path))
+		// Validate input_folder_path.
+		if (!exists(input_folder_path))
 		{
-			cerr << "Ligand folder " << ligand_folder_path << " does not exist\n";
+			cerr << "Input folder " << input_folder_path << " does not exist\n";
 			return 1;
 		}
-		if (!is_directory(ligand_folder_path))
+		if (!is_directory(input_folder_path))
 		{
-			cerr << "Ligand folder " << ligand_folder_path << " is not a directory\n";
+			cerr << "Input folder " << input_folder_path << " is not a directory\n";
 			return 1;
 		}
 
@@ -267,7 +267,7 @@ int main(int argc, char* argv[])
 	size_t num_conformations; // Number of conformation to output.
 	using namespace boost::filesystem;
 	const directory_iterator end_dir_iter; // A default constructed directory_iterator acts as the end iterator.
-	for (directory_iterator dir_iter(ligand_folder_path); dir_iter != end_dir_iter; ++dir_iter)
+	for (directory_iterator dir_iter(input_folder_path); dir_iter != end_dir_iter; ++dir_iter)
 	{
 		// Obtain a ligand.
 		input_ligand_path = dir_iter->path();
