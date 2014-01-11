@@ -1,6 +1,6 @@
+#include <chrono>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
-#include "seed.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "io_service_pool.hpp"
@@ -8,6 +8,8 @@
 #include "monte_carlo_task.hpp"
 #include "summary.hpp"
 #include "utility.hpp"
+//#include "random_forest.hpp"
+//#include "log.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -30,8 +32,8 @@ int main(int argc, char* argv[])
 		const path default_log_path = "log.txt";
 		const path default_csv_path = "log.csv";
 		const unsigned int concurrency = thread::hardware_concurrency();
-		const size_t default_num_threads = concurrency ? concurrency : 1;
-		const size_t default_seed = random_seed();
+		const size_t default_num_threads = concurrency;
+		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_mc_tasks = 32;
 		const size_t default_max_conformations = 9;
 		const fl default_energy_range = 3.0;
@@ -370,33 +372,6 @@ int main(int argc, char* argv[])
 
 		if (num_conformations)
 		{
-			// Find the number of hydrogen bonds.
-			const size_t num_lig_hbda = lig.hbda.size();
-			for (size_t k = 0; k < num_conformations; ++k)
-			{
-				result& r = results[k];
-				for (size_t i = 0; i < num_lig_hbda; ++i)
-				{
-					const atom& lig_atom = lig.heavy_atoms[lig.hbda[i]];
-					BOOST_ASSERT(xs_is_donor_acceptor(lig_atom.xs));
-
-					// Find the possibly interacting receptor atoms via partitions.
-					const vec3 lig_coords = r.heavy_atoms[lig.hbda[i]];
-					const vector<size_t>& rec_hbda = rec.hbda_3d(b.partition_index(lig_coords));
-
-					// Accumulate individual free energies for each atom types to populate.
-					const size_t num_rec_hbda = rec_hbda.size();
-					for (size_t l = 0; l < num_rec_hbda; ++l)
-					{
-						const atom& rec_atom = rec.atoms[rec_hbda[l]];
-						BOOST_ASSERT(xs_is_donor_acceptor(rec_atom.xs));
-						if (!xs_hbond(lig_atom.xs, rec_atom.xs)) continue;
-						const fl r2 = distance_sqr(lig_coords, rec_atom.coordinate);
-						if (r2 <= hbond_dist_sqr) r.hbonds.push_back(hbond(rec_atom.name, lig_atom.name));
-					}
-				}
-			}
-
 			// Write models to file.
 			lig.write_models(output_ligand_path, results, num_conformations, b, grid_maps);
 
@@ -415,13 +390,9 @@ int main(int argc, char* argv[])
 
 	// Initialize necessary variables for storing ligand summaries.
 	ptr_vector<summary> summaries(num_ligands);
-	vector<fl> energies, efficiencies;
+	vector<fl> energies;
 	energies.reserve(max_conformations);
-	efficiencies.reserve(max_conformations);
-	vector<string> hbonds;
-	hbonds.reserve(max_conformations);
 	string line;
-	line.reserve(79);
 
 	// Scan the output folder to retrieve ligand summaries.
 	for (directory_iterator dir_iter(output_folder_path); dir_iter != end_dir_iter; ++dir_iter)
@@ -434,29 +405,9 @@ int main(int argc, char* argv[])
 			{
 				energies.push_back(right_cast<fl>(line, 56, 63));
 			}
-			else if (starts_with(line, "REMARK            LIGAND EFFICIENCY PREDICTED BY IDOCK:"))
-			{
-				efficiencies.push_back(right_cast<fl>(line, 56, 63));
-			}
-			else if (starts_with(line, "REMARK               HYDROGEN BONDS PREDICTED BY IDOCK:"))
-			{
-				size_t start;
-				for (start = 56; line[start] == ' '; ++start);
-				hbonds.push_back(line.substr(start));
-			}
 		}
 		in.close(); // Parsing finishes. Close the file stream as soon as possible.
-		if (energies.empty() || efficiencies.empty() || hbonds.empty())
-		{
-			cout << p.filename().string() << " contains no free energy, ligand efficiency or hydrogen bonds.\n";
-			continue;
-		}
-		summaries.push_back(new summary(p.stem().string(), static_cast<vector<fl>&&>(energies), static_cast<vector<fl>&&>(efficiencies), static_cast<vector<string>&&>(hbonds)));
-#ifdef __clang__ // Clang 3.1 on Mac OS X and FreeBSD does not support rvalue references.
-		energies.clear();
-		efficiencies.clear();
-		hbonds.clear();
-#endif
+		summaries.push_back(new summary(p.stem().string(), static_cast<vector<fl>&&>(energies)));
 	}
 
 	// Sort the summaries.
@@ -469,7 +420,7 @@ int main(int argc, char* argv[])
 	csv << "Ligand,Conf";
 	for (size_t i = 1; i <= max_conformations; ++i)
 	{
-		csv << ",FE" << i << ",LE" << i << ",HB" << i;
+		csv << ",FE" << i;
 	}
 	csv.setf(std::ios::fixed, std::ios::floatfield);
 	csv << '\n' << std::setprecision(3);
@@ -480,11 +431,11 @@ int main(int argc, char* argv[])
 		csv << s.stem << ',' << num_conformations;
 		for (size_t j = 0; j < num_conformations; ++j)
 		{
-			csv << ',' << s.energies[j] << ',' << s.efficiencies[j] << ',' << s.hbonds[j];
+			csv << ',' << s.energies[j];
 		}
 		for (size_t j = num_conformations; j < max_conformations; ++j)
 		{
-			csv << ",,,";
+			csv << ",";
 		}
 		csv << '\n';
 	}

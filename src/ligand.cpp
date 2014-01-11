@@ -200,13 +200,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	flexibility_penalty_factor = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
 	BOOST_ASSERT(flexibility_penalty_factor < 1);
 
-	// Find hydrogen bond donors and acceptors.
-	hbda.reserve(num_heavy_atoms);
-	for (size_t i = 0; i < num_heavy_atoms; ++i)
-	{
-		if (xs_is_donor_acceptor(heavy_atoms[i].xs)) hbda.push_back(i);
-	}
-
 	// Update heavy_atoms[].coordinate and hydrogens[].coordinate relative to frame origin.
 	for (size_t k = 0; k < num_frames; ++k)
 	{
