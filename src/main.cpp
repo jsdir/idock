@@ -401,7 +401,7 @@ int main(int argc, char* argv[])
 			lig.write_models(output_ligand_path, results, num_conformations, b, grid_maps);
 
 			// Display the free energies of the top 4 conformations.
-			const size_t num_energies = std::min<size_t>(num_conformations, 4);
+			const size_t num_energies = std::min<size_t>(num_conformations, 9);
 			for (size_t i = 0; i < num_energies; ++i)
 			{
 				cout << std::setw(6) << results[i].e_nd;
