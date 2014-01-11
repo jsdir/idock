@@ -19,7 +19,6 @@ int main(int argc, char* argv[])
 	fl center_x, center_y, center_z, size_x, size_y, size_z;
 	size_t num_threads, seed, num_mc_tasks, max_conformations;
 	fl energy_range, grid_granularity;
-	bool force;
 
 	// Process program options.
 	try
@@ -37,7 +36,6 @@ int main(int argc, char* argv[])
 		const size_t default_max_conformations = 9;
 		const fl default_energy_range = 3.0;
 		const fl default_grid_granularity = 0.15625;
-		const bool default_force = false;
 
 		options_description input_options("input (required)");
 		input_options.add_options()
@@ -65,7 +63,8 @@ int main(int argc, char* argv[])
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
 			("energy_range", value<fl>(&energy_range)->default_value(default_energy_range), "maximum energy difference in kcal/mol between the best binding conformation and the worst one")
 			("granularity", value<fl>(&grid_granularity)->default_value(default_grid_granularity), "density of probe atoms of grid maps")
-			("force", bool_switch(&force)->default_value(default_force), "force to dock every ligand")
+			("help", "help information")
+			("version", "version information")
 			("config", value<path>(), "options can be loaded from a configuration file")
 			;
 
@@ -262,7 +261,7 @@ int main(int argc, char* argv[])
 
 	// Perform docking for each file in the ligand folder.
 	cout.setf(std::ios::fixed, std::ios::floatfield);
-	cout << "  Index |       Ligand |   Progress | Conf | Top 4 conf free energy in kcal/mol\n" << std::setprecision(3);
+	cout << "   Index        Ligand    pKd 1     2     3     4     5     6     7     8     9" << endl << std::setprecision(2);
 	path input_ligand_path;
 	size_t num_ligands = 0; // Ligand counter.
 	size_t num_conformations; // Number of conformation to output.
@@ -270,168 +269,148 @@ int main(int argc, char* argv[])
 	const directory_iterator end_dir_iter; // A default constructed directory_iterator acts as the end iterator.
 	for (directory_iterator dir_iter(ligand_folder_path); dir_iter != end_dir_iter; ++dir_iter)
 	{
+		// Obtain a ligand.
+		input_ligand_path = dir_iter->path();
+
 		// Skip non-regular files such as folders.
-		if (!is_regular_file(dir_iter->status())) continue;
+		if (!is_regular_file(input_ligand_path)) continue;
+
+		// Filter files with .pdbqt extension name.
+		if (input_ligand_path.extension() != ".pdbqt") continue;
 
 		// Increment the ligand counter.
 		++num_ligands;
+		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 
-		try // The try-catch block ensures the remaining ligands will be docked should the current ligand fail.
+		// Parse the ligand.
+		ligand lig(input_ligand_path);
+
+		// Create grid maps on the fly if necessary.
+		BOOST_ASSERT(atom_types_to_populate.empty());
+		const vector<size_t> ligand_atom_types = lig.get_atom_types();
+		const size_t num_ligand_atom_types = ligand_atom_types.size();
+		for (size_t i = 0; i < num_ligand_atom_types; ++i)
 		{
-			// Obtain a ligand.
-			input_ligand_path = dir_iter->path();
-			const string stem = input_ligand_path.extension() == ".pdbqt" ? input_ligand_path.stem().string() : input_ligand_path.stem().stem().string();
-
-			// Skip the current ligand if it has been docked.
-			const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-			if (!force && exists(output_ligand_path)) continue;
-
-			// Parse the ligand.
-			ligand lig(input_ligand_path);
-
-			// Create grid maps on the fly if necessary.
-			BOOST_ASSERT(atom_types_to_populate.empty());
-			const vector<size_t> ligand_atom_types = lig.get_atom_types();
-			const size_t num_ligand_atom_types = ligand_atom_types.size();
-			for (size_t i = 0; i < num_ligand_atom_types; ++i)
+			const size_t t = ligand_atom_types[i];
+			BOOST_ASSERT(t < XS_TYPE_SIZE);
+			array3d<fl>& grid_map = grid_maps[t];
+			if (grid_map.initialized()) continue; // The grid map of XScore atom type t has already been populated.
+			grid_map.resize(b.num_probes); // An exception may be thrown in case memory is exhausted.
+			atom_types_to_populate.push_back(t);  // The grid map of XScore atom type t has not been populated and should be populated now.
+		}
+		const size_t num_atom_types_to_populate = atom_types_to_populate.size();
+		if (num_atom_types_to_populate)
+		{
+			// Populate the grid map task container.
+			cnt.init(num_gm_tasks);
+			for (size_t x = 0; x < num_gm_tasks; ++x)
 			{
-				const size_t t = ligand_atom_types[i];
-				BOOST_ASSERT(t < XS_TYPE_SIZE);
-				array3d<fl>& grid_map = grid_maps[t];
-				if (grid_map.initialized()) continue; // The grid map of XScore atom type t has already been populated.
-				grid_map.resize(b.num_probes); // An exception may be thrown in case memory is exhausted.
-				atom_types_to_populate.push_back(t);  // The grid map of XScore atom type t has not been populated and should be populated now.
-			}
-			const size_t num_atom_types_to_populate = atom_types_to_populate.size();
-			if (num_atom_types_to_populate)
-			{
-				// Creating grid maps is an intermediate step, and thus should not be dumped to the log file.
-				cout << "Creating " << std::setw(2) << num_atom_types_to_populate << " grid map" << ((num_atom_types_to_populate == 1) ? ' ' : 's') << "    " << std::flush;
-
-				// Populate the grid map task container.
-				cnt.init(num_gm_tasks);
-				for (size_t x = 0; x < num_gm_tasks; ++x)
+				io.post([&,x]()
 				{
-					io.post([&,x]()
-					{
-						grid_map_task(grid_maps, atom_types_to_populate, x, sf, b, rec);
-						cnt.increment();
-					});
-				}
-
-				// Block until all the grid map tasks are completed.
-				cnt.wait();
-				atom_types_to_populate.clear();
-
-				// Clear the current line and reset the cursor to the beginning.
-				cout << '\r' << std::setw(36) << '\r';
-			}
-
-			// Dump the ligand filename.
-			cout << std::setw(7) << num_ligands << " | " << std::setw(12) << stem << " | " << std::flush;
-
-			// Populate the Monte Carlo task container.
-			cnt.init(num_mc_tasks);
-			for (size_t i = 0; i < num_mc_tasks; ++i)
-			{
-				BOOST_ASSERT(result_containers[i].empty());
-				io.post([&,i]()
-				{
-					monte_carlo_task(result_containers[i], lig, eng(), sf, b, grid_maps);
+					grid_map_task(grid_maps, atom_types_to_populate, x, sf, b, rec);
 					cnt.increment();
 				});
 			}
+
+			// Block until all the grid map tasks are completed.
 			cnt.wait();
+			atom_types_to_populate.clear();
+		}
 
-			// Merge results from all the tasks into one single result container.
-			BOOST_ASSERT(results.empty());
-			const fl required_square_error = static_cast<fl>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
-			for (size_t i = 0; i < num_mc_tasks; ++i)
+		// Dump the ligand filename.
+//		cout << std::setw(7) << num_ligands << " | " << std::setw(12) << input_ligand_path.stem().string() << " | " << std::flush;
+		cout << std::setw(8) << num_ligands << std::setw(14) << input_ligand_path.stem().string() << "   " << std::flush;
+
+		// Populate the Monte Carlo task container.
+		cnt.init(num_mc_tasks);
+		for (size_t i = 0; i < num_mc_tasks; ++i)
+		{
+			BOOST_ASSERT(result_containers[i].empty());
+			io.post([&,i]()
 			{
-				ptr_vector<result>& task_results = result_containers[i];
-				const size_t num_task_results = task_results.size();
-				for (size_t j = 0; j < num_task_results; ++j)
+				monte_carlo_task(result_containers[i], lig, eng(), sf, b, grid_maps);
+				cnt.increment();
+			});
+		}
+		cnt.wait();
+
+		// Merge results from all the tasks into one single result container.
+		BOOST_ASSERT(results.empty());
+		const fl required_square_error = static_cast<fl>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
+		for (size_t i = 0; i < num_mc_tasks; ++i)
+		{
+			ptr_vector<result>& task_results = result_containers[i];
+			const size_t num_task_results = task_results.size();
+			for (size_t j = 0; j < num_task_results; ++j)
+			{
+				add_to_result_container(results, static_cast<result&&>(task_results[j]), required_square_error);
+			}
+			task_results.clear();
+		}
+
+		// If no conformation can be found, skip the current ligand and proceed with the next one.
+		const size_t num_results = std::min<size_t>(results.size(), max_conformations);
+		if (!num_results) // Possible if and only if results.size() == 0 because max_conformations >= 1 is enforced when parsing command line arguments.
+		{
+			cout << std::setw(4) << 0 << " |\n";
+			continue;
+		}
+
+		// Adjust free energy relative to the best conformation and flexibility.
+		const result& best_result = results.front();
+		const fl best_result_intra_e = best_result.e - best_result.f;
+		for (size_t i = 0; i < num_results; ++i)
+		{
+			results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
+		}
+
+		// Determine the number of conformations to output according to user-supplied max_conformations and energy_range.
+		const fl energy_upper_bound = best_result.e_nd + energy_range;
+		for (num_conformations = 1; (num_conformations < num_results) && (results[num_conformations].e_nd <= energy_upper_bound); ++num_conformations);
+
+		if (num_conformations)
+		{
+			// Find the number of hydrogen bonds.
+			const size_t num_lig_hbda = lig.hbda.size();
+			for (size_t k = 0; k < num_conformations; ++k)
+			{
+				result& r = results[k];
+				for (size_t i = 0; i < num_lig_hbda; ++i)
 				{
-					add_to_result_container(results, static_cast<result&&>(task_results[j]), required_square_error);
-				}
-				task_results.clear();
-			}
+					const atom& lig_atom = lig.heavy_atoms[lig.hbda[i]];
+					BOOST_ASSERT(xs_is_donor_acceptor(lig_atom.xs));
 
-			// Proceed to number of conformations.
-			cout << " | ";
+					// Find the possibly interacting receptor atoms via partitions.
+					const vec3 lig_coords = r.heavy_atoms[lig.hbda[i]];
+					const vector<size_t>& rec_hbda = rec.hbda_3d(b.partition_index(lig_coords));
 
-			// If no conformation can be found, skip the current ligand and proceed with the next one.
-			const size_t num_results = std::min<size_t>(results.size(), max_conformations);
-			if (!num_results) // Possible if and only if results.size() == 0 because max_conformations >= 1 is enforced when parsing command line arguments.
-			{
-				cout << std::setw(4) << 0 << " |\n";
-				continue;
-			}
-
-			// Adjust free energy relative to the best conformation and flexibility.
-			const result& best_result = results.front();
-			const fl best_result_intra_e = best_result.e - best_result.f;
-			for (size_t i = 0; i < num_results; ++i)
-			{
-				results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
-			}
-
-			// Determine the number of conformations to output according to user-supplied max_conformations and energy_range.
-			const fl energy_upper_bound = best_result.e_nd + energy_range;
-			for (num_conformations = 1; (num_conformations < num_results) && (results[num_conformations].e_nd <= energy_upper_bound); ++num_conformations);
-
-			// Flush the number of conformations to output.
-			cout << std::setw(4) << num_conformations << " |";
-
-			if (num_conformations)
-			{
-				// Find the number of hydrogen bonds.
-				const size_t num_lig_hbda = lig.hbda.size();
-				for (size_t k = 0; k < num_conformations; ++k)
-				{
-					result& r = results[k];
-					for (size_t i = 0; i < num_lig_hbda; ++i)
+					// Accumulate individual free energies for each atom types to populate.
+					const size_t num_rec_hbda = rec_hbda.size();
+					for (size_t l = 0; l < num_rec_hbda; ++l)
 					{
-						const atom& lig_atom = lig.heavy_atoms[lig.hbda[i]];
-						BOOST_ASSERT(xs_is_donor_acceptor(lig_atom.xs));
-
-						// Find the possibly interacting receptor atoms via partitions.
-						const vec3 lig_coords = r.heavy_atoms[lig.hbda[i]];
-						const vector<size_t>& rec_hbda = rec.hbda_3d(b.partition_index(lig_coords));
-
-						// Accumulate individual free energies for each atom types to populate.
-						const size_t num_rec_hbda = rec_hbda.size();
-						for (size_t l = 0; l < num_rec_hbda; ++l)
-						{
-							const atom& rec_atom = rec.atoms[rec_hbda[l]];
-							BOOST_ASSERT(xs_is_donor_acceptor(rec_atom.xs));
-							if (!xs_hbond(lig_atom.xs, rec_atom.xs)) continue;
-							const fl r2 = distance_sqr(lig_coords, rec_atom.coordinate);
-							if (r2 <= hbond_dist_sqr) r.hbonds.push_back(hbond(rec_atom.name, lig_atom.name));
-						}
+						const atom& rec_atom = rec.atoms[rec_hbda[l]];
+						BOOST_ASSERT(xs_is_donor_acceptor(rec_atom.xs));
+						if (!xs_hbond(lig_atom.xs, rec_atom.xs)) continue;
+						const fl r2 = distance_sqr(lig_coords, rec_atom.coordinate);
+						if (r2 <= hbond_dist_sqr) r.hbonds.push_back(hbond(rec_atom.name, lig_atom.name));
 					}
 				}
-
-				// Write models to file.
-				lig.write_models(output_ligand_path, results, num_conformations, b, grid_maps);
-
-				// Display the free energies of the top 4 conformations.
-				const size_t num_energies = std::min<size_t>(num_conformations, 4);
-				for (size_t i = 0; i < num_energies; ++i)
-				{
-					cout << std::setw(8) << results[i].e_nd;
-				}
 			}
-			cout << '\n';
 
-			// Clear the results of the current ligand.
-			results.clear();
+			// Write models to file.
+			lig.write_models(output_ligand_path, results, num_conformations, b, grid_maps);
+
+			// Display the free energies of the top 4 conformations.
+			const size_t num_energies = std::min<size_t>(num_conformations, 4);
+			for (size_t i = 0; i < num_energies; ++i)
+			{
+				cout << std::setw(6) << results[i].e_nd;
+			}
 		}
-		catch (const std::exception& e)
-		{
-			cout << input_ligand_path.filename().string() << ' ' << e.what() << '\n';
-			continue; // Skip the current ligand and proceed with the next one.
-		}
+		cout << endl;
+
+		// Clear the results of the current ligand.
+		results.clear();
 	}
 
 	// Initialize necessary variables for storing ligand summaries.
