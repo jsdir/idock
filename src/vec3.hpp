@@ -2,9 +2,10 @@
 #ifndef IDOCK_VEC3_HPP
 #define IDOCK_VEC3_HPP
 
+#include <vector>
 #include <boost/array.hpp>
 #include "common.hpp"
-
+using std::vector;
 using boost::array;
 
 /// Returns the square of a generic value.
@@ -12,6 +13,12 @@ template<typename T>
 inline T sqr(const T x)
 {
 	return x * x;
+}
+
+/// Returns true if the absolute difference between two floating point values is within the constant tolerance.
+inline bool eq(const fl a, const fl b)
+{
+	return fabs(a - b) < 1e-5;
 }
 
 /// Represents a vector of 3 floating point elements.
