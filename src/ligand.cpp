@@ -1,7 +1,4 @@
 #include <boost/algorithm/string.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filter/bzip2.hpp>
 #include "ligand.hpp"
 
 ligand::ligand(const path& p) : num_active_torsions(0)
@@ -25,11 +22,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 
 	// Parse ROOT, ATOM/HETATM, ENDROOT, BRANCH, ENDBRANCH, TORSDOF.
 	ifstream in(p); // Parsing starts. Open the file stream as late as possible.
-	boost::iostreams::filtering_istream fis;
-	const string ext = p.extension().string();
-	if (ext == ".gz") fis.push(boost::iostreams::gzip_decompressor()); else if (ext == ".bz2") fis.push(boost::iostreams::bzip2_decompressor());
-	fis.push(in);
-	while (getline(fis, line))
+	while (getline(in, line))
 	{
 		++num_lines;
 		if (starts_with(line, "ATOM") || starts_with(line, "HETATM"))
@@ -550,17 +543,13 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 	// Dump binding conformations to the output ligand file.
 	using namespace std;
 	boost::filesystem::ofstream out(output_ligand_path); // Dumping starts. Open the file stream as late as possible.
-	boost::iostreams::filtering_ostream fos;
-	const string ext = output_ligand_path.extension().string();
-	if (ext == ".gz") fos.push(boost::iostreams::gzip_compressor()); else if (ext == ".bz2") fos.push(boost::iostreams::bzip2_compressor());
-	fos.push(out);
-	fos.setf(ios::fixed, ios::floatfield);
-	fos << setprecision(3);
+	out.setf(ios::fixed, ios::floatfield);
+	out << setprecision(3);
 	for (size_t i = 0; i < num_conformations; ++i)
 	{
 		const result& r = results[i];
 		const size_t num_hbonds = r.hbonds.size();
-		fos << "MODEL     " << setw(4) << (i + 1) << '\n'
+		out << "MODEL     " << setw(4) << (i + 1) << '\n'
 			<< "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
 			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
 			<< "REMARK     INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
@@ -570,9 +559,9 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 		for (size_t i = 0; i < num_hbonds; ++i)
 		{
 			const hbond& hb = r.hbonds[i];
-			fos << " | " << hb.receptor << " - " << hb.ligand;
+			out << " | " << hb.receptor << " - " << hb.ligand;
 		}
-		fos << '\n';
+		out << '\n';
 		for (size_t j = 0, heavy_atom = 0, hydrogen = 0; j < num_lines; ++j)
 		{
 			const string& line = lines[j];
@@ -580,7 +569,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			{
 				const fl   free_energy = line[77] == 'H' ? 0 : grid_maps[heavy_atoms[heavy_atom].xs](b.grid_index(r.heavy_atoms[heavy_atom]));
 				const vec3& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
-				fos << line.substr(0, 30)
+				out << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
 					<< setw(8) << coordinate[1]
 					<< setw(8) << coordinate[2]
@@ -590,10 +579,10 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			}
 			else // This line starts with "ROOT", "ENDROOT", "BRANCH", "ENDBRANCH", TORSDOF", which will not change during docking.
 			{
-				fos << line;
+				out << line;
 			}
-			fos << '\n';
+			out << '\n';
 		}
-		fos << "ENDMDL\n";
+		out << "ENDMDL\n";
 	}
 }

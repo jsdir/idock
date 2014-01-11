@@ -1,9 +1,6 @@
 #include <boost/thread/thread.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filter/bzip2.hpp>
 #include "seed.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
@@ -16,7 +13,7 @@ int main(int argc, char* argv[])
 {
 	using std::cout;
 	using std::cerr;
-	cout << "idock 2.0\n";
+	using std::endl;
 
 	path receptor_path, ligand_folder_path, output_folder_path, csv_path;
 	fl center_x, center_y, center_z, size_x, size_y, size_z;
@@ -75,23 +72,33 @@ int main(int argc, char* argv[])
 		options_description all_options;
 		all_options.add(input_options).add(output_options).add(miscellaneous_options);
 
-		// If no command line argument is supplied, simply print the usage and exit.
-		if (argc == 1)
+		// Parse command line arguments.
+		variables_map vm;
+		store(parse_command_line(argc, argv, all_options), vm);
+
+		// If no command line argument is supplied or help is requested, print the usage and exit.
+		if (argc == 1 || vm.count("help"))
 		{
 			cout << all_options;
 			return 0;
 		}
 
-		// Parse command line arguments.
-		variables_map vm;
-		store(parse_command_line(argc, argv, all_options), vm);
-		variable_value config_value = vm["config"];
-		if (!config_value.empty()) // If a configuration file is presented, parse it.
+		// If version is requested, print the version and exit.
+		if (vm.count("version"))
 		{
-			ifstream config_file(config_value.as<path>());
+			cout << "2.1" << endl;
+			return 0;
+		}
+
+		// If a configuration file is presented, parse it.
+		if (vm.count("config"))
+		{
+			boost::filesystem::ifstream config_file(vm["config"].as<path>());
 			store(parse_config_file(config_file, all_options), vm);
 		}
-		vm.notify(); // Notify the user if there are any parsing errors.
+
+		// Notify the user of parsing errors, if any.
+		vm.notify();
 
 		// Validate receptor.
 		if (!exists(receptor_path))
@@ -450,16 +457,11 @@ int main(int argc, char* argv[])
 	line.reserve(79);
 
 	// Scan the output folder to retrieve ligand summaries.
-	using namespace boost::iostreams;
 	for (directory_iterator dir_iter(output_folder_path); dir_iter != end_dir_iter; ++dir_iter)
 	{
 		const path p = dir_iter->path();
 		ifstream in(p); // Parsing starts. Open the file stream as late as possible.
-		filtering_istream fis;
-		const string ext = p.extension().string();
-		if (ext == ".gz") fis.push(gzip_decompressor()); else if (ext == ".bz2") fis.push(bzip2_decompressor());
-		fis.push(in);
-		while (getline(fis, line))
+		while (getline(in, line))
 		{
 			if (starts_with(line, "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:"))
 			{
@@ -482,7 +484,7 @@ int main(int argc, char* argv[])
 			cout << p.filename().string() << " contains no free energy, ligand efficiency or hydrogen bonds.\n";
 			continue;
 		}
-		summaries.push_back(new summary(ext == ".pdbqt" ? p.stem().string() : p.stem().stem().string(), static_cast<vector<fl>&&>(energies), static_cast<vector<fl>&&>(efficiencies), static_cast<vector<string>&&>(hbonds)));
+		summaries.push_back(new summary(p.stem().string(), static_cast<vector<fl>&&>(energies), static_cast<vector<fl>&&>(efficiencies), static_cast<vector<string>&&>(hbonds)));
 #ifdef __clang__ // Clang 3.1 on Mac OS X and FreeBSD does not support rvalue references.
 		energies.clear();
 		efficiencies.clear();
