@@ -1,4 +1,3 @@
-#include <boost/thread/thread.hpp>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 #include "seed.hpp"
@@ -31,7 +30,7 @@ int main(int argc, char* argv[])
 		const path default_output_folder_path = "output";
 		const path default_log_path = "log.txt";
 		const path default_csv_path = "log.csv";
-		const unsigned int concurrency = boost::thread::hardware_concurrency();
+		const unsigned int concurrency = thread::hardware_concurrency();
 		const size_t default_num_threads = concurrency ? concurrency : 1;
 		const size_t default_seed = random_seed();
 		const size_t default_num_mc_tasks = 32;
@@ -249,7 +248,6 @@ int main(int argc, char* argv[])
 		for (size_t t0 =  0; t0 < XS_TYPE_SIZE; ++t0)
 		for (size_t t1 = t0; t1 < XS_TYPE_SIZE; ++t1)
 		{
-//			sf_tasks.push_back(new packaged_task<void>(boost::bind<void>(&scoring_function::precalculate, boost::ref(sf), t0, t1, boost::cref(rs))));
 			io.post([&,t0,t1]()
 			{
 				sf.precalculate(t0, t1, rs);
@@ -314,7 +312,6 @@ int main(int argc, char* argv[])
 				cnt.init(num_gm_tasks);
 				for (size_t x = 0; x < num_gm_tasks; ++x)
 				{
-//					gm_tasks.push_back(new packaged_task<void>(boost::bind<void>(grid_map_task, boost::ref(grid_maps), boost::cref(atom_types_to_populate), x, boost::cref(sf), boost::cref(b), boost::cref(rec))));
 					io.post([&,x]()
 					{
 						grid_map_task(grid_maps, atom_types_to_populate, x, sf, b, rec);
@@ -338,7 +335,6 @@ int main(int argc, char* argv[])
 			for (size_t i = 0; i < num_mc_tasks; ++i)
 			{
 				BOOST_ASSERT(result_containers[i].empty());
-//				mc_tasks.push_back(new packaged_task<void>(boost::bind<void>(monte_carlo_task, boost::ref(result_containers[i]), boost::cref(lig), eng(), boost::cref(sf), boost::cref(b), boost::cref(grid_maps))));
 				io.post([&,i]()
 				{
 					monte_carlo_task(result_containers[i], lig, eng(), sf, b, grid_maps);
