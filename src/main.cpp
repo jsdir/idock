@@ -1,6 +1,9 @@
 #include <chrono>
+#include <iostream>
+#include <iomanip>
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "io_service_pool.hpp"
@@ -9,13 +12,10 @@
 #include "utility.hpp"
 //#include "random_forest.hpp"
 #include "log.hpp"
+using namespace std;
 
 int main(int argc, char* argv[])
 {
-	using std::cout;
-	using std::cerr;
-	using std::endl;
-
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	fl center_x, center_y, center_z, size_x, size_y, size_z;
 	size_t num_threads, seed, num_mc_tasks, max_conformations;
@@ -180,7 +180,7 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 	}
-	catch (const std::exception& e)
+	catch (const exception& e)
 	{
 		cerr << e.what() << '\n';
 		return 1;
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
 
 	// Initialize a Mersenne Twister random number generator.
 	cout << "Using random seed " << seed << '\n';
-	mt19937eng eng(seed);
+	mt19937_64 eng(seed);
 
 	// Initialize the search space of cuboid shape.
 	const box b(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size_z), grid_granularity);
@@ -254,8 +254,8 @@ int main(int argc, char* argv[])
 
 	// Perform docking for each file in the ligand folder.
 	log_engine log;
-	cout.setf(std::ios::fixed, std::ios::floatfield);
-	cout << "   Index        Ligand    pKd 1     2     3     4     5     6     7     8     9" << endl << std::setprecision(2);
+	cout.setf(ios::fixed, ios::floatfield);
+	cout << "   Index        Ligand    pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	path input_ligand_path;
 	size_t num_conformations; // Number of conformation to output.
 	using namespace boost::filesystem;
@@ -310,7 +310,7 @@ int main(int argc, char* argv[])
 
 		// Dump the ligand file stem.
 		string stem = input_ligand_path.stem().string();
-		cout << std::setw(8) << log.size() + 1 << std::setw(14) << stem << "   " << std::flush;
+		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
 
 		// Populate the Monte Carlo task container.
 		cnt.init(num_mc_tasks);
@@ -347,7 +347,7 @@ int main(int argc, char* argv[])
 		}
 
 		// Adjust free energy relative to the best conformation and flexibility.
-		const size_t num_results = std::min<size_t>(results.size(), max_conformations);
+		const size_t num_results = min<size_t>(results.size(), max_conformations);
 		const result& best_result = results.front();
 		const fl best_result_intra_e = best_result.e - best_result.f;
 		for (size_t i = 0; i < num_results; ++i)
@@ -359,10 +359,10 @@ int main(int argc, char* argv[])
 		lig.write_models(output_ligand_path, results, num_results, b, grid_maps);
 
 		// Display the free energies of the top 4 conformations.
-		const size_t num_energies = std::min<size_t>(num_results, 9);
+		const size_t num_energies = min<size_t>(num_results, 9);
 		for (size_t i = 0; i < num_energies; ++i)
 		{
-			cout << std::setw(6) << results[i].e_nd;
+			cout << setw(6) << results[i].e_nd;
 		}
 
 		// Add a log record.

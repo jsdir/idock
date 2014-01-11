@@ -1,4 +1,7 @@
+#include <iomanip>
+#include <boost/filesystem/fstream.hpp>
 #include "ligand.hpp"
+using std::setw;
 
 ligand::ligand(const path& p) : num_active_torsions(0)
 {
@@ -15,14 +18,11 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	size_t current = 0; // Index of current frame, initialized to ROOT frame.
 	frame* f = &frames.front(); // Pointer to the current frame.
 	f->rotorYidx = 0; // Assume the rotorY of ROOT frame is the first atom.
-	size_t num_lines = 0; // Used to track line number for reporting parsing errors, if any.
 	string line;
 
-	// Parse ROOT, ATOM/HETATM, ENDROOT, BRANCH, ENDBRANCH, TORSDOF.
-	boost::filesystem::ifstream in(p); // Parsing starts. Open the file stream as late as possible.
-	while (getline(in, line))
+	// Start parsing.
+	for (boost::filesystem::ifstream ifs(p); getline(ifs, line);)
 	{
-		++num_lines;
 		const string record = line.substr(0, 6);
 		if (record == "ATOM  " || record == "HETATM")
 		{
@@ -175,8 +175,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			lines.push_back(line);
 		}
 	}
-	in.close(); // Parsing finishes. Close the file stream as soon as possible.
-	BOOST_ASSERT(lines.size() <= num_lines); // Some lines like "REMARK", "WARNING", "TER" will not be dumped to the output ligand file.
 	BOOST_ASSERT(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 	BOOST_ASSERT(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 
@@ -532,13 +530,13 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 
 	// Dump binding conformations to the output ligand file.
 	using namespace std;
-	boost::filesystem::ofstream out(output_ligand_path); // Dumping starts. Open the file stream as late as possible.
-	out.setf(ios::fixed, ios::floatfield);
-	out << setprecision(3);
+	boost::filesystem::ofstream ofs(output_ligand_path); // Dumping starts. Open the file stream as late as possible.
+	ofs.setf(ios::fixed, ios::floatfield);
+	ofs << setprecision(3);
 	for (size_t i = 0; i < num_conformations; ++i)
 	{
 		const result& r = results[i];
-		out << "MODEL     " << setw(4) << (i + 1) << '\n'
+		ofs << "MODEL     " << setw(4) << (i + 1) << '\n'
 			<< "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
 			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
 			<< "REMARK     INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
@@ -551,7 +549,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			{
 				const fl   free_energy = line[77] == 'H' ? 0 : grid_maps[heavy_atoms[heavy_atom].xs](b.grid_index(r.heavy_atoms[heavy_atom]));
 				const vec3& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
-				out << line.substr(0, 30)
+				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
 					<< setw(8) << coordinate[1]
 					<< setw(8) << coordinate[2]
@@ -561,10 +559,10 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			}
 			else // This line starts with "ROOT", "ENDROOT", "BRANCH", "ENDBRANCH", TORSDOF", which will not change during docking.
 			{
-				out << line;
+				ofs << line;
 			}
-			out << '\n';
+			ofs << '\n';
 		}
-		out << "ENDMDL\n";
+		ofs << "ENDMDL\n";
 	}
 }

@@ -2,6 +2,7 @@
 #ifndef IDOCK_LIGAND_HPP
 #define IDOCK_LIGAND_HPP
 
+#include <boost/filesystem/path.hpp>
 #include <boost/optional.hpp>
 #include "atom.hpp"
 #include "matrix.hpp"

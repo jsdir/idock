@@ -2,6 +2,7 @@
 #ifndef IDOCK_RECEPTOR_HPP
 #define IDOCK_RECEPTOR_HPP
 
+#include <boost/filesystem/path.hpp>
 #include "atom.hpp"
 #include "array3d.hpp"
 #include "box.hpp"

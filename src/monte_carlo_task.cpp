@@ -1,4 +1,7 @@
+#include <random>
 #include "monte_carlo_task.hpp"
+using namespace std;
+//using std::random::mt19937_64;
 
 void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const box& b, const vector<array3d<fl>>& grid_maps)
 {
@@ -10,25 +13,23 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 	const fl required_square_error = static_cast<fl>(1 * lig.num_heavy_atoms); // Ligands with RMSD < 1.0 will be clustered into the same cluster.
 	const fl pi = static_cast<fl>(3.1415926535897932); ///< Pi.
 
-	// On Linux, the std namespace contains std::mt19937 and std::normal_distribution.
-	// In order to avoid ambiguity, use the complete scope.
-	using boost::random::variate_generator;
-	using boost::random::uniform_real_distribution;
-	using boost::random::uniform_int_distribution;
-	using boost::random::normal_distribution;
-	mt19937eng eng(seed);
-	variate_generator<mt19937eng&, uniform_real_distribution<fl>> uniform_01_gen(eng, uniform_real_distribution<fl>(  0,  1));
-	variate_generator<mt19937eng&, uniform_real_distribution<fl>> uniform_11_gen(eng, uniform_real_distribution<fl>( -1,  1));
-	variate_generator<mt19937eng&, uniform_real_distribution<fl>> uniform_pi_gen(eng, uniform_real_distribution<fl>(-pi, pi));
-	variate_generator<mt19937eng&, uniform_real_distribution<fl>> uniform_box0_gen(eng, uniform_real_distribution<fl>(b.corner1[0], b.corner2[0]));
-	variate_generator<mt19937eng&, uniform_real_distribution<fl>> uniform_box1_gen(eng, uniform_real_distribution<fl>(b.corner1[1], b.corner2[1]));
-	variate_generator<mt19937eng&, uniform_real_distribution<fl>> uniform_box2_gen(eng, uniform_real_distribution<fl>(b.corner1[2], b.corner2[2]));
-	variate_generator<mt19937eng&, uniform_int_distribution<size_t>> uniform_entity_gen(eng, uniform_int_distribution<size_t>(0, num_entities - 1));
-	variate_generator<mt19937eng&, normal_distribution<fl>> normal_01_gen(eng, normal_distribution<fl>(0, 1));
-	// uniform_11 = uniform_01 * 2 - 1
-	// uniform_pi = (uniform_01 * 2 - 1) * pi
-	// uniform_box = uniform_01 * (b - a) + a
-	// uniform_entity = curand() % num_entities
+	mt19937_64 eng(seed);
+	uniform_real_distribution<fl> uniform_01_gen(  0,  1);
+	uniform_real_distribution<fl> uniform_11_gen( -1,  1);
+	uniform_real_distribution<fl> uniform_pi_gen(-pi, pi);
+	uniform_real_distribution<fl> uniform_box0_gen(b.corner1[0], b.corner2[0]);
+	uniform_real_distribution<fl> uniform_box1_gen(b.corner1[1], b.corner2[1]);
+	uniform_real_distribution<fl> uniform_box2_gen(b.corner1[2], b.corner2[2]);
+	uniform_int_distribution<size_t> uniform_entity_gen(0, num_entities - 1);
+	normal_distribution<fl> normal_01_gen(0, 1);
+/*	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_01_gen(eng, uniform_real_distribution<fl>(  0,  1));
+	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_11_gen(eng, uniform_real_distribution<fl>( -1,  1));
+	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_pi_gen(eng, uniform_real_distribution<fl>(-pi, pi));
+	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_box0_gen(eng, uniform_real_distribution<fl>(b.corner1[0], b.corner2[0]));
+	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_box1_gen(eng, uniform_real_distribution<fl>(b.corner1[1], b.corner2[1]));
+	variate_generator<mt19937_64&, uniform_real_distribution<fl>> uniform_box2_gen(eng, uniform_real_distribution<fl>(b.corner1[2], b.corner2[2]));
+	variate_generator<mt19937_64&, uniform_int_distribution<size_t>> uniform_entity_gen(eng, uniform_int_distribution<size_t>(0, num_entities - 1));
+	variate_generator<mt19937_64&, normal_distribution<fl>> normal_01_gen(eng, normal_distribution<fl>(0, 1));*/
 
 	// Generate an initial random conformation c0, and evaluate it.
 	conformation c0(lig.num_active_torsions);
@@ -38,11 +39,11 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 	for (size_t i = 0; (i < 1000) && (!valid_conformation); ++i)
 	{
 		// Randomize conformation c0.
-		c0.position = vec3(uniform_box0_gen(), uniform_box1_gen(), uniform_box2_gen());
-		c0.orientation = qtn4(normal_01_gen(), normal_01_gen(), normal_01_gen(), normal_01_gen()).normalize();
+		c0.position = vec3(uniform_box0_gen(eng), uniform_box1_gen(eng), uniform_box2_gen(eng));
+		c0.orientation = qtn4(normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng)).normalize();
 		for (size_t i = 0; i < lig.num_active_torsions; ++i)
 		{
-			c0.torsions[i] = uniform_pi_gen();
+			c0.torsions[i] = uniform_pi_gen(eng);
 		}
 		valid_conformation = lig.evaluate(c0, sf, b, grid_maps, e_upper_bound, e0, f0, g0);
 	}
@@ -83,19 +84,19 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 			c1 = c0;
 
 			// Determine an entity to mutate.
-			mutation_entity = uniform_entity_gen();
+			mutation_entity = uniform_entity_gen(eng);
 			BOOST_ASSERT(mutation_entity < num_entities);
 			if (mutation_entity < lig.num_active_torsions) // Mutate an active torsion.
 			{
-				c1.torsions[mutation_entity] = uniform_pi_gen();
+				c1.torsions[mutation_entity] = uniform_pi_gen(eng);
 			}
 			else if (mutation_entity == lig.num_active_torsions) // Mutate position.
 			{
-				c1.position += vec3(uniform_11_gen(), uniform_11_gen(), uniform_11_gen());
+				c1.position += vec3(uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng));
 			}
 			else // Mutate orientation.
 			{
-				c1.orientation = qtn4(static_cast<fl>(0.01) * vec3(uniform_11_gen(), uniform_11_gen(), uniform_11_gen())) * c1.orientation;
+				c1.orientation = qtn4(static_cast<fl>(0.01) * vec3(uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng))) * c1.orientation;
 				BOOST_ASSERT(c1.orientation.is_normalized());
 			}
 			++num_mutations;
@@ -193,7 +194,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 
 		// Accept c1 according to Metropolis criteria.
 		const fl delta = e0 - e1;
-		if ((delta > 0) || (uniform_01_gen() < exp(delta)))
+		if ((delta > 0) || (uniform_01_gen(eng) < exp(delta)))
 		{
 			// best_e is the best energy of all the conformations in the container.
 			// e1 will be saved if and only if it is even better than the best one.
