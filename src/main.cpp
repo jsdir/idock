@@ -10,7 +10,7 @@
 #include "grid_map_task.hpp"
 #include "monte_carlo_task.hpp"
 #include "utility.hpp"
-//#include "random_forest.hpp"
+#include "random_forest.hpp"
 #include "log.hpp"
 using namespace std;
 
@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	double center_x, center_y, center_z, size_x, size_y, size_z;
-	size_t num_threads, seed, num_mc_tasks, max_conformations;
+	size_t seed, num_threads, num_trees, num_mc_tasks, max_conformations;
 	double grid_granularity;
 
 	// Process program options.
@@ -32,6 +32,7 @@ int main(int argc, char* argv[])
 		const unsigned int concurrency = thread::hardware_concurrency();
 		const size_t default_num_threads = concurrency;
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
+		const size_t default_num_trees = 500;
 		const size_t default_num_mc_tasks = 32;
 		const size_t default_max_conformations = 9;
 		const double default_grid_granularity = 0.15625;
@@ -56,8 +57,9 @@ int main(int argc, char* argv[])
 
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
-			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
+			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
+			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
 			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
 			("granularity", value<double>(&grid_granularity)->default_value(default_grid_granularity), "density of probe atoms of grid maps")
@@ -222,7 +224,7 @@ int main(int argc, char* argv[])
 	safe_counter<size_t> cnt;
 
 	// Precalculate the scoring function in parallel.
-	cout << "Precalculating scoring function in parallel ";
+	cout << "Precalculating scoring function in parallel" << endl;
 	scoring_function sf;
 	{
 		// Precalculate reciprocal square root values.
@@ -248,7 +250,20 @@ int main(int argc, char* argv[])
 		}
 		cnt.wait();
 	}
-	cout << '\n';
+
+	cout << "Training a random forest of " << num_trees << " trees with seed " << seed << " in parallel" << endl;
+	forest f(num_trees, seed);
+	cnt.init(num_trees);
+	for (size_t i = 0; i < num_trees; ++i)
+	{
+		io.post([&,i]()
+		{
+			f[i].train(5, f.u01_s);
+			cnt.increment();
+		});
+	}
+	cnt.wait();
+	f.clear();
 
 	cout << "Running " << num_mc_tasks << " Monte Carlo task" << ((num_mc_tasks == 1) ? "" : "s") << " per ligand\n";
 
