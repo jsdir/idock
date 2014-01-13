@@ -30,7 +30,7 @@ public:
 	static const size_t nv = 42; //!< Number of variables.
 
 	//! Trains an empty tree from bootstrap samples.
-	void train(const size_t mtry, const function<float()> u01);
+	void train(const size_t mtry, const function<double()> u01);
 
 	//! Predicts the y value of the given sample x.
 	float operator()(const array<float, nv>& x) const;
@@ -56,11 +56,11 @@ public:
 	//! Clears node samples to save memory.
 	void clear();
 
-	//! Returns a random value from uniform distribution in [0, 1] in a thread safe manner.
-	const function<float()> u01_s;
+	//! Returns a random value from uniform distribution in [0, 1) in a thread safe manner.
+	const function<double()> u01_s;
 private:
 	mt19937_64 rng;
-	uniform_real_distribution<float> uniform_01;
+	uniform_real_distribution<double> uniform_01;
 	mutable mutex m;
 };
 
