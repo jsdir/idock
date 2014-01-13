@@ -43,7 +43,7 @@ void grid_map_task(vector<array3d<double>>& grid_maps, const vector<size_t>& ato
 		for (size_t i = 0; i < num_atom_types_to_populate; ++i)
 		{
 			const size_t t = atom_types_to_populate[i];
-			grid_maps[t](grid_index) = -f(e[i]);
+			grid_maps[t](grid_index) = -0.73349480509 * f(e[i]);
 		}
 	}
 }
