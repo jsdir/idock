@@ -14,9 +14,6 @@
     <ClCompile Include="src\ligand.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\main_cl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\scoring_function.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -44,7 +41,7 @@
     <ClCompile Include="src\log.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\source_cl.cpp">
+    <ClCompile Include="src\main_cp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -70,17 +67,11 @@
     <ClInclude Include="src\io_service_pool.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\cl_helper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\log.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\source.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="src\idock.cl" />
   </ItemGroup>
 </Project>
