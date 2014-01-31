@@ -156,6 +156,10 @@ int main(int argc, char* argv[])
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
 
+	vector<int>   ligh(2601);
+	vector<float> slnd(3438);
+	vector<float> cnfh(  43);
+
 	cout << "Training a random forest of " << num_trees << " trees with seed " << seed << " in parallel" << endl;
 	forest f(num_trees, seed);
 	cnt.init(num_trees);
@@ -216,30 +220,39 @@ int main(int argc, char* argv[])
 
 		// Reallocate ligh and ligd should the current ligand elements exceed the default size.
 		const size_t this_lig_elems = lig.get_lig_elems();
-//		if (this_lig_elems > lig_elems)
+		if (this_lig_elems > ligh.size())
 		{
-			// .resize(this_lig_elems);
+			ligh.resize(this_lig_elems);
 		}
 
 		// Compute the number of shared memory bytes.
-//		const size_t lig_bytes = sizeof(int) * lig_elems;
+		const size_t lig_bytes = sizeof(int) * ligh.size();
 
 		// Encode the current ligand.
-//		lig.encode(ligh);
+		lig.encode(ligh.data());
 
 		// Reallocate slnd should the current solution elements exceed the default size.
 		const size_t this_sln_elems = lig.get_sln_elems();
-//		if (this_sln_elems > sln_elems)
+		if (this_sln_elems > slnd.size())
 		{
-			// .resize(this_sln_elemsn);
+			slnd.resize(this_sln_elems);
 		}
 
 		// Clear the solution buffer.
-		//slnd.fill(0);
+		slnd.assign(slnd.size(), 0);
 
 		// Launch kernel.
-//		void* params[] = { &lig.nv, &lig.nf, &lig.na, &lig.np };
-//		checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, NULL, params, NULL));
+		cnt.init(num_mc_tasks);
+		for (int gid = 0; gid < num_mc_tasks; ++gid)
+		{
+			io.post([&]()
+			{
+				monte_carlo(slnd.data(), ligh.data(), lig.nv, lig.nf, lig.na, lig.np, num_bfgs_iterations, sf.e.data(), sf.d.data(), sf.ns, rec.corner0, rec.corner1, rec.num_probes, rec.granularity_inverse, rec.maps, gid, num_mc_tasks);
+				cnt.increment();
+			});
+		}
+		cnt.wait();
+
 		io.post([=]()
 		{
 /*			// Write conformations.
