@@ -1,12 +1,10 @@
 #include <cmath>
 #include <cassert>
+#include <random>
 #include "kernel.hpp"
 
-inline
-bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub, const int* shared, const float* sfe, const float* sfd, const int sfs, const array<double, 3> cr0, const array<double, 3> cr1, const array<int, 3> npr, const float gri, const float* const mps[15])
+bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub, const int* shared, const float* sfe, const float* sfd, const int sfs, const array<double, 3> cr0, const array<double, 3> cr1, const array<int, 3> npr, const float gri, const float* const mps[15], const int gid, const int gds)
 {
-	const int gid = get_global_id(0);
-	const int gds = get_global_size(0);
 	const int gd3 = 3 * gds;
 	const int gd4 = 4 * gds;
 
@@ -312,10 +310,8 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 	return true;
 }
 
-void monte_carlo(float* const s0e, const int* const lig, const int nv, const int nf, const int na, const int np, int* const shared, const int nbi, const float* const sfe, const float* const sfd, const int sfs, const array<double, 3> cr0, const array<double, 3> cr1, const array<int, 3> npr, const float gri, const float* const x00, const float* const x01, const float* const x02, const float* const x03, const float* const x04, const float* const x05, const float* const x06, const float* const x07, const float* const x08, const float* const x09, const float* const x10, const float* const x11, const float* const x12, const float* const x13, const float* const x14)
+void monte_carlo(float* const s0e, const int* const lig, const int nv, const int nf, const int na, const int np, const int nbi, const float* const sfe, const float* const sfd, const int sfs, const array<double, 3> cr0, const array<double, 3> cr1, const array<int, 3> npr, const float gri, const float* const mps[15], const int gid, const int gds)
 {
-	const int gid = get_global_id(0);
-	const int gds = get_global_size(0);
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
 	float* const s0x = &s0e[gds];
@@ -352,38 +348,20 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 	float sum, pg1, pga, pgc, alp, pg2, pr0, pr1, pr2, nrm, ang, sng, pq0, pq1, pq2, pq3, s1xq0, s1xq1, s1xq2, s1xq3, s2xq0, s2xq1, s2xq2, s2xq3, bpi;
 	float yhy, yps, ryp, pco, bpj, bmj, ppj;
 	int g, i, j, o0, o1, o2;
-	mwc64x_state_t rng;
-	const float* const mps[15] = { x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14 };
-
-#ifndef CL_GLOBAL
-	// Load ligand into local memory.
-	g = 11 * nf + nf - 1 + 4 * na + 3 * np;
-	o0 = get_local_id(0);
-	for (i = 0, j = (g - 1) / get_local_size(0); i < j; ++i)
-	{
-		shared[o0] = lig[o0];
-		o0 += get_local_size(0);
-	}
-	if (o0 < g)
-	{
-		shared[o0] = lig[o0];
-	}
-	barrier(CLK_LOCAL_MEM_FENCE);
-#else
-#endif
+	mt19937_64 rng(gid);
+	uniform_real_distribution<double> uniform_01(0, 1);
 
 	// Randomize s0x.
-	seed(&rng, 0, 9999);
-	rd0 = next(&rng);
+	rd0 = uniform_01(rng);
 	s0x[o0  = gid] = rd0 * cr1[0] + (1 - rd0) * cr0[0];
-	rd0 = next(&rng);
+	rd0 = uniform_01(rng);
 	s0x[o0 += gds] = rd0 * cr1[1] + (1 - rd0) * cr0[1];
-	rd0 = next(&rng);
+	rd0 = uniform_01(rng);
 	s0x[o0 += gds] = rd0 * cr1[2] + (1 - rd0) * cr0[2];
-	rd0 = next(&rng);
-	rd1 = next(&rng);
-	rd2 = next(&rng);
-	rd3 = next(&rng);
+	rd0 = uniform_01(rng);
+	rd1 = uniform_01(rng);
+	rd2 = uniform_01(rng);
+	rd3 = uniform_01(rng);
 	rst = 1 / sqrt(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
 	s0x[o0 += gds] = rd0 * rst;
 	s0x[o0 += gds] = rd1 * rst;
@@ -391,27 +369,27 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 	s0x[o0 += gds] = rd3 * rst;
 	for (i = 6; i < nv; ++i)
 	{
-		s0x[o0 += gds] = next(&rng);
+		s0x[o0 += gds] = uniform_01(rng);
 	}
-	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, mps);
+	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, lig, sfe, sfd, sfs, cr0, cr1, npr, gri, mps, gid, gds);
 
 	// Repeat for a number of generations.
 	for (g = 0; g < nbi; ++g)
 	{
 		// Mutate s0x into s1x
 		o0  = gid;
-		s1x[o0] = s0x[o0] + next(&rng);
+		s1x[o0] = s0x[o0] + uniform_01(rng);
 		o0 += gds;
-		s1x[o0] = s0x[o0] + next(&rng);
+		s1x[o0] = s0x[o0] + uniform_01(rng);
 		o0 += gds;
-		s1x[o0] = s0x[o0] + next(&rng);
+		s1x[o0] = s0x[o0] + uniform_01(rng);
 //		for (i = 3; i < nv + 1; ++i)
 		for (i = 2 - nv; i < 0; ++i)
 		{
 			o0 += gds;
 			s1x[o0] = s0x[o0];
 		}
-		evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, mps);
+		evaluate(s1e, s1g, s1a, s1q, s1c, s1d, s1f, s1t, s1x, nf, na, np, eub, lig, sfe, sfd, sfs, cr0, cr1, npr, gri, mps, gid, gds);
 
 		// Initialize the inverse Hessian matrix to identity matrix.
 		// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
@@ -513,7 +491,7 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 				// Evaluate x2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, nf, na, np, s1e[gid] + alp * pga, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, mps))
+				if (evaluate(s2e, s2g, s2a, s2q, s2c, s2d, s2f, s2t, s2x, nf, na, np, s1e[gid] + alp * pga, lig, sfe, sfd, sfs, cr0, cr1, npr, gri, mps, gid, gds))
 				{
 					o0 = gid;
 					pg2 = bfp[o0] * s2g[o0];
