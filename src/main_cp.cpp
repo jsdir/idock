@@ -10,6 +10,7 @@
 #include "utility.hpp"
 #include "random_forest.hpp"
 #include "log.hpp"
+#include "kernel.hpp"
 
 int main(int argc, char* argv[])
 {

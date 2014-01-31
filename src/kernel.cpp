@@ -1,150 +1,39 @@
-/*
-The idock kernel for OpenCL uses the MWC64X random number generator.
-
-MWC64X
-http://cas.ee.ic.ac.uk/people/dt10/research/rngs-gpu-mwc64x.html
-Copyright (c) 2011, David Thomas
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-	* Redistributions of source code must retain the above copyright notice,
-	this list of conditions and the following disclaimer.
-	* Redistributions in binary form must reproduce the above copyright
-	notice, this list of conditions and the following disclaimer in the
-	documentation and/or other materials provided with the distribution.
-	* Neither the name of Imperial College London nor the names of its
-	contributors may be used to endorse or promote products derived
-	from this software without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
-CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
-INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
-CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
-SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
-OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
-STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
-ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-*/
-
-// Pre: a < M, b < M
-// Post: r = (a + b) mod M
-ulong AddMod64(ulong a, ulong b, ulong M)
-{
-	ulong v = a + b;
-	if (v >= M || v < a) v -= M;
-	return v;
-}
-
-// Pre: a < M, b < M
-// Post: r = (a * b) mod M
-ulong MulMod64(ulong a, ulong b, ulong M)
-{
-	ulong r = 0;
-	while (a)
-	{
-		if (a & 1) r = AddMod64(r, b, M);
-		b = AddMod64(b, b, M);
-		a = a >> 1;
-	}
-	return r;
-}
-
-// Pre: a < M, e >= 0
-// Post: r = (a ^ b) mod M
-// This takes at most ~64^2 modular additions, so probably about 2^15 or so instructions on most architectures
-ulong PowMod64(ulong a, ulong e, ulong M)
-{
-	ulong sqr = a, acc = 1;
-	while (e)
-	{
-		if (e & 1) acc = MulMod64(acc, sqr, M);
-		sqr = MulMod64(sqr, sqr, M);
-		e = e >> 1;
-	}
-	return acc;
-}
-
-typedef struct { uint x; uint c; } mwc64x_state_t;
-
-enum { A = 4294883355U };
-enum { M = 18446383549859758079UL };
-enum { B = 4077358422479273989UL };
-
-void skip(mwc64x_state_t *s, ulong d)
-{
-	ulong m = PowMod64(A, d, M);
-	ulong x = MulMod64(s->x * (ulong)A + s->c, m, M);
-	s->x = x / A;
-	s->c = x % A;
-}
-
-void seed(mwc64x_state_t *s, ulong baseOffset, ulong perStreamOffset)
-{
-	ulong d = baseOffset + get_global_id(0) * perStreamOffset;
-	ulong m = PowMod64(A, d, M);
-	ulong x = MulMod64(B, m, M);
-	s->x = x / A;
-	s->c = x % A;
-}
-
-uint next(mwc64x_state_t *s)
-{
-	uint X = s->x;
-	uint C = s->c;
-	uint r = X ^ C;
-	uint Xn = A * X + C;
-	uint carry = Xn < C;
-	uint Cn = mad_hi(A, X, carry);
-	s->x = Xn;
-	s->c = Cn;
-	return r;
-}
-
-// Avoid using Shared Local Memory on the Intel Xeon Phi coprocessor.
-// Have at least 1000 WGs per NDRange to optimally utilize Phi.
-// Use Array Notation with int32 Indices.
-
-#define assert(arg)
+#include <cmath>
+#include <cassert>
+#include "kernel.hpp"
 
 inline
-bool evaluate(__global float* e, __global float* g, __global float* a, __global float* q, __global float* c, __global float* d, __global float* f, __global float* t, __global const float* x, const int nf, const int na, const int np, const float eub, __local const int* shared, __global const float* sfe, __global const float* sfd, const int sfs, const float3 cr0, const float3 cr1, const int3 npr, const float gri, __global const float* const mps[15])
+bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub, const int* shared, const float* sfe, const float* sfd, const int sfs, const array<double, 3> cr0, const array<double, 3> cr1, const array<int, 3> npr, const float gri, const float* const mps[15])
 {
 	const int gid = get_global_id(0);
 	const int gds = get_global_size(0);
 	const int gd3 = 3 * gds;
 	const int gd4 = 4 * gds;
 
-	__local const int* const act = shared;
-	__local const int* const beg = &act[nf];
-	__local const int* const end = &beg[nf];
-	__local const int* const nbr = &end[nf];
-	__local const int* const prn = &nbr[nf];
-	__local const float* const yy0 = (__local const float*)&prn[nf];
-	__local const float* const yy1 = &yy0[nf];
-	__local const float* const yy2 = &yy1[nf];
-	__local const float* const xy0 = &yy2[nf];
-	__local const float* const xy1 = &xy0[nf];
-	__local const float* const xy2 = &xy1[nf];
-	__local const int* const brs = (__local const int*)&xy2[nf];
-	__local const float* const co0 = (__local const float*)&brs[nf - 1];
-	__local const float* const co1 = &co0[na];
-	__local const float* const co2 = &co1[na];
-	__local const int* const xst = (__local const int*)&co2[na];
-	__local const int* const ip0 = &xst[na];
-	__local const int* const ip1 = &ip0[np];
-	__local const int* const ipp = &ip1[np];
+	const int* const act = shared;
+	const int* const beg = &act[nf];
+	const int* const end = &beg[nf];
+	const int* const nbr = &end[nf];
+	const int* const prn = &nbr[nf];
+	const float* const yy0 = (const float*)&prn[nf];
+	const float* const yy1 = &yy0[nf];
+	const float* const yy2 = &yy1[nf];
+	const float* const xy0 = &yy2[nf];
+	const float* const xy1 = &xy0[nf];
+	const float* const xy2 = &xy1[nf];
+	const int* const brs = (const int*)&xy2[nf];
+	const float* const co0 = (const float*)&brs[nf - 1];
+	const float* const co1 = &co0[na];
+	const float* const co2 = &co1[na];
+	const int* const xst = (const int*)&co2[na];
+	const int* const ip0 = &xst[na];
+	const int* const ip1 = &ip0[np];
+	const int* const ipp = &ip1[np];
 
 	float y, y0, y1, y2, v0, v1, v2, c0, c1, c2, e000, e100, e010, e001, a0, a1, a2, ang, sng, r0, r1, r2, r3, vs, dr, f0, f1, f2, t0, t1, t2, d0, d1, d2;
 	float q0, q1, q2, q3, q00, q01, q02, q03, q11, q12, q13, q22, q23, q33, m0, m1, m2, m3, m4, m5, m6, m7, m8;
 	int i, j, k, b, w, i0, i1, i2, k0, k1, k2, z;
-	__global const float* map;
+	const float* map;
 
 	// Apply position, orientation and torsions.
 	c[i  = gid] = x[k  = gid];
@@ -276,9 +165,8 @@ bool evaluate(__global float* e, __global float* g, __global float* a, __global 
 
 			// Update q of BRANCH frame
 			ang = x[w += gds] * 0.5f;
-//			sng = sin(ang);
-//			r0 = cos(ang);
-			sng = sincos(ang, &r0);
+			sng = sin(ang);
+			r0 = cos(ang);
 			r1 = sng * a0;
 			r2 = sng * a1;
 			r3 = sng * a2;
@@ -424,49 +312,48 @@ bool evaluate(__global float* e, __global float* g, __global float* a, __global 
 	return true;
 }
 
-__kernel //__attribute__((reqd_work_group_size(X, Y, Z))) // X <= 16 (i.e. half warp or quarter wavefront) informs the compiler to optimize out barrier. Compile-time work group size helps the compiler to optimize register allocation.
-void monte_carlo(__global float* const restrict s0e, __global const int* const restrict lig, const int nv, const int nf, const int na, const int np, __local int* const shared, const int nbi, __global const float* const sfe, __global const float* const sfd, const int sfs, const float3 cr0, const float3 cr1, const int3 npr, const float gri, __global const float* const x00, __global const float* const x01, __global const float* const x02, __global const float* const x03, __global const float* const x04, __global const float* const x05, __global const float* const x06, __global const float* const x07, __global const float* const x08, __global const float* const x09, __global const float* const x10, __global const float* const x11, __global const float* const x12, __global const float* const x13, __global const float* const x14)
+void monte_carlo(float* const s0e, const int* const lig, const int nv, const int nf, const int na, const int np, int* const shared, const int nbi, const float* const sfe, const float* const sfd, const int sfs, const array<double, 3> cr0, const array<double, 3> cr1, const array<int, 3> npr, const float gri, const float* const x00, const float* const x01, const float* const x02, const float* const x03, const float* const x04, const float* const x05, const float* const x06, const float* const x07, const float* const x08, const float* const x09, const float* const x10, const float* const x11, const float* const x12, const float* const x13, const float* const x14)
 {
 	const int gid = get_global_id(0);
 	const int gds = get_global_size(0);
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
-	__global float* const s0x = &s0e[gds];
-	__global float* const s0g = &s0x[(nv + 1) * gds];
-	__global float* const s0a = &s0g[nv * gds];
-	__global float* const s0q = &s0a[3 * nf * gds];
-	__global float* const s0c = &s0q[4 * nf * gds];
-	__global float* const s0d = &s0c[3 * na * gds];
-	__global float* const s0f = &s0d[3 * na * gds];
-	__global float* const s0t = &s0f[3 * nf * gds];
-	__global float* const s1e = &s0t[3 * nf * gds];
-	__global float* const s1x = &s1e[gds];
-	__global float* const s1g = &s1x[(nv + 1) * gds];
-	__global float* const s1a = &s1g[nv * gds];
-	__global float* const s1q = &s1a[3 * nf * gds];
-	__global float* const s1c = &s1q[4 * nf * gds];
-	__global float* const s1d = &s1c[3 * na * gds];
-	__global float* const s1f = &s1d[3 * na * gds];
-	__global float* const s1t = &s1f[3 * nf * gds];
-	__global float* const s2e = &s1t[3 * nf * gds];
-	__global float* const s2x = &s2e[gds];
-	__global float* const s2g = &s2x[(nv + 1) * gds];
-	__global float* const s2a = &s2g[nv * gds];
-	__global float* const s2q = &s2a[3 * nf * gds];
-	__global float* const s2c = &s2q[4 * nf * gds];
-	__global float* const s2d = &s2c[3 * na * gds];
-	__global float* const s2f = &s2d[3 * na * gds];
-	__global float* const s2t = &s2f[3 * nf * gds];
-	__global float* const bfh = &s2t[3 * nf * gds];
-	__global float* const bfp = &bfh[(nv*(nv+1)>>1) * gds];
-	__global float* const bfy = &bfp[nv * gds];
-	__global float* const bfm = &bfy[nv * gds];
+	float* const s0x = &s0e[gds];
+	float* const s0g = &s0x[(nv + 1) * gds];
+	float* const s0a = &s0g[nv * gds];
+	float* const s0q = &s0a[3 * nf * gds];
+	float* const s0c = &s0q[4 * nf * gds];
+	float* const s0d = &s0c[3 * na * gds];
+	float* const s0f = &s0d[3 * na * gds];
+	float* const s0t = &s0f[3 * nf * gds];
+	float* const s1e = &s0t[3 * nf * gds];
+	float* const s1x = &s1e[gds];
+	float* const s1g = &s1x[(nv + 1) * gds];
+	float* const s1a = &s1g[nv * gds];
+	float* const s1q = &s1a[3 * nf * gds];
+	float* const s1c = &s1q[4 * nf * gds];
+	float* const s1d = &s1c[3 * na * gds];
+	float* const s1f = &s1d[3 * na * gds];
+	float* const s1t = &s1f[3 * nf * gds];
+	float* const s2e = &s1t[3 * nf * gds];
+	float* const s2x = &s2e[gds];
+	float* const s2g = &s2x[(nv + 1) * gds];
+	float* const s2a = &s2g[nv * gds];
+	float* const s2q = &s2a[3 * nf * gds];
+	float* const s2c = &s2q[4 * nf * gds];
+	float* const s2d = &s2c[3 * na * gds];
+	float* const s2f = &s2d[3 * na * gds];
+	float* const s2t = &s2f[3 * nf * gds];
+	float* const bfh = &s2t[3 * nf * gds];
+	float* const bfp = &bfh[(nv*(nv+1)>>1) * gds];
+	float* const bfy = &bfp[nv * gds];
+	float* const bfm = &bfy[nv * gds];
 	float rd0, rd1, rd2, rd3, rst;
 	float sum, pg1, pga, pgc, alp, pg2, pr0, pr1, pr2, nrm, ang, sng, pq0, pq1, pq2, pq3, s1xq0, s1xq1, s1xq2, s1xq3, s2xq0, s2xq1, s2xq2, s2xq3, bpi;
 	float yhy, yps, ryp, pco, bpj, bmj, ppj;
 	int g, i, j, o0, o1, o2;
 	mwc64x_state_t rng;
-	__global const float* const mps[15] = { x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14 };
+	const float* const mps[15] = { x00, x01, x02, x03, x04, x05, x06, x07, x08, x09, x10, x11, x12, x13, x14 };
 
 #ifndef CL_GLOBAL
 	// Load ligand into local memory.
@@ -497,7 +384,7 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 	rd1 = next(&rng);
 	rd2 = next(&rng);
 	rd3 = next(&rng);
-	rst = rsqrt(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
+	rst = 1 / sqrt(rd0*rd0 + rd1*rd1 + rd2*rd2 + rd3*rd3);
 	s0x[o0 += gds] = rd0 * rst;
 	s0x[o0 += gds] = rd1 * rst;
 	s0x[o0 += gds] = rd2 * rst;
@@ -506,19 +393,6 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 	{
 		s0x[o0 += gds] = next(&rng);
 	}
-/*
-	s0x[o0  = gid] =  49.799f;
-	s0x[o0 += gds] = -31.025f;
-	s0x[o0 += gds] =  35.312f;
-	s0x[o0 += gds] = 1.0f;
-	s0x[o0 += gds] = 0.0f;
-	s0x[o0 += gds] = 0.0f;
-	s0x[o0 += gds] = 0.0f;
-	for (i = 6; i < nv; ++i)
-	{
-		s0x[o0 += gds] = 0.0f;
-	}
-*/
 	evaluate(s0e, s0g, s0a, s0q, s0c, s0d, s0f, s0t, s0x, nf, na, np, eub, shared, sfe, sfd, sfs, cr0, cr1, npr, gri, mps);
 
 	// Repeat for a number of generations.
@@ -614,9 +488,8 @@ void monte_carlo(__global float* const restrict s0e, __global const int* const r
 				assert(fabs(s1xq0*s1xq0 + s1xq1*s1xq1 + s1xq2*s1xq2 + s1xq3*s1xq3 - 1.0f) < 2e-3f);
 				nrm = sqrt(pr0*pr0 + pr1*pr1 + pr2*pr2);
 				ang = 0.5f * alp * nrm;
-//				sng = sin(ang) / nrm;
-//				pq0 = cos(ang);
-				sng = sincos(ang, &pq0) / nrm;
+				sng = sin(ang) / nrm;
+				pq0 = cos(ang);
 				pq1 = sng * pr0;
 				pq2 = sng * pr1;
 				pq3 = sng * pr2;
