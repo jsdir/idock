@@ -310,7 +310,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 	return true;
 }
 
-void monte_carlo(float* const s0e, const int* const lig, const int nv, const int nf, const int na, const int np, const int nbi, const float* const sfe, const float* const sfd, const int sfs, const array<double, 3> cr0, const array<double, 3> cr1, const array<int, 3> npr, const float gri, const float* const mps[15], const int gid, const int gds)
+void monte_carlo(float* const s0e, const int* const lig, const int nv, const int nf, const int na, const int np, const int nbi, const float* const sfe, const float* const sfd, const int sfs, const array<float, 3> cr0, const array<float, 3> cr1, const array<int, 3> npr, const float gri, const float* const mps[15], const int gid, const int gds)
 {
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
