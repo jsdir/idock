@@ -112,7 +112,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 
 			// TODO: move conditional expression out to bypass short circuiting.
 			// Penalize out-of-box case.
-			if (c0 < cr0.x || cr1.x <= c0 || c1 < cr0.y || cr1.y <= c1 || c2 < cr0.z || cr1.z <= c2)
+			if (c0 < cr0[0] || cr1[0] <= c0 || c1 < cr0[1] || cr1[1] <= c1 || c2 < cr0[2] || cr1[2] <= c2)
 			{
 				y += 10.0f;
 				d[i0] = 0.0f;
@@ -122,20 +122,20 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			}
 
 			// Find the index of the current coordinate
-			k0 = (int)((c0 - cr0.x) * gri);
-			k1 = (int)((c1 - cr0.y) * gri);
-			k2 = (int)((c2 - cr0.z) * gri);
-			assert(k0 + 1 < npr.x);
-			assert(k1 + 1 < npr.y);
-			assert(k2 + 1 < npr.z);
-			k0 = npr.x * (npr.y * k2 + k1) + k0;
+			k0 = (int)((c0 - cr0[0]) * gri);
+			k1 = (int)((c1 - cr0[1]) * gri);
+			k2 = (int)((c2 - cr0[2]) * gri);
+			assert(k0 + 1 < npr[0]);
+			assert(k1 + 1 < npr[1]);
+			assert(k2 + 1 < npr[2]);
+			k0 = npr[0] * (npr[1] * k2 + k1) + k0;
 
 			// Retrieve the grid map and lookup the value
 			 map = mps[xst[i]];
 			e000 = map[k0];
 			e100 = map[k0 + 1];
-			e010 = map[k0 + npr.x];
-			e001 = map[k0 + npr.x * npr.y];
+			e010 = map[k0 + npr[0]];
+			e001 = map[k0 + npr[0] * npr[1]];
 			y += e000;
 			d[i0] = (e100 - e000) * gri;
 			d[i1] = (e010 - e000) * gri;
@@ -375,11 +375,11 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 	// Randomize s0x.
 	seed(&rng, 0, 9999);
 	rd0 = next(&rng);
-	s0x[o0  = gid] = rd0 * cr1.x + (1 - rd0) * cr0.x;
+	s0x[o0  = gid] = rd0 * cr1[0] + (1 - rd0) * cr0[0];
 	rd0 = next(&rng);
-	s0x[o0 += gds] = rd0 * cr1.y + (1 - rd0) * cr0.y;
+	s0x[o0 += gds] = rd0 * cr1[1] + (1 - rd0) * cr0[1];
 	rd0 = next(&rng);
-	s0x[o0 += gds] = rd0 * cr1.z + (1 - rd0) * cr0.z;
+	s0x[o0 += gds] = rd0 * cr1[2] + (1 - rd0) * cr0[2];
 	rd0 = next(&rng);
 	rd1 = next(&rng);
 	rd2 = next(&rng);
