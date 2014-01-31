@@ -1,7 +1,7 @@
 CC=clang++ -std=c++11 -O2
 NVCC=nvcc -use_fast_math
 
-all: bin/idock_cp bin/idock_cu bin/idock_cl src/idock.fatbin
+all: bin/idock_cp bin/idock_cu bin/idock_cl src/kernel.fatbin
 
 bin/idock_cp: obj/utility.o obj/io_service_pool.o obj/scoring_function.o obj/atom.o obj/receptor.o obj/ligand.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/log.o obj/main_cp.o
 	$(CC) -o $@ $^ -pthread -L${BOOST_ROOT}/lib -lboost_system -lboost_program_options -lboost_filesystem
@@ -25,4 +25,4 @@ src/%.fatbin: src/%.cu
 	$(NVCC) -o $@ $< -fatbin -gencode arch=compute_11,code=compute_11
 
 clean:
-	rm -f bin/idock_cp bin/idock_cu bin/idock_cl src/idock.fatbin obj/*.o
+	rm -f bin/idock_cp bin/idock_cu bin/idock_cl src/kernel.fatbin obj/*.o
