@@ -81,7 +81,7 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="src\idock.cu">
+    <CustomBuild Include="src\kernel.cu">
       <Filter>Source Files</Filter>
     </CustomBuild>
   </ItemGroup>

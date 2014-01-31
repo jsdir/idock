@@ -21,12 +21,12 @@
     <ClInclude Include="src\random_forest.hpp" />
     <ClInclude Include="src\scoring_function.hpp" />
     <ClInclude Include="src\receptor.hpp" />
-    <ClInclude Include="src\source.hpp" />
     <ClInclude Include="src\utility.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\atom.cpp" />
     <ClCompile Include="src\io_service_pool.cpp" />
+    <ClCompile Include="src\kernel.cpp" />
     <ClCompile Include="src\ligand.cpp" />
     <ClCompile Include="src\log.cpp" />
     <ClCompile Include="src\main_cp.cpp" />

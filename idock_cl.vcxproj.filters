@@ -7,7 +7,7 @@
     </Filter>
     <Filter Include="Source Files">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx;cu</Extensions>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx;cl</Extensions>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -81,6 +81,8 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\idock.cl" />
+    <None Include="src\kernel.cl">
+      <Filter>Source Files</Filter>
+    </None>
   </ItemGroup>
 </Project>

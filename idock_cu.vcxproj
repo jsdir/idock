@@ -43,11 +43,11 @@
     <ClCompile Include="src\utility.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="src\idock.cu">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_11,code=compute_11 -fatbin -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(ProjectDir)\src\idock.fatbin $(ProjectDir)\src\idock.cu</Command>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">idock.fatbin</Outputs>
-      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">idock.fatbin</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_11,code=compute_11 -fatbin -G -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(ProjectDir)\src\idock.fatbin $(ProjectDir)\src\idock.cu</Command>
+    <CustomBuild Include="src\kernel.cu">
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_11,code=compute_11 -fatbin -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(ProjectDir)\src\kernel.fatbin $(ProjectDir)\src\kernel.cu</Command>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">kernel.fatbin</Outputs>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">kernel.fatbin</Outputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_11,code=compute_11 -fatbin -G -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(ProjectDir)\src\kernel.fatbin $(ProjectDir)\src\kernel.cu</Command>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
