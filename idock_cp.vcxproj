@@ -29,7 +29,7 @@
     <ClCompile Include="src\io_service_pool.cpp" />
     <ClCompile Include="src\ligand.cpp" />
     <ClCompile Include="src\log.cpp" />
-    <ClCompile Include="src\main_cp.cpp"  />
+    <ClCompile Include="src\main_cp.cpp" />
     <ClCompile Include="src\random_forest.cpp" />
     <ClCompile Include="src\random_forest_x.cpp" />
     <ClCompile Include="src\random_forest_y.cpp" />
@@ -75,6 +75,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -90,6 +91,7 @@
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>$(BOOST_ROOT)\lib</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
