@@ -29,13 +29,12 @@
     <ClCompile Include="src\io_service_pool.cpp" />
     <ClCompile Include="src\ligand.cpp" />
     <ClCompile Include="src\log.cpp" />
-    <ClCompile Include="src\main.cpp"  />
+    <ClCompile Include="src\main_cp.cpp"  />
     <ClCompile Include="src\random_forest.cpp" />
     <ClCompile Include="src\random_forest_x.cpp" />
     <ClCompile Include="src\random_forest_y.cpp" />
     <ClCompile Include="src\scoring_function.cpp" />
     <ClCompile Include="src\receptor.cpp" />
-    <ClCompile Include="src\source_cl.cpp" />
     <ClCompile Include="src\utility.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
