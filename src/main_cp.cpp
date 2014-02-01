@@ -157,8 +157,7 @@ int main(int argc, char* argv[])
 	receptor rec(receptor_path, center, size, granularity);
 
 	vector<int>   ligh(2601);
-	vector<float> slnd(3438);
-	vector<float> cnfh(  43);
+	vector<float> slnd(3438 * num_mc_tasks);
 
 	cout << "Training a random forest of " << num_trees << " trees with seed " << seed << " in parallel" << endl;
 	forest f(num_trees, seed);
@@ -225,14 +224,11 @@ int main(int argc, char* argv[])
 			ligh.resize(this_lig_elems);
 		}
 
-		// Compute the number of shared memory bytes.
-		const size_t lig_bytes = sizeof(int) * ligh.size();
-
 		// Encode the current ligand.
 		lig.encode(ligh.data());
 
 		// Reallocate slnd should the current solution elements exceed the default size.
-		const size_t this_sln_elems = lig.get_sln_elems();
+		const size_t this_sln_elems = lig.get_sln_elems() * num_mc_tasks;
 		if (this_sln_elems > slnd.size())
 		{
 			slnd.resize(this_sln_elems);
@@ -245,7 +241,7 @@ int main(int argc, char* argv[])
 		cnt.init(num_mc_tasks);
 		for (int gid = 0; gid < num_mc_tasks; ++gid)
 		{
-			io.post([&]()
+			io.post([&,gid]()
 			{
 				monte_carlo(slnd.data(), ligh.data(), lig.nv, lig.nf, lig.na, lig.np, num_bfgs_iterations, sf.e.data(), sf.d.data(), sf.ns, rec.corner0, rec.corner1, rec.num_probes, rec.granularity_inverse, rec.maps, gid, num_mc_tasks);
 				cnt.increment();
@@ -254,7 +250,7 @@ int main(int argc, char* argv[])
 		cnt.wait();
 
 		// Reallocate cnfh should the current conformation elements exceed the default size.
-		const size_t this_cnf_elems = lig.get_cnf_elems();
+		const size_t this_cnf_elems = lig.get_cnf_elems() * num_mc_tasks;
 
 		io.post(bind([&](ligand lig, vector<float> cnfh)
 		{
