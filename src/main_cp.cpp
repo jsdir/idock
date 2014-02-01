@@ -253,10 +253,13 @@ int main(int argc, char* argv[])
 		}
 		cnt.wait();
 
-		io.post([=]()
+		// Reallocate cnfh should the current conformation elements exceed the default size.
+		const size_t this_cnf_elems = lig.get_cnf_elems();
+
+		io.post(bind([&](ligand lig, vector<float> cnfh)
 		{
-/*			// Write conformations.
-			lig.write(cnfh, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf);
+			// Write conformations.
+			lig.write(cnfh.data(), output_folder_path, max_conformations, num_mc_tasks, rec, f, sf);
 
 			// Output and save ligand stem and predicted affinities.
 			safe_print([&]()
@@ -269,15 +272,8 @@ int main(int argc, char* argv[])
 				});
 				cout << endl;
 				log.push_back(new log_record(move(stem), move(lig.affinities)));
-			});*/
-		});
-
-		// Reallocate cnfh should the current conformation elements exceed the default size.
-		const size_t this_cnf_elems = lig.get_cnf_elems();
-//		if (this_cnf_elems > cnf_elems)
-		{
-			// .resize(this_cnf_elems);
-		}
+			});
+		}, move(lig), vector<float>(slnd.cbegin(), slnd.cbegin() + this_cnf_elems)));
 	}
 
 	// Wait until the io service pool has finished all its tasks.
