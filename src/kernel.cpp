@@ -3,7 +3,7 @@
 #include <random>
 #include "kernel.hpp"
 
-bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub, const int* shared, const float* sfe, const float* sfd, const int sfs, const array<double, 3> cr0, const array<double, 3> cr1, const array<int, 3> npr, const float gri, const float* const mps[15], const int gid, const int gds)
+bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float* f, float* t, const float* x, const int nf, const int na, const int np, const float eub, const int* shared, const float* sfe, const float* sfd, const int sfs, const array<float, 3> cr0, const array<float, 3> cr1, const array<int, 3> npr, const float gri, const vector<vector<float>>& mps, const int gid, const int gds)
 {
 	const int gd3 = 3 * gds;
 	const int gd4 = 4 * gds;
@@ -129,7 +129,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 			k0 = npr[0] * (npr[1] * k2 + k1) + k0;
 
 			// Retrieve the grid map and lookup the value
-			 map = mps[xst[i]];
+			 map = mps[xst[i]].data();
 			e000 = map[k0];
 			e100 = map[k0 + 1];
 			e010 = map[k0 + npr[0]];
@@ -310,7 +310,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 	return true;
 }
 
-void monte_carlo(float* const s0e, const int* const lig, const int nv, const int nf, const int na, const int np, const int nbi, const float* const sfe, const float* const sfd, const int sfs, const array<float, 3> cr0, const array<float, 3> cr1, const array<int, 3> npr, const float gri, const float* const mps[15], const int gid, const int gds)
+void monte_carlo(float* const s0e, const int* const lig, const int nv, const int nf, const int na, const int np, const int nbi, const float* const sfe, const float* const sfd, const int sfs, const array<float, 3> cr0, const array<float, 3> cr1, const array<int, 3> npr, const float gri, const vector<vector<float>>& mps, const int gid, const int gds)
 {
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
