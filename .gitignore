@@ -7,6 +7,7 @@
 *.tar.bz2
 *.tgz
 *.nvprof
+*.fatbin
 log.*
 logo.*
 output
@@ -14,3 +15,4 @@ doc
 pdb
 ideal
 design
+bin
