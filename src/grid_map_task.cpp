@@ -18,7 +18,6 @@ void grid_map_task(vector<array3d<double>>& grid_maps, const vector<size_t>& ato
 
 		// Accumulate individual free energies for each atom types to populate.
 		fill(e.begin(), e.end(), 0);
-		for (auto& a : e) a.fill(0);
 		const size_t num_receptor_atoms = receptor_atoms.size();
 		for (size_t l = 0; l < num_receptor_atoms; ++l)
 		{
