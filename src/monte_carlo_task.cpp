@@ -12,7 +12,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 	const double required_square_error = static_cast<double>(1 * lig.num_heavy_atoms); // Ligands with RMSD < 1.0 will be clustered into the same cluster.
 	const double pi = static_cast<double>(3.1415926535897932); //!< Pi.
 
-	mt19937_64 eng(seed);
+	mt19937_64 rng(seed);
 	uniform_real_distribution<double> uniform_01_gen(  0,  1);
 	uniform_real_distribution<double> uniform_11_gen( -1,  1);
 	uniform_real_distribution<double> uniform_pi_gen(-pi, pi);
@@ -30,11 +30,11 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 	for (size_t i = 0; (i < 1000) && (!valid_conformation); ++i)
 	{
 		// Randomize conformation c0.
-		c0.position = array<double, 3>{uniform_box0_gen(eng), uniform_box1_gen(eng), uniform_box2_gen(eng)};
-		c0.orientation = normalize(array<double, 4>{normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng)});
+		c0.position = array<double, 3>{uniform_box0_gen(rng), uniform_box1_gen(rng), uniform_box2_gen(rng)};
+		c0.orientation = normalize(array<double, 4>{normal_01_gen(rng), normal_01_gen(rng), normal_01_gen(rng), normal_01_gen(rng)});
 		for (size_t i = 0; i < lig.num_active_torsions; ++i)
 		{
-			c0.torsions[i] = uniform_pi_gen(eng);
+			c0.torsions[i] = uniform_pi_gen(rng);
 		}
 		valid_conformation = lig.evaluate(c0, sf, rec, e_upper_bound, e0, f0, g0);
 	}
@@ -75,19 +75,19 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 			c1 = c0;
 
 			// Determine an entity to mutate.
-			mutation_entity = uniform_entity_gen(eng);
+			mutation_entity = uniform_entity_gen(rng);
 			assert(mutation_entity < num_entities);
 			if (mutation_entity < lig.num_active_torsions) // Mutate an active torsion.
 			{
-				c1.torsions[mutation_entity] = uniform_pi_gen(eng);
+				c1.torsions[mutation_entity] = uniform_pi_gen(rng);
 			}
 			else if (mutation_entity == lig.num_active_torsions) // Mutate position.
 			{
-				c1.position += array<double, 3>{uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng)};
+				c1.position += array<double, 3>{uniform_11_gen(rng), uniform_11_gen(rng), uniform_11_gen(rng)};
 			}
 			else // Mutate orientation.
 			{
-				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * array<double, 3>{uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng)}) * c1.orientation;
+				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * array<double, 3>{uniform_11_gen(rng), uniform_11_gen(rng), uniform_11_gen(rng)}) * c1.orientation;
 				assert(normalized(c1.orientation));
 			}
 			++num_mutations;
@@ -185,7 +185,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 
 		// Accept c1 according to Metropolis criteria.
 		const double delta = e0 - e1;
-		if ((delta > 0) || (uniform_01_gen(eng) < exp(delta)))
+		if ((delta > 0) || (uniform_01_gen(rng) < exp(delta)))
 		{
 			// best_e is the best energy of all the conformations in the container.
 			// e1 will be saved if and only if it is even better than the best one.
