@@ -189,13 +189,11 @@ int main(int argc, char* argv[])
 
 	// Initialize the search space of cuboid shape.
 	const box b(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size_z), grid_granularity);
+	const size_t num_gm_tasks = b.num_probes[0];
 
 	// Parse the receptor.
 	cout << "Parsing receptor " << receptor_path << endl;
 	const receptor rec(receptor_path, b);
-
-	// Reserve storage for task containers.
-	const size_t num_gm_tasks = b.num_probes[0];
 
 	// Reserve storage for result containers. ptr_vector<T> is used for fast sorting.
 	const size_t max_results = 20; // Maximum number of results obtained from a single Monte Carlo task.
@@ -213,7 +211,7 @@ int main(int argc, char* argv[])
 	vector<size_t> atom_types_to_populate;
 	atom_types_to_populate.reserve(XS_TYPE_SIZE);
 
-	// Initialize a thread pool and create worker threads for later use.
+	// Initialize an io service pool and create worker threads for later use.
 	cout << "Creating an io service pool of " << num_threads << " worker thread" << (num_threads == 1 ? "" : "s") << endl;
 	io_service_pool io(num_threads);
 	safe_counter<size_t> cnt;
@@ -260,27 +258,17 @@ int main(int argc, char* argv[])
 	cnt.wait();
 	f.clear();
 
-	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand" << endl;
-
 	// Perform docking for each file in the ligand folder.
+	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand" << endl
+	     << "   Index        Ligand    pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	log_engine log;
 	cout.setf(ios::fixed, ios::floatfield);
-	cout << "   Index        Ligand    pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
-	path input_ligand_path;
 	size_t num_conformations; // Number of conformation to output.
-	using namespace boost::filesystem;
 	for (directory_iterator dir_iter(input_folder_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
 	{
-		// Obtain a ligand.
-		input_ligand_path = dir_iter->path();
-
-		// Skip non-regular files such as folders.
-		if (!is_regular_file(input_ligand_path)) continue;
-
 		// Filter files with .pdbqt extension name.
+		const path input_ligand_path = dir_iter->path();
 		if (input_ligand_path.extension() != ".pdbqt") continue;
-
-		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 
 		// Parse the ligand.
 		ligand lig(input_ligand_path);
@@ -298,8 +286,7 @@ int main(int argc, char* argv[])
 			grid_map.resize(b.num_probes); // An exception may be thrown in case memory is exhausted.
 			atom_types_to_populate.push_back(t);  // The grid map of XScore atom type t has not been populated and should be populated now.
 		}
-		const size_t num_atom_types_to_populate = atom_types_to_populate.size();
-		if (num_atom_types_to_populate)
+		if (atom_types_to_populate.size())
 		{
 			// Populate the grid map task container.
 			cnt.init(num_gm_tasks);
@@ -326,9 +313,10 @@ int main(int argc, char* argv[])
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
 			BOOST_ASSERT(result_containers[i].empty());
-			io.post([&,i]()
+			const size_t s = eng();
+			io.post([&,i,s]()
 			{
-				monte_carlo_task(result_containers[i], lig, eng(), sf, b, grid_maps);
+				monte_carlo_task(result_containers[i], lig, s, sf, b, grid_maps);
 				cnt.increment();
 			});
 		}
@@ -336,7 +324,7 @@ int main(int argc, char* argv[])
 
 		// Merge results from all the tasks into one single result container.
 		BOOST_ASSERT(results.empty());
-		const double required_square_error = static_cast<double>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
+		const double required_square_error = 4 * lig.num_heavy_atoms; // Ligands with RMSD < 2.0 will be clustered into the same cluster.
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
 			ptr_vector<result>& task_results = result_containers[i];
@@ -365,6 +353,7 @@ int main(int argc, char* argv[])
 		}
 
 		// Write models to file.
+		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 		lig.write_models(output_ligand_path, results, num_results, b, grid_maps);
 
 		// Display the free energies of the top 4 conformations.
