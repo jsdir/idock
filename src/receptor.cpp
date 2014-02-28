@@ -2,7 +2,7 @@
 #include "scoring_function.hpp"
 #include "receptor.hpp"
 
-receptor::receptor(const path& p, const box& b) : partitions(b.num_partitions[0] * b.num_partitions[1] * b.num_partitions[2])
+receptor::receptor(const path& p, const box& b) : partitions(b.num_partitions[0] * b.num_partitions[1] * b.num_partitions[2]), grid_maps(scoring_function::n)
 {
 	// Initialize necessary variables for constructing a receptor.
 	atoms.reserve(5000); // A receptor typically consists of <= 5,000 atoms.

@@ -1,9 +1,8 @@
 #include <random>
 #include "monte_carlo_task.hpp"
 using namespace std;
-//using std::random::mt19937_64;
 
-void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const box& b, const vector<vector<double>>& grid_maps)
+void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const box& b, const receptor& rec)
 {
 	// Define constants.
 	const size_t num_mc_iterations = 100 * lig.num_heavy_atoms; //!< The number of iterations correlates to the complexity of ligand.
@@ -37,7 +36,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 		{
 			c0.torsions[i] = uniform_pi_gen(eng);
 		}
-		valid_conformation = lig.evaluate(c0, sf, b, grid_maps, e_upper_bound, e0, f0, g0);
+		valid_conformation = lig.evaluate(c0, sf, b, rec, e_upper_bound, e0, f0, g0);
 	}
 	if (!valid_conformation) return;
 	double best_e = e0; // The best free energy so far.
@@ -92,7 +91,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 				assert(normalized(c1.orientation));
 			}
 			++num_mutations;
-		} while (!lig.evaluate(c1, sf, b, grid_maps, e_upper_bound, e1, f1, g1));
+		} while (!lig.evaluate(c1, sf, b, rec, e_upper_bound, e1, f1, g1));
 
 		// Initialize the Hessian matrix to identity.
 		h = identity_hessian;
@@ -140,7 +139,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (lig.evaluate(c2, sf, b, grid_maps, e1 + 0.0001 * alpha * pg1, e2, f2, g2))
+				if (lig.evaluate(c2, sf, b, rec, e1 + 0.0001 * alpha * pg1, e2, f2, g2))
 				{
 					pg2 = 0;
 					for (size_t i = 0; i < num_variables; ++i)

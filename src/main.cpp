@@ -225,7 +225,7 @@ int main(int argc, char* argv[])
 
 	// Parse the receptor.
 	cout << "Parsing receptor " << receptor_path << endl;
-	const receptor rec(receptor_path, b);
+	receptor rec(receptor_path, b);
 
 	// Reserve storage for result containers. ptr_vector<T> is used for fast sorting.
 	const size_t max_results = 20; // Maximum number of results obtained from a single Monte Carlo task.
@@ -239,7 +239,6 @@ int main(int argc, char* argv[])
 	results.reserve(max_results * num_mc_tasks);
 
 	// Initialize a vector of empty grid maps. Each grid map corresponds to an XScore atom type.
-	vector<vector<double>> grid_maps(sf.n);
 	vector<size_t> atom_types_to_populate;
 	atom_types_to_populate.reserve(sf.n);
 
@@ -279,7 +278,7 @@ int main(int argc, char* argv[])
 		{
 			const size_t t = ligand_atom_types[i];
 			assert(t < sf.n);
-			vector<double>& grid_map = grid_maps[t];
+			vector<double>& grid_map = rec.grid_maps[t];
 			if (grid_map.size()) continue; // The grid map of XScore atom type t has already been populated.
 			grid_map.resize(b.num_probes[0] * b.num_probes[1] * b.num_probes[2]); // An exception may be thrown in case memory is exhausted.
 			atom_types_to_populate.push_back(t); // The grid map of XScore atom type t has not been populated and should be populated now.
@@ -292,7 +291,7 @@ int main(int argc, char* argv[])
 			{
 				io.post([&,x]()
 				{
-					grid_map_task(grid_maps, atom_types_to_populate, x, sf, b, rec);
+					grid_map_task(atom_types_to_populate, x, sf, b, rec);
 					cnt.increment();
 				});
 			}
@@ -312,7 +311,7 @@ int main(int argc, char* argv[])
 			const size_t s = rng();
 			io.post([&, i, s]()
 			{
-				monte_carlo_task(result_containers[i], lig, s, sf, b, grid_maps);
+				monte_carlo_task(result_containers[i], lig, s, sf, b, rec);
 				cnt.increment();
 			});
 		}
@@ -350,7 +349,7 @@ int main(int argc, char* argv[])
 
 		// Write models to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		lig.write_models(output_ligand_path, results, num_results, b, grid_maps);
+		lig.write_models(output_ligand_path, results, num_results, b, rec);
 
 		// Display the free energies of the top 9 conformations.
 		const size_t num_energies = min<size_t>(num_results, 9);

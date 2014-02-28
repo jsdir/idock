@@ -16,6 +16,7 @@ public:
 
 	vector<atom> atoms; //!< Receptor atoms.
 	vector<vector<size_t>> partitions; //!< Heavy atoms in partitions.
+	vector<vector<double>> grid_maps;
 };
 
 #endif
