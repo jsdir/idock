@@ -74,6 +74,8 @@ public:
 	//! Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
 	void write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const receptor& rec);
 
+	void monte_carlo(ptr_vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const;
+
 private:
 	double num_heavy_atoms_inverse; //!< 1 / num_heavy_atoms.
 

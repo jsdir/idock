@@ -1,6 +1,6 @@
 CC=clang++ -std=c++11 -O2
 
-bin/idock: obj/io_service_pool.o obj/safe_counter.o obj/array.o obj/atom.o obj/scoring_function.o obj/receptor.o obj/ligand.o obj/monte_carlo_task.o obj/log.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/main.o
+bin/idock: obj/io_service_pool.o obj/safe_counter.o obj/array.o obj/atom.o obj/scoring_function.o obj/receptor.o obj/ligand.o obj/log.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/main.o
 	$(CC) -o $@ $^ -pthread -L${BOOST_ROOT}/lib -lboost_system -lboost_program_options -lboost_filesystem
 
 obj/%.o: src/%.cpp 

@@ -7,7 +7,6 @@
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "io_service_pool.hpp"
-#include "monte_carlo_task.hpp"
 #include "safe_counter.hpp"
 #include "random_forest.hpp"
 #include "log.hpp"
@@ -307,7 +306,7 @@ int main(int argc, char* argv[])
 			const size_t s = rng();
 			io.post([&, i, s]()
 			{
-				monte_carlo_task(result_containers[i], lig, s, sf, rec);
+				lig.monte_carlo(result_containers[i], s, sf, rec);
 				cnt.increment();
 			});
 		}

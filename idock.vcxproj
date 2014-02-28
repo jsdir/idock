@@ -20,7 +20,6 @@
     <ClInclude Include="src\ligand.hpp" />
     <ClInclude Include="src\log.hpp" />
     <ClInclude Include="src\matrix.hpp" />
-    <ClInclude Include="src\monte_carlo_task.hpp" />
     <ClInclude Include="src\random_forest.hpp" />
     <ClInclude Include="src\result.hpp" />
     <ClInclude Include="src\safe_counter.hpp" />
@@ -34,7 +33,6 @@
     <ClCompile Include="src\ligand.cpp" />
     <ClCompile Include="src\log.cpp" />
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\monte_carlo_task.cpp" />
     <ClCompile Include="src\random_forest.cpp" />
     <ClCompile Include="src\random_forest_x.cpp" />
     <ClCompile Include="src\random_forest_y.cpp" />
