@@ -188,58 +188,6 @@ const double xs_vdw_radii[] = ///< Van der Waals radii for XScore atom types.
 	1.2  // 14 = XS_TYPE_Met_D
 };
 
-/// Returns Van der Waals radius from an XScore atom type.
-inline double xs_vdw_radius(const size_t xs)
-{
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs_vdw_radii[xs];
-}
-
-/// Returns true if the XScore atom type is hydrophobic.
-inline bool xs_is_hydrophobic(const size_t xs)
-{
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs == XS_TYPE_C_H
-		|| xs == XS_TYPE_F_H
-		|| xs == XS_TYPE_Cl_H
-		|| xs == XS_TYPE_Br_H
-		|| xs == XS_TYPE_I_H;
-}
-
-/// Returns true if the XScore atom type is a hydrogen bond donor.
-inline bool xs_is_donor(const size_t xs)
-{
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs == XS_TYPE_N_D
-		|| xs == XS_TYPE_N_DA
-		|| xs == XS_TYPE_O_DA
-		|| xs == XS_TYPE_Met_D;
-}
-
-/// Returns true if the XScore atom type is a hydrogen bond acceptor.
-inline bool xs_is_acceptor(const size_t xs)
-{
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs == XS_TYPE_N_A
-		|| xs == XS_TYPE_N_DA
-		|| xs == XS_TYPE_O_A
-		|| xs == XS_TYPE_O_DA;
-}
-
-/// Returns true if the XScore atom type is either a hydrogen bond donor or a hydrogen bond acceptor.
-inline bool xs_is_donor_acceptor(const size_t xs)
-{
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs_is_donor(xs) || xs_is_acceptor(xs);
-}
-
-/// Returns true if the two XScore atom types are a pair of hydrogen bond donor and acceptor.
-inline bool xs_hbond(const size_t xs1, const size_t xs2)
-{
-	return (xs_is_donor(xs1) && xs_is_acceptor(xs2))
-		|| (xs_is_donor(xs2) && xs_is_acceptor(xs1));
-}
-
 /// Mapping from AutoDock4 atom type to XScore atom type.
 const size_t ad_to_xs[] =
 {

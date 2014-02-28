@@ -6,6 +6,58 @@ const double scoring_function::Factor = static_cast<double>(256);
 const double scoring_function::Factor_Inverse = 1 / Factor;
 const size_t scoring_function::Num_Samples = static_cast<size_t>(Factor * Cutoff_Sqr) + 1;
 
+/// Returns Van der Waals radius from an XScore atom type.
+inline double xs_vdw_radius(const size_t xs)
+{
+	BOOST_ASSERT(xs < XS_TYPE_SIZE);
+	return xs_vdw_radii[xs];
+}
+
+/// Returns true if the XScore atom type is hydrophobic.
+inline bool xs_is_hydrophobic(const size_t xs)
+{
+	BOOST_ASSERT(xs < XS_TYPE_SIZE);
+	return xs == XS_TYPE_C_H
+		|| xs == XS_TYPE_F_H
+		|| xs == XS_TYPE_Cl_H
+		|| xs == XS_TYPE_Br_H
+		|| xs == XS_TYPE_I_H;
+}
+
+/// Returns true if the XScore atom type is a hydrogen bond donor.
+inline bool xs_is_donor(const size_t xs)
+{
+	BOOST_ASSERT(xs < XS_TYPE_SIZE);
+	return xs == XS_TYPE_N_D
+		|| xs == XS_TYPE_N_DA
+		|| xs == XS_TYPE_O_DA
+		|| xs == XS_TYPE_Met_D;
+}
+
+/// Returns true if the XScore atom type is a hydrogen bond acceptor.
+inline bool xs_is_acceptor(const size_t xs)
+{
+	BOOST_ASSERT(xs < XS_TYPE_SIZE);
+	return xs == XS_TYPE_N_A
+		|| xs == XS_TYPE_N_DA
+		|| xs == XS_TYPE_O_A
+		|| xs == XS_TYPE_O_DA;
+}
+
+/// Returns true if the XScore atom type is either a hydrogen bond donor or a hydrogen bond acceptor.
+inline bool xs_is_donor_acceptor(const size_t xs)
+{
+	BOOST_ASSERT(xs < XS_TYPE_SIZE);
+	return xs_is_donor(xs) || xs_is_acceptor(xs);
+}
+
+/// Returns true if the two XScore atom types are a pair of hydrogen bond donor and acceptor.
+inline bool xs_hbond(const size_t xs1, const size_t xs2)
+{
+	return (xs_is_donor(xs1) && xs_is_acceptor(xs2))
+		|| (xs_is_donor(xs2) && xs_is_acceptor(xs1));
+}
+
 double scoring_function::score(const size_t t0, const size_t t1, const double r)
 {
 	BOOST_ASSERT(r <= Cutoff);
@@ -19,7 +71,7 @@ double scoring_function::score(const size_t t0, const size_t t1, const double r)
 		+  (-0.005156) * exp(-sqr((d - 3.0) * 0.5))
 		+  ( 0.840245) * (d > 0 ? 0.0 : d * d)
 		+  (-0.035069) * ((xs_is_hydrophobic(t0) && xs_is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0)
-		+  (-0.587439) * ((xs_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.428571))): 0.0);
+		+  (-0.587439) * ((xs_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
 }
 
 void scoring_function::score5(float* const v, const size_t t0, const size_t t1, const double r2)
@@ -35,7 +87,7 @@ void scoring_function::score5(float* const v, const size_t t0, const size_t t1, 
 	v[1] += exp(-sqr((d - 3.0) * 0.5));
 	v[2] += (d > 0 ? 0.0 : d * d);
 	v[3] += ((xs_is_hydrophobic(t0) && xs_is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0);
-	v[4] += ((xs_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.428571))): 0.0);
+	v[4] += ((xs_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
 }
 
 void scoring_function::precalculate(const size_t t0, const size_t t1, const vector<double>& rs)
