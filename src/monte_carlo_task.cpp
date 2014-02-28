@@ -16,9 +16,9 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 	uniform_real_distribution<double> uniform_01_gen(  0,  1);
 	uniform_real_distribution<double> uniform_11_gen( -1,  1);
 	uniform_real_distribution<double> uniform_pi_gen(-pi, pi);
-	uniform_real_distribution<double> uniform_box0_gen(rec.corner1[0], rec.corner2[0]);
-	uniform_real_distribution<double> uniform_box1_gen(rec.corner1[1], rec.corner2[1]);
-	uniform_real_distribution<double> uniform_box2_gen(rec.corner1[2], rec.corner2[2]);
+	uniform_real_distribution<double> uniform_box0_gen(rec.corner0[0], rec.corner1[0]);
+	uniform_real_distribution<double> uniform_box1_gen(rec.corner0[1], rec.corner1[1]);
+	uniform_real_distribution<double> uniform_box2_gen(rec.corner0[2], rec.corner1[2]);
 	uniform_int_distribution<size_t> uniform_entity_gen(0, num_entities - 1);
 	normal_distribution<double> normal_01_gen(0, 1);
 

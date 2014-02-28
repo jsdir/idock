@@ -20,9 +20,9 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 		num_probes[i] = num_grids[i] + 1;
 
 		// Determine the two extreme corners.
-		corner1[i] = center[i] - span[i] * static_cast<double>(0.5);
-		corner2[i] = corner1[i] + span[i];
-		assert(corner1[i] < corner2[i]);
+		corner0[i] = center[i] - span[i] * static_cast<double>(0.5);
+		corner1[i] = corner0[i] + span[i];
+		assert(corner0[i] < corner1[i]);
 
 		// Determine the number of partitions.
 		num_partitions[i] = static_cast<size_t>(span[i] * Default_Partition_Granularity_Inverse);
@@ -130,15 +130,15 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	{
 		vector<size_t>& par = partitions[partition_index(array<size_t, 3>{x, y, z})];
 		par.reserve(num_receptor_atoms_within_cutoff);
-		const array<size_t, 3> index1 = {{ x,     y,     z     }};
-		const array<size_t, 3> index2 = {{ x + 1, y + 1, z + 1 }};
-		const array<double, 3> corner1 = partition_corner1(index1);
-		const array<double, 3> corner2 = partition_corner1(index2);
+		const array<size_t, 3> index0 = {{ x,     y,     z     }};
+		const array<size_t, 3> index1 = {{ x + 1, y + 1, z + 1 }};
+		const array<double, 3> corner0 = partition_corner0(index0);
+		const array<double, 3> corner1 = partition_corner0(index1);
 		for (size_t l = 0; l < num_receptor_atoms_within_cutoff; ++l)
 		{
 			const size_t i = receptor_atoms_within_cutoff[l];
 			const atom& a = atoms[i];
-			const double proj_dist_sqr = project_distance_sqr(corner1, corner2, a.coordinate);
+			const double proj_dist_sqr = project_distance_sqr(corner0, corner1, a.coordinate);
 			if (proj_dist_sqr < scoring_function::Cutoff_Sqr)
 			{
 				par.push_back(i);
@@ -151,21 +151,21 @@ bool receptor::within(const array<double, 3>& coordinate) const
 {
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
-		// Half-open-half-close box, i.e. [corner1, corner2)
-		if (coordinate[i] < corner1[i] || corner2[i] <= coordinate[i])
+		// Half-open-half-close box, i.e. [corner0, corner1)
+		if (coordinate[i] < corner0[i] || corner1[i] <= coordinate[i])
 			return false;
 	}
 	return true;
 }
 
-double receptor::project_distance_sqr(const array<double, 3>& corner1, const array<double, 3>& corner2, const array<double, 3>& coordinate) const
+double receptor::project_distance_sqr(const array<double, 3>& corner0, const array<double, 3>& corner1, const array<double, 3>& coordinate) const
 {
 	// Calculate the projection point of the given coordinate onto the surface of the given box.
 	array<double, 3> projection = coordinate; // The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
 	{
-		if (projection[i] < corner1[i]) projection[i] = corner1[i];
-		if (projection[i] > corner2[i]) projection[i] = corner2[i];
+		if (projection[i] < corner0[i]) projection[i] = corner0[i];
+		if (projection[i] > corner1[i]) projection[i] = corner1[i];
 	}
 
 	// Check if the distance between the projection and the given coordinate is within cutoff.
@@ -174,17 +174,17 @@ double receptor::project_distance_sqr(const array<double, 3>& corner1, const arr
 
 double receptor::project_distance_sqr(const array<double, 3>& coordinate) const
 {
-	return project_distance_sqr(corner1, corner2, coordinate);
+	return project_distance_sqr(corner0, corner1, coordinate);
 }
 
-array<double, 3> receptor::grid_corner1(const array<size_t, 3>& index) const
+array<double, 3> receptor::grid_corner0(const array<size_t, 3>& index) const
 {
-	return corner1 + (grid_size * index);
+	return corner0 + (grid_size * index);
 }
 
-array<double, 3> receptor::partition_corner1(const array<size_t, 3>& index) const
+array<double, 3> receptor::partition_corner0(const array<size_t, 3>& index) const
 {
-	return corner1 + (partition_size * index);
+	return corner0 + (partition_size * index);
 }
 
 array<size_t, 3> receptor::grid_index(const array<double, 3>& coordinate) const
@@ -192,9 +192,9 @@ array<size_t, 3> receptor::grid_index(const array<double, 3>& coordinate) const
 	array<size_t, 3> index;
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
-		index[i] = static_cast<size_t>((coordinate[i] - corner1[i]) * grid_size_inverse[i]);
+		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * grid_size_inverse[i]);
 		// Boundary checking is not necessary because the given coordinate is a ligand atom,
-		// which has been restricted within the half-open-half-close box [corner1, corner2).
+		// which has been restricted within the half-open-half-close box [corner0, corner1).
 		//if (index[i] == num_grids[i]) index[i] = num_grids[i] - 1;
 	}
 	return index;
@@ -205,7 +205,7 @@ array<size_t, 3> receptor::partition_index(const array<double, 3>& coordinate) c
 	array<size_t, 3> index;
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
-		index[i] = static_cast<size_t>((coordinate[i] - corner1[i]) * partition_size_inverse[i]);
+		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * partition_size_inverse[i]);
 		// The following condition occurs if and only if coordinate[i] is exactly at the right boundary of the box.
 		// In such case, merge it into the last partition.
 		// Boundary checking is necessary because the given coordinate is a probe atom.
@@ -237,7 +237,7 @@ void receptor::populate(const vector<size_t>& atom_types_to_populate, const size
 	{
 		// Find the possibly interacting receptor atoms via partitions.
 		const array<size_t, 3> grid_idx = { { x, y, z } };
-		const array<double, 3> probe_coords = grid_corner1(grid_idx);
+		const array<double, 3> probe_coords = grid_corner0(grid_idx);
 		const vector<size_t>& receptor_atoms = partitions[partition_index(partition_index(probe_coords))];
 
 		// Accumulate individual free energies for each atom types to populate.
