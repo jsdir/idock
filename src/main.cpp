@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-		// Validate size_x, size_y, size_z.
+		// Validate size.
 		if (size[0] < box::Default_Partition_Granularity ||
 		    size[1] < box::Default_Partition_Granularity ||
 		    size[2] < box::Default_Partition_Granularity)
@@ -185,7 +185,7 @@ int main(int argc, char* argv[])
 
 	// Initialize a Mersenne Twister random number generator.
 	cout << "Using random seed " << seed << endl;
-	mt19937_64 eng(seed);
+	mt19937_64 rng(seed);
 
 	// Initialize an io service pool and create worker threads for later use.
 	cout << "Creating an io service pool of " << num_threads << " worker thread" << (num_threads == 1 ? "" : "s") << endl;
@@ -206,12 +206,11 @@ int main(int argc, char* argv[])
 		assert(rs.back() == scoring_function::Cutoff);
 
 		// Populate the scoring function task container.
-		const size_t num_sf_tasks = ((sf.n + 1) * sf.n) >> 1;
-		cnt.init(num_sf_tasks);
+		cnt.init(((sf.n + 1) * sf.n) >> 1);
 		for (size_t t0 =  0; t0 < sf.n; ++t0)
 		for (size_t t1 = t0; t1 < sf.n; ++t1)
 		{
-			io.post([&,t0,t1]()
+			io.post([&, t0, t1]()
 			{
 				sf.precalculate(t0, t1, rs);
 				cnt.increment();
@@ -244,12 +243,12 @@ int main(int argc, char* argv[])
 	vector<size_t> atom_types_to_populate;
 	atom_types_to_populate.reserve(sf.n);
 
-	cout << "Training a random forest of " << num_trees << " trees with seed " << seed << " in parallel" << endl;
+	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
 	forest f(num_trees, seed);
 	cnt.init(num_trees);
 	for (size_t i = 0; i < num_trees; ++i)
 	{
-		io.post([&,i]()
+		io.post([&, i]()
 		{
 			f[i].train(5, f.u01_s);
 			cnt.increment();
@@ -310,8 +309,8 @@ int main(int argc, char* argv[])
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
 			assert(result_containers[i].empty());
-			const size_t s = eng();
-			io.post([&,i,s]()
+			const size_t s = rng();
+			io.post([&, i, s]()
 			{
 				monte_carlo_task(result_containers[i], lig, s, sf, b, grid_maps);
 				cnt.increment();
@@ -328,7 +327,7 @@ int main(int argc, char* argv[])
 			const size_t num_task_results = task_results.size();
 			for (size_t j = 0; j < num_task_results; ++j)
 			{
-				add_to_result_container(results, static_cast<result&&>(task_results[j]), required_square_error);
+				add_to_result_container(results, move(task_results[j]), required_square_error);
 			}
 			task_results.clear();
 		}
@@ -353,12 +352,13 @@ int main(int argc, char* argv[])
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 		lig.write_models(output_ligand_path, results, num_results, b, grid_maps);
 
-		// Display the free energies of the top 4 conformations.
+		// Display the free energies of the top 9 conformations.
 		const size_t num_energies = min<size_t>(num_results, 9);
 		for (size_t i = 0; i < num_energies; ++i)
 		{
 			cout << setw(6) << results[i].e_nd;
 		}
+		cout << endl;
 
 		// Add a log record.
 		vector<double> affinities(num_results);
@@ -367,8 +367,6 @@ int main(int argc, char* argv[])
 			affinities[i] = results[i].e_nd;
 		}
 		log.push_back(new log_record(move(stem), move(affinities)));
-
-		cout << endl;
 
 		// Clear the results of the current ligand.
 		results.clear();
