@@ -35,14 +35,6 @@ public:
 		elems[2] = d2;
 	}
 
-	/// Assigns a value to all the 3 elements.
-	void assign(const double s)
-	{
-		elems[0] = s;
-		elems[1] = s;
-		elems[2] = s;
-	}
-
 	/// Returns a constant reference to the element at index i.
 	const double& operator[](const size_t i) const
 	{
