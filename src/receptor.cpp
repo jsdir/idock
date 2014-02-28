@@ -100,7 +100,7 @@ receptor::receptor(const path& p, const box& b) : partitions(b.num_partitions[0]
 	for (size_t y = 0; y < b.num_partitions[1]; ++y)
 	for (size_t z = 0; z < b.num_partitions[2]; ++z)
 	{
-		vector<size_t>& par = partitions[b.partition_idx3_to_idx1(array<size_t, 3>{x, y, z})];
+		vector<size_t>& par = partitions[b.partition_index(array<size_t, 3>{x, y, z})];
 		par.reserve(num_receptor_atoms_within_cutoff);
 		const array<size_t, 3> index1 = {{ x,     y,     z     }};
 		const array<size_t, 3> index2 = {{ x + 1, y + 1, z + 1 }};

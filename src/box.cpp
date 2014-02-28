@@ -97,12 +97,12 @@ array<size_t, 3> box::partition_index(const array<double, 3>& coordinate) const
 	return index;
 }
 
-size_t box::grid_idx3_to_idx1(const array<size_t, 3>& a) const
+size_t box::grid_index(const array<size_t, 3>& a) const
 {
 	return num_probes[2] * (num_probes[1] * a[0] + a[1]) + a[2];
 }
 
-size_t box::partition_idx3_to_idx1(const array<size_t, 3>& a) const
+size_t box::partition_index(const array<size_t, 3>& a) const
 {
 	return num_partitions[2] * (num_partitions[1] * a[0] + a[1]) + a[2];
 }
