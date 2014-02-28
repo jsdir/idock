@@ -3,9 +3,28 @@
 #define IDOCK_RESULT_HPP
 
 #include <boost/ptr_container/ptr_vector.hpp>
-#include "conformation.hpp"
-
+#include "array.hpp"
 using boost::ptr_vector;
+
+/// Represents a ligand conformation.
+class conformation
+{
+public:
+	array<double, 3> position; ///< Ligand origin coordinate.
+	array<double, 4> orientation; ///< Ligand orientation.
+	vector<double> torsions; ///< Ligand torsions.
+
+	/// Constructs an initial conformation.
+	explicit conformation(const size_t num_active_torsions) : position(zero3), orientation(qtn4id), torsions(num_active_torsions, 0) {}
+};
+
+/// Represents a transition from one conformation to another.
+class change : public vector<double>
+{
+public:
+	/// Constructs a zero change.
+	explicit change(const size_t num_active_torsions) : vector<double>(6 + num_active_torsions, 0) {}
+};
 
 /// Represents a result found by BFGS local optimization for later clustering.
 class result
