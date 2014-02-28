@@ -23,19 +23,18 @@ int main(int argc, char* argv[])
 	// Process program options.
 	try
 	{
-		using namespace boost::program_options;
-
 		// Initialize the default values of optional arguments.
 		const path default_output_folder_path = "output";
 		const path default_log_path = "log.csv";
-		const unsigned int concurrency = thread::hardware_concurrency();
-		const size_t default_num_threads = concurrency;
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
+		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
 		const size_t default_num_mc_tasks = 32;
 		const size_t default_max_conformations = 9;
 		const double default_grid_granularity = 0.15625;
 
+		// Set up options description.
+		using namespace boost::program_options;
 		options_description input_options("input (required)");
 		input_options.add_options()
 			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
@@ -47,13 +46,11 @@ int main(int argc, char* argv[])
 			("size_y", value<double>(&size_y)->required(), "size in the y dimension in Angstrom")
 			("size_z", value<double>(&size_z)->required(), "size in the z dimension in Angstrom")
 			;
-
 		options_description output_options("output (optional)");
 		output_options.add_options()
 			("output_folder", value<path>(&output_folder_path)->default_value(default_output_folder_path), "folder of output models in PDBQT format")
 			("log", value<path>(&log_path)->default_value(default_log_path), "log file")
 			;
-
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
@@ -66,7 +63,6 @@ int main(int argc, char* argv[])
 			("version", "version information")
 			("config", value<path>(), "options can be loaded from a configuration file")
 			;
-
 		options_description all_options;
 		all_options.add(input_options).add(output_options).add(miscellaneous_options);
 
@@ -101,24 +97,24 @@ int main(int argc, char* argv[])
 		// Validate receptor.
 		if (!exists(receptor_path))
 		{
-			cerr << "Receptor " << receptor_path << " does not exist\n";
+			cerr << "Receptor " << receptor_path << " does not exist" << endl;
 			return 1;
 		}
 		if (!is_regular_file(receptor_path))
 		{
-			cerr << "Receptor " << receptor_path << " is not a regular file\n";
+			cerr << "Receptor " << receptor_path << " is not a regular file" << endl;
 			return 1;
 		}
 
 		// Validate input_folder_path.
 		if (!exists(input_folder_path))
 		{
-			cerr << "Input folder " << input_folder_path << " does not exist\n";
+			cerr << "Input folder " << input_folder_path << " does not exist" << endl;
 			return 1;
 		}
 		if (!is_directory(input_folder_path))
 		{
-			cerr << "Input folder " << input_folder_path << " is not a directory\n";
+			cerr << "Input folder " << input_folder_path << " is not a directory" << endl;
 			return 1;
 		}
 
@@ -130,7 +126,7 @@ int main(int argc, char* argv[])
 			cerr << "Search space must be "
 				 << box::Default_Partition_Granularity << "A x "
 				 << box::Default_Partition_Granularity << "A x "
-				 << box::Default_Partition_Granularity << "A or larger\n";
+				 << box::Default_Partition_Granularity << "A or larger" << endl;
 			return 1;
 		}
 
@@ -139,7 +135,7 @@ int main(int argc, char* argv[])
 		{
 			if (!is_directory(output_folder_path))
 			{
-				cerr << "Output folder " << output_folder_path << " is not a directory\n";
+				cerr << "Output folder " << output_folder_path << " is not a directory" << endl;
 				return 1;
 			}
 		}
@@ -147,7 +143,7 @@ int main(int argc, char* argv[])
 		{
 			if (!create_directories(output_folder_path))
 			{
-				cerr << "Failed to create output folder " << output_folder_path << '\n';
+				cerr << "Failed to create output folder " << output_folder_path << endl;
 				return 1;
 			}
 		}
@@ -155,47 +151,47 @@ int main(int argc, char* argv[])
 		// Validate log_path.
 		if (is_directory(log_path))
 		{
-			cerr << "log path " << log_path << " is a directory\n";
+			cerr << "log path " << log_path << " is a directory" << endl;
 			return 1;
 		}
 
 		// Validate miscellaneous options.
 		if (!num_threads)
 		{
-			cerr << "Option threads must be 1 or greater\n";
+			cerr << "Option threads must be 1 or greater" << endl;
 			return 1;
 		}
 		if (!num_mc_tasks)
 		{
-			cerr << "Option tasks must be 1 or greater\n";
+			cerr << "Option tasks must be 1 or greater" << endl;
 			return 1;
 		}
 		if (!max_conformations)
 		{
-			cerr << "Option max_conformations must be 1 or greater\n";
+			cerr << "Option max_conformations must be 1 or greater" << endl;
 			return 1;
 		}
 		if (grid_granularity <= 0)
 		{
-			cerr << "Option granularity must be positive\n";
+			cerr << "Option granularity must be positive" << endl;
 			return 1;
 		}
 	}
 	catch (const exception& e)
 	{
-		cerr << e.what() << '\n';
+		cerr << e.what() << endl;
 		return 1;
 	}
 
 	// Initialize a Mersenne Twister random number generator.
-	cout << "Using random seed " << seed << '\n';
+	cout << "Using random seed " << seed << endl;
 	mt19937_64 eng(seed);
 
 	// Initialize the search space of cuboid shape.
 	const box b(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size_z), grid_granularity);
 
 	// Parse the receptor.
-	cout << "Parsing receptor " << receptor_path << '\n';
+	cout << "Parsing receptor " << receptor_path << endl;
 	const receptor rec(receptor_path, b);
 
 	// Reserve storage for task containers.
@@ -218,7 +214,7 @@ int main(int argc, char* argv[])
 	atom_types_to_populate.reserve(XS_TYPE_SIZE);
 
 	// Initialize a thread pool and create worker threads for later use.
-	cout << "Creating an io service pool of " << num_threads << " worker thread" << (num_threads == 1 ? "" : "s") << '\n';
+	cout << "Creating an io service pool of " << num_threads << " worker thread" << (num_threads == 1 ? "" : "s") << endl;
 	io_service_pool io(num_threads);
 	safe_counter<size_t> cnt;
 
@@ -264,7 +260,7 @@ int main(int argc, char* argv[])
 	cnt.wait();
 	f.clear();
 
-	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand\n";
+	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand" << endl;
 
 	// Perform docking for each file in the ligand folder.
 	log_engine log;
