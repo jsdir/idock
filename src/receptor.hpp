@@ -7,16 +7,16 @@
 #include "box.hpp"
 using namespace boost::filesystem;
 
-/// Represents a receptor.
+//! Represents a receptor.
 class receptor
 {
 public:
-	/// Constructs a receptor by parsing a receptor file in pdbqt format.
-	/// @exception parsing_error Thrown when an atom type is not recognized.
+	//! Constructs a receptor by parsing a receptor file in pdbqt format.
+	//! @exception parsing_error Thrown when an atom type is not recognized.
 	explicit receptor(const path& p, const box& b);
 
-	vector<atom> atoms; ///< Receptor atoms.
-	vector<vector<size_t>> partitions; ///< Heavy atoms in partitions.
+	vector<atom> atoms; //!< Receptor atoms.
+	vector<vector<size_t>> partitions; //!< Heavy atoms in partitions.
 };
 
 #endif

@@ -6,12 +6,12 @@ using namespace std;
 void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const box& b, const vector<vector<double>>& grid_maps)
 {
 	// Define constants.
-	const size_t num_mc_iterations = 100 * lig.num_heavy_atoms; ///< The number of iterations correlates to the complexity of ligand.
+	const size_t num_mc_iterations = 100 * lig.num_heavy_atoms; //!< The number of iterations correlates to the complexity of ligand.
 	const size_t num_entities  = 2 + lig.num_active_torsions; // Number of entities to mutate.
 	const size_t num_variables = 6 + lig.num_active_torsions; // Number of variables to optimize.
 	const double e_upper_bound = static_cast<double>(4 * lig.num_heavy_atoms); // A conformation will be droped if its free energy is not better than e_upper_bound.
 	const double required_square_error = static_cast<double>(1 * lig.num_heavy_atoms); // Ligands with RMSD < 1.0 will be clustered into the same cluster.
-	const double pi = static_cast<double>(3.1415926535897932); ///< Pi.
+	const double pi = static_cast<double>(3.1415926535897932); //!< Pi.
 
 	mt19937_64 eng(seed);
 	uniform_real_distribution<double> uniform_01_gen(  0,  1);

@@ -7,43 +7,43 @@ inline bool zero(const double a)
 	return fabs(a) < 1e-5;
 }
 
-/// Returns true if the absolute difference between two floating point values is within the constant tolerance.
+//! Returns true if the absolute difference between two floating point values is within the constant tolerance.
 inline bool eq(const double a, const double b)
 {
 	return zero(a - b);
 }
 
-/// Returns true is the vector is (0, 0, 0).
+//! Returns true is the vector is (0, 0, 0).
 bool zero(const array<double, 3>& a)
 {
 	return zero(a[0]) && zero(a[1]) && zero(a[2]);
 }
 
-/// Returns the square norm.
+//! Returns the square norm.
 double norm_sqr(const array<double, 3>& a)
 {
 	return a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
 }
 
-/// Returns the norm.
+//! Returns the norm.
 double norm(const array<double, 3>& a)
 {
 	return sqrt(norm_sqr(a));
 }
 
-/// Returns true if the norm equals 1.
+//! Returns true if the norm equals 1.
 bool normalized(const array<double, 3>& a)
 {
 	return eq(norm_sqr(a), 1);
 }
 
-/// Returns the dot product of the current vector and the given vector.
+//! Returns the dot product of the current vector and the given vector.
 double operator*(const array<double, 3>& t, const array<double, 3>& v)
 {
 	return t[0] * v[0] + t[1] * v[1] + t[2] * v[2];
 }
 
-/// Returns the result of pairwise multiplication of the current vector and the given vector.
+//! Returns the result of pairwise multiplication of the current vector and the given vector.
 array<double, 3> operator*(const array<double, 3>& t, const array<size_t, 3>& v)
 {
 	return
@@ -54,7 +54,7 @@ array<double, 3> operator*(const array<double, 3>& t, const array<size_t, 3>& v)
 	};
 }
 
-/// Returns the result of pairwise addition of the current vector and the given vector.
+//! Returns the result of pairwise addition of the current vector and the given vector.
 array<double, 3> operator+(const array<double, 3>& t, const array<double, 3>& v)
 {
 	return
@@ -65,7 +65,7 @@ array<double, 3> operator+(const array<double, 3>& t, const array<double, 3>& v)
 	};
 }
 
-/// Returns the result of pairwise subtraction of the current vector and the given vector.
+//! Returns the result of pairwise subtraction of the current vector and the given vector.
 array<double, 3> operator-(const array<double, 3>& t, const array<double, 3>& v)
 {
 	return
@@ -76,7 +76,7 @@ array<double, 3> operator-(const array<double, 3>& t, const array<double, 3>& v)
 	};
 }
 
-/// Pairwise add a given vector to the current vector.
+//! Pairwise add a given vector to the current vector.
 void operator+=(array<double, 3>& t, const array<double, 3>& v)
 {
 	t[0] += v[0];
@@ -84,7 +84,7 @@ void operator+=(array<double, 3>& t, const array<double, 3>& v)
 	t[2] += v[2];
 }
 
-/// Pairwise subtract a given vector from the current vector.
+//! Pairwise subtract a given vector from the current vector.
 void operator-=(array<double, 3>& t, const array<double, 3>& v)
 {
 	t[0] -= v[0];
@@ -92,7 +92,7 @@ void operator-=(array<double, 3>& t, const array<double, 3>& v)
 	t[2] -= v[2];
 }
 
-/// Pairwise multiply a constant to the current vector.
+//! Pairwise multiply a constant to the current vector.
 array<double, 3> operator*(const double s, const array<double, 3>& v)
 {
 	return
@@ -103,13 +103,13 @@ array<double, 3> operator*(const double s, const array<double, 3>& v)
 	};
 }
 
-/// Returns the normalized vector of a vector.
+//! Returns the normalized vector of a vector.
 array<double, 3> normalize(const array<double, 3>& v)
 {
 	return (1 / norm(v)) * v;
 }
 
-/// Returns the cross product of two vectors.
+//! Returns the cross product of two vectors.
 array<double, 3> cross_product(const array<double, 3>& a, const array<double, 3>& b)
 {
 	return
@@ -120,7 +120,7 @@ array<double, 3> cross_product(const array<double, 3>& a, const array<double, 3>
 	};
 }
 
-/// Returns the square distance between two vectors.
+//! Returns the square distance between two vectors.
 double distance_sqr(const array<double, 3>& a, const array<double, 3>& b)
 {
 	const auto d0 = a[0] - b[0];
@@ -129,7 +129,7 @@ double distance_sqr(const array<double, 3>& a, const array<double, 3>& b)
 	return d0*d0 + d1*d1 + d2*d2;
 }
 
-/// Returns the accumulated square distance between two vectors of vectors.
+//! Returns the accumulated square distance between two vectors of vectors.
 double distance_sqr(const vector<array<double, 3>>& a, const vector<array<double, 3>>& b)
 {
 	const size_t n = a.size();
@@ -143,7 +143,7 @@ double distance_sqr(const vector<array<double, 3>>& a, const vector<array<double
 	return sum;
 }
 
-/// Transforms a vector by a 3x3 matrix.
+//! Transforms a vector by a 3x3 matrix.
 array<double, 3> operator*(const array<double, 9>& m, const array<double, 3>& v)
 {
 	return
@@ -234,7 +234,7 @@ array<double, 9> qtn4_to_mat3(const array<double, 4>& a)
 	};
 }
 
-/// Returns the product of two quaternions.
+//! Returns the product of two quaternions.
 array<double, 4> operator*(const array<double, 4>& q1, const array<double, 4>& q2)
 {
     return

@@ -13,7 +13,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	hydrogens.reserve(50); // A ligand typically consists of <= 50 hydrogens.
 
 	// Initialize helper variables for parsing.
-	vector<vector<size_t>> bonds; ///< Covalent bonds.
+	vector<vector<size_t>> bonds; //!< Covalent bonds.
 	bonds.reserve(100); // A ligand typically consists of <= 100 heavy atoms.
 	size_t current = 0; // Index of current frame, initialized to ROOT frame.
 	frame* f = &frames.front(); // Pointer to the current frame.
@@ -285,12 +285,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		return false;
 
 	// Initialize frame-wide conformational variables.
-	vector<array<double, 3>> origins; ///< Origin coordinate, which is rotorY.
-	vector<array<double, 3>> axes; ///< Vector pointing from rotor Y to rotor X.
-	vector<array<double, 4>> orientations_q; ///< Orientation in the form of quaternion.
-	vector<array<double, 9>> orientations_m; ///< Orientation in the form of 3x3 matrix.
-	vector<array<double, 3>> forces; ///< Aggregated derivatives of heavy atoms.
-	vector<array<double, 3>> torques; /// Torque of the force.
+	vector<array<double, 3>> origins; //!< Origin coordinate, which is rotorY.
+	vector<array<double, 3>> axes; //!< Vector pointing from rotor Y to rotor X.
+	vector<array<double, 4>> orientations_q; //!< Orientation in the form of quaternion.
+	vector<array<double, 9>> orientations_m; //!< Orientation in the form of 3x3 matrix.
+	vector<array<double, 3>> forces; //!< Aggregated derivatives of heavy atoms.
+	vector<array<double, 3>> torques; //! Torque of the force.
 	origins.resize(num_frames);
 	axes.resize(num_frames);
 	orientations_q.resize(num_frames);
@@ -299,8 +299,8 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	torques.resize(num_frames, zero3); // Initialize torques to zero3 for subsequent aggregation.
 
 	// Initialize atom-wide conformational variables.
-	vector<array<double, 3>> coordinates; ///< Heavy atom coordinates.
-	vector<array<double, 3>> derivatives; ///< Heavy atom derivatives.
+	vector<array<double, 3>> coordinates; //!< Heavy atom coordinates.
+	vector<array<double, 3>> derivatives; //!< Heavy atom derivatives.
 	coordinates.resize(num_heavy_atoms);
 	derivatives.resize(num_heavy_atoms);
 

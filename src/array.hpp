@@ -6,8 +6,8 @@
 #include <vector>
 using namespace std;
 
-const array<double, 3> zero3{0, 0, 0}; ///< Constant vector with all the 3 elements of zero.
-const array<double, 4> qtn4id{1, 0, 0, 0}; ///< Identity quaternion.
+const array<double, 3> zero3{0, 0, 0}; //!< Constant vector with all the 3 elements of zero.
+const array<double, 4> qtn4id{1, 0, 0, 0}; //!< Identity quaternion.
 
 double norm_sqr(const array<double, 3>& a);
 double norm(const array<double, 3>& a);
@@ -24,7 +24,7 @@ array<double, 3> cross_product(const array<double, 3>& a, const array<double, 3>
 double distance_sqr(const array<double, 3>& a, const array<double, 3>& b);
 double distance_sqr(const vector<array<double, 3>>& a, const vector<array<double, 3>>& b);
 
-/// Transforms a vector by a 3x3 matrix.
+//! Transforms a vector by a 3x3 matrix.
 array<double, 3> operator*(const array<double, 9>& m, const array<double, 3>& v);
 
 array<double, 4> vec4_to_qtn4(const array<double, 3>& axis, const double angle);
@@ -35,7 +35,7 @@ bool normalized(const array<double, 4>& a);
 array<double, 4> normalize(const array<double, 4>& a);
 array<double, 9> qtn4_to_mat3(const array<double, 4>& a);
 
-/// Returns the product of two quaternions.
+//! Returns the product of two quaternions.
 array<double, 4> operator*(const array<double, 4>& q1, const array<double, 4>& q2);
 
 #endif

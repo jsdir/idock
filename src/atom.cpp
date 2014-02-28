@@ -133,31 +133,31 @@ bool atom::is_nonpolar_hydrogen() const
 	return ad == 0;
 }
 
-/// Returns true if the atom is polar hydrogen.
+//! Returns true if the atom is polar hydrogen.
 bool atom::is_polar_hydrogen() const
 {
 	return ad == 1;
 }
 
-/// Returns true if the atom is hydrogen.
+//! Returns true if the atom is hydrogen.
 bool atom::is_hydrogen() const
 {
 	return ad <= 1;
 }
 
-/// Returns true if the atom is a hetero atom, i.e. non-carbon heavy atom.
+//! Returns true if the atom is a hetero atom, i.e. non-carbon heavy atom.
 bool atom::is_hetero() const
 {
 	return ad >= 4;
 }
 
-/// Returns the covalent radius of current AutoDock4 atom type.
+//! Returns the covalent radius of current AutoDock4 atom type.
 double atom::covalent_radius() const
 {
 	return ad_covalent_radii[ad];
 }
 
-/// Returns true if the current atom is covalently bonded to a given atom.
+//! Returns true if the current atom is covalently bonded to a given atom.
 bool atom::is_neighbor(const atom& a) const
 {
 	assert(this != &a);
@@ -165,7 +165,7 @@ bool atom::is_neighbor(const atom& a) const
 	return distance_sqr(coordinate, a.coordinate) < r * r;
 }
 
-/// For nitrogen and oxygen, revises the XScore atom type to make it a hydrogen bond donor.
+//! For nitrogen and oxygen, revises the XScore atom type to make it a hydrogen bond donor.
 void atom::donorize()
 {
 	switch (xs)
@@ -176,7 +176,7 @@ void atom::donorize()
 	}
 }
 
-/// For carbon, revises the XScore atom type to make it non-hydrophobic.
+//! For carbon, revises the XScore atom type to make it non-hydrophobic.
 void atom::dehydrophobicize()
 {
 	assert(xs <= 1);

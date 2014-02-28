@@ -26,25 +26,25 @@ const array<float, scoring_function::n> scoring_function::vdw =
 	1.2, // Met_D
 };
 
-/// Returns true if the XScore atom type is hydrophobic.
+//! Returns true if the XScore atom type is hydrophobic.
 inline bool is_hydrophobic(const size_t t)
 {
 	return t ==  0 || t == 10 || t == 11 || t == 12 || t == 13;
 }
 
-/// Returns true if the XScore atom type is a hydrogen bond donor.
+//! Returns true if the XScore atom type is a hydrogen bond donor.
 inline bool is_hbdonor(const size_t t)
 {
 	return t ==  3 || t ==  5 || t ==  7 || t == 14;
 }
 
-/// Returns true if the XScore atom type is a hydrogen bond acceptor.
+//! Returns true if the XScore atom type is a hydrogen bond acceptor.
 inline bool is_hbacceptor(const size_t t)
 {
 	return t ==  4 || t ==  5 || t ==  6 || t ==  7;
 }
 
-/// Returns true if the two XScore atom types are a pair of hydrogen bond donor and acceptor.
+//! Returns true if the two XScore atom types are a pair of hydrogen bond donor and acceptor.
 inline bool is_hbond(const size_t t0, const size_t t1)
 {
 	return (is_hbdonor(t0) && is_hbacceptor(t1)) || (is_hbdonor(t1) && is_hbacceptor(t0));
