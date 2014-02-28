@@ -219,7 +219,7 @@ int main(int argc, char* argv[])
 	atom_types_to_populate.reserve(XS_TYPE_SIZE);
 
 	// Initialize a thread pool and create worker threads for later use.
-	cout << "Creating an io service pool of " << num_threads << " worker thread" << ((num_threads == 1) ? "" : "s") << '\n';
+	cout << "Creating an io service pool of " << num_threads << " worker thread" << (num_threads == 1 ? "" : "s") << '\n';
 	io_service_pool io(num_threads);
 	safe_counter<size_t> cnt;
 
@@ -265,7 +265,7 @@ int main(int argc, char* argv[])
 	cnt.wait();
 	f.clear();
 
-	cout << "Running " << num_mc_tasks << " Monte Carlo task" << ((num_mc_tasks == 1) ? "" : "s") << " per ligand\n";
+	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand\n";
 
 	// Perform docking for each file in the ligand folder.
 	log_engine log;
@@ -274,8 +274,7 @@ int main(int argc, char* argv[])
 	path input_ligand_path;
 	size_t num_conformations; // Number of conformation to output.
 	using namespace boost::filesystem;
-	const directory_iterator end_dir_iter; // A default constructed directory_iterator acts as the end iterator.
-	for (directory_iterator dir_iter(input_folder_path); dir_iter != end_dir_iter; ++dir_iter)
+	for (directory_iterator dir_iter(input_folder_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
 	{
 		// Obtain a ligand.
 		input_ligand_path = dir_iter->path();
