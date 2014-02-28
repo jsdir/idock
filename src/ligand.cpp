@@ -279,7 +279,7 @@ vector<size_t> ligand::get_atom_types() const
 	return atom_types;
 }
 
-bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const box& b, const vector<array3d<double>>& grid_maps, const double e_upper_bound, double& e, double& f, change& g) const
+bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const box& b, const vector<vector<double>>& grid_maps, const double e_upper_bound, double& e, double& f, change& g) const
 {
 	if (!b.within(conf.position))
 		return false;
@@ -374,8 +374,8 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	for (size_t i = 0; i < num_heavy_atoms; ++i)
 	{
 		// Retrieve the grid map in need.
-		const array3d<double>& grid_map = grid_maps[heavy_atoms[i].xs];
-		assert(grid_map.initialized());
+		const vector<double>& grid_map = grid_maps[heavy_atoms[i].xs];
+		assert(grid_map.size());
 
 		// Find the index and fraction of the current coordinates.
 		const array<size_t, 3> index = b.grid_index(coordinates[i]);
@@ -389,12 +389,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const size_t x0 = index[0];
 		const size_t y0 = index[1];
 		const size_t z0 = index[2];
-		const double e000 = grid_map(x0, y0, z0);
+		const double e000 = grid_map[b.grid_idx3_to_idx1(array<size_t, 3>{x0, y0, z0})];
 
 		// The derivative of probe atoms can be precalculated at the cost of massive memory storage.
-		const double e100 = grid_map(x0 + 1, y0,     z0    );
-		const double e010 = grid_map(x0,     y0 + 1, z0    );
-		const double e001 = grid_map(x0,     y0,     z0 + 1);
+		const double e100 = grid_map[b.grid_idx3_to_idx1(array<size_t, 3>{x0 + 1, y0,     z0    })];
+		const double e010 = grid_map[b.grid_idx3_to_idx1(array<size_t, 3>{x0,     y0 + 1, z0    })];
+		const double e001 = grid_map[b.grid_idx3_to_idx1(array<size_t, 3>{x0,     y0,     z0 + 1})];
 		derivatives[i][0] = (e100 - e000) * b.grid_granularity_inverse;
 		derivatives[i][1] = (e010 - e000) * b.grid_granularity_inverse;
 		derivatives[i][2] = (e001 - e000) * b.grid_granularity_inverse;
@@ -519,7 +519,7 @@ result ligand::compose_result(const double e, const double f, const conformation
 	return result(e, f, static_cast<vector<array<double, 3>>&&>(heavy_atoms), static_cast<vector<array<double, 3>>&&>(hydrogens));
 }
 
-void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const vector<array3d<double>>& grid_maps)
+void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const vector<vector<double>>& grid_maps)
 {
 	assert(num_conformations > 0);
 	assert(num_conformations <= results.size());
@@ -545,7 +545,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			const string& line = lines[j];
 			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
 			{
-				const double   free_energy = line[77] == 'H' ? 0 : grid_maps[heavy_atoms[heavy_atom].xs](b.grid_index(r.heavy_atoms[heavy_atom]));
+				const double   free_energy = line[77] == 'H' ? 0 : grid_maps[heavy_atoms[heavy_atom].xs][b.grid_idx3_to_idx1(b.grid_index(r.heavy_atoms[heavy_atom]))];
 				const array<double, 3>& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]

@@ -3,7 +3,7 @@
 using namespace std;
 //using std::random::mt19937_64;
 
-void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const box& b, const vector<array3d<double>>& grid_maps)
+void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const box& b, const vector<vector<double>>& grid_maps)
 {
 	// Define constants.
 	const size_t num_mc_iterations = 100 * lig.num_heavy_atoms; ///< The number of iterations correlates to the complexity of ligand.

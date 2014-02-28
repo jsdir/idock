@@ -4,7 +4,6 @@
 
 #include <boost/filesystem/path.hpp>
 #include "atom.hpp"
-#include "array3d.hpp"
 #include "box.hpp"
 using namespace boost::filesystem;
 
@@ -17,7 +16,7 @@ public:
 	explicit receptor(const path& p, const box& b);
 
 	vector<atom> atoms; ///< Receptor atoms.
-	array3d<vector<size_t>> partitions; ///< Heavy atoms in partitions.
+	vector<vector<size_t>> partitions; ///< Heavy atoms in partitions.
 };
 
 #endif

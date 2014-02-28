@@ -52,6 +52,9 @@ public:
 
 	/// Returns the index of the half-open-half-close partition containing the given coordinate.
 	array<size_t, 3> partition_index(const array<double, 3>& coordinate) const;
+
+	size_t grid_idx3_to_idx1(const array<size_t, 3>& a) const;
+	size_t partition_idx3_to_idx1(const array<size_t, 3>& a) const;
 };
 
 #endif

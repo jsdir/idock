@@ -240,7 +240,7 @@ int main(int argc, char* argv[])
 	results.reserve(max_results * num_mc_tasks);
 
 	// Initialize a vector of empty grid maps. Each grid map corresponds to an XScore atom type.
-	vector<array3d<double>> grid_maps(sf.n);
+	vector<vector<double>> grid_maps(sf.n);
 	vector<size_t> atom_types_to_populate;
 	atom_types_to_populate.reserve(sf.n);
 
@@ -280,9 +280,9 @@ int main(int argc, char* argv[])
 		{
 			const size_t t = ligand_atom_types[i];
 			assert(t < sf.n);
-			array3d<double>& grid_map = grid_maps[t];
-			if (grid_map.initialized()) continue; // The grid map of XScore atom type t has already been populated.
-			grid_map.resize(b.num_probes); // An exception may be thrown in case memory is exhausted.
+			vector<double>& grid_map = grid_maps[t];
+			if (grid_map.size()) continue; // The grid map of XScore atom type t has already been populated.
+			grid_map.resize(b.num_probes[0] * b.num_probes[1] * b.num_probes[2]); // An exception may be thrown in case memory is exhausted.
 			atom_types_to_populate.push_back(t); // The grid map of XScore atom type t has not been populated and should be populated now.
 		}
 		if (atom_types_to_populate.size())

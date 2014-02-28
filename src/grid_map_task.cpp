@@ -1,7 +1,7 @@
 #include "array.hpp"
 #include "grid_map_task.hpp"
 
-void grid_map_task(vector<array3d<double>>& grid_maps, const vector<size_t>& atom_types_to_populate, const size_t x, const scoring_function& sf, const box& b, const receptor& rec)
+void grid_map_task(vector<vector<double>>& grid_maps, const vector<size_t>& atom_types_to_populate, const size_t x, const scoring_function& sf, const box& b, const receptor& rec)
 {
 	const size_t num_atom_types_to_populate = atom_types_to_populate.size();
 	vector<double> e(num_atom_types_to_populate);
@@ -15,7 +15,7 @@ void grid_map_task(vector<array3d<double>>& grid_maps, const vector<size_t>& ato
 		// Find the possibly interacting receptor atoms via partitions.
 		const array<size_t, 3> grid_index = {{ x, y, z }};
 		const array<double, 3> probe_coords = b.grid_corner1(grid_index);
-		const vector<size_t>& receptor_atoms = rec.partitions(b.partition_index(probe_coords));
+		const vector<size_t>& receptor_atoms = rec.partitions[b.partition_idx3_to_idx1(b.partition_index(probe_coords))];
 
 		// Accumulate individual free energies for each atom types to populate.
 		fill(e.begin(), e.end(), 0);
@@ -41,7 +41,7 @@ void grid_map_task(vector<array3d<double>>& grid_maps, const vector<size_t>& ato
 		for (size_t i = 0; i < num_atom_types_to_populate; ++i)
 		{
 			const size_t t = atom_types_to_populate[i];
-			grid_maps[t](grid_index) = e[i];
+			grid_maps[t][b.grid_idx3_to_idx1(grid_index)] = e[i];
 		}
 	}
 }
