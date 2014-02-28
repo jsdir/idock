@@ -6,75 +6,47 @@ const double scoring_function::Factor = static_cast<double>(256);
 const double scoring_function::Factor_Inverse = 1 / Factor;
 const size_t scoring_function::Num_Samples = static_cast<size_t>(Factor * Cutoff_Sqr) + 1;
 
-const double xs_vdw_radii[] = ///< Van der Waals radii for XScore atom types.
+const std::array<float, scoring_function::n> scoring_function::vdw =
 {
-	1.9, //  0 = XS_TYPE_C_H
-	1.9, //  1 = XS_TYPE_C_P
-	1.8, //  2 = XS_TYPE_N_P
-	1.8, //  3 = XS_TYPE_N_D
-	1.8, //  4 = XS_TYPE_N_A
-	1.8, //  5 = XS_TYPE_N_DA
-	1.7, //  6 = XS_TYPE_O_A
-	1.7, //  7 = XS_TYPE_O_DA
-	2.0, //  8 = XS_TYPE_S_P
-	2.1, //  9 = XS_TYPE_P_P
-	1.5, // 10 = XS_TYPE_F_H
-	1.8, // 11 = XS_TYPE_Cl_H
-	2.0, // 12 = XS_TYPE_Br_H
-	2.2, // 13 = XS_TYPE_I_H
-	1.2  // 14 = XS_TYPE_Met_D
+	1.9, //   C_H
+	1.9, //   C_P
+	1.8, //   N_P
+	1.8, //   N_D
+	1.8, //   N_A
+	1.8, //   N_DA
+	1.7, //   O_A
+	1.7, //   O_DA
+	2.0, //   S_P
+	2.1, //   P_P
+	1.5, //   F_H
+	1.8, //  Cl_H
+	2.0, //  Br_H
+	2.2, //   I_H
+	1.2, // Met_D
 };
 
-/// Returns Van der Waals radius from an XScore atom type.
-inline double xs_vdw_radius(const size_t xs)
-{
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs_vdw_radii[xs];
-}
-
 /// Returns true if the XScore atom type is hydrophobic.
-inline bool xs_is_hydrophobic(const size_t xs)
+inline bool is_hydrophobic(const size_t t)
 {
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs == XS_TYPE_C_H
-		|| xs == XS_TYPE_F_H
-		|| xs == XS_TYPE_Cl_H
-		|| xs == XS_TYPE_Br_H
-		|| xs == XS_TYPE_I_H;
+	return t ==  0 || t == 10 || t == 11 || t == 12 || t == 13;
 }
 
 /// Returns true if the XScore atom type is a hydrogen bond donor.
-inline bool xs_is_donor(const size_t xs)
+inline bool is_hbdonor(const size_t t)
 {
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs == XS_TYPE_N_D
-		|| xs == XS_TYPE_N_DA
-		|| xs == XS_TYPE_O_DA
-		|| xs == XS_TYPE_Met_D;
+	return t ==  3 || t ==  5 || t ==  7 || t == 14;
 }
 
 /// Returns true if the XScore atom type is a hydrogen bond acceptor.
-inline bool xs_is_acceptor(const size_t xs)
+inline bool is_hbacceptor(const size_t t)
 {
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs == XS_TYPE_N_A
-		|| xs == XS_TYPE_N_DA
-		|| xs == XS_TYPE_O_A
-		|| xs == XS_TYPE_O_DA;
-}
-
-/// Returns true if the XScore atom type is either a hydrogen bond donor or a hydrogen bond acceptor.
-inline bool xs_is_donor_acceptor(const size_t xs)
-{
-	BOOST_ASSERT(xs < XS_TYPE_SIZE);
-	return xs_is_donor(xs) || xs_is_acceptor(xs);
+	return t ==  4 || t ==  5 || t ==  6 || t ==  7;
 }
 
 /// Returns true if the two XScore atom types are a pair of hydrogen bond donor and acceptor.
-inline bool xs_hbond(const size_t xs1, const size_t xs2)
+inline bool is_hbond(const size_t t0, const size_t t1)
 {
-	return (xs_is_donor(xs1) && xs_is_acceptor(xs2))
-		|| (xs_is_donor(xs2) && xs_is_acceptor(xs1));
+	return (is_hbdonor(t0) && is_hbacceptor(t1)) || (is_hbdonor(t1) && is_hbacceptor(t0));
 }
 
 double scoring_function::score(const size_t t0, const size_t t1, const double r)
@@ -82,15 +54,15 @@ double scoring_function::score(const size_t t0, const size_t t1, const double r)
 	BOOST_ASSERT(r <= Cutoff);
 
 	// Calculate the surface distance d.
-	const double d = r - (xs_vdw_radius(t0) + xs_vdw_radius(t1));
+	const double d = r - (vdw[t0] + vdw[t1]);
 
 	// The scoring function is a weighted sum of 5 terms.
 	// The first 3 terms depend on d only, while the latter 2 terms depend on t0, t1 and d.
 	return (-0.035579) * exp(-sqr(d * 2))
 		+  (-0.005156) * exp(-sqr((d - 3.0) * 0.5))
 		+  ( 0.840245) * (d > 0 ? 0.0 : d * d)
-		+  (-0.035069) * ((xs_is_hydrophobic(t0) && xs_is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0)
-		+  (-0.587439) * ((xs_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
+		+  (-0.035069) * ((is_hydrophobic(t0) && is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0)
+		+  (-0.587439) * ((is_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
 }
 
 void scoring_function::score5(float* const v, const size_t t0, const size_t t1, const double r2)
@@ -98,15 +70,15 @@ void scoring_function::score5(float* const v, const size_t t0, const size_t t1, 
 	BOOST_ASSERT(r2 <= Cutoff_Sqr);
 
 	// Calculate the surface distance d.
-	const double d = sqrt(r2) - (xs_vdw_radius(t0) + xs_vdw_radius(t1));
+	const double d = sqrt(r2) - (vdw[t0] + vdw[t1]);
 
 	// The scoring function is a weighted sum of 5 terms.
 	// The first 3 terms depend on d only, while the latter 2 terms depend on t0, t1 and d.
 	v[0] += exp(-sqr(d * 2));
 	v[1] += exp(-sqr((d - 3.0) * 0.5));
 	v[2] += (d > 0 ? 0.0 : d * d);
-	v[3] += ((xs_is_hydrophobic(t0) && xs_is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0);
-	v[4] += ((xs_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
+	v[3] += ((is_hydrophobic(t0) && is_hydrophobic(t1)) ? ((d >= 1.5) ? 0.0 : ((d <= 0.5) ? 1.0 : 1.5 - d)) : 0.0);
+	v[4] += ((is_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
 }
 
 void scoring_function::precalculate(const size_t t0, const size_t t1, const vector<double>& rs)

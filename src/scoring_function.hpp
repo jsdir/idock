@@ -17,6 +17,7 @@ public:
 class scoring_function : private triangular_matrix<vector<scoring_function_element>>
 {
 public:
+	static const size_t n = 15; //!< Number of XScore atom types.
 	static const double Cutoff; ///< Cutoff of a scoring function.
 	static const double Cutoff_Sqr; ///< Square of Cutoff.
 	static const size_t Num_Samples; ///< Number of sampling points within [0, Cutoff].
@@ -27,7 +28,7 @@ public:
 	static void score5(float* const v, const size_t t0, const size_t t1, const double r2);
 
 	/// Constructs an empty scoring function.
-	scoring_function() : triangular_matrix<vector<scoring_function_element>>(XS_TYPE_SIZE, vector<scoring_function_element>(Num_Samples, scoring_function_element())) {}
+	scoring_function() : triangular_matrix<vector<scoring_function_element>>(n, vector<scoring_function_element>(Num_Samples, scoring_function_element())) {}
 
 	/// Precalculates the scoring function values of sample points for the type combination of t0 and t1.
 	void precalculate(const size_t t0, const size_t t1, const vector<double>& rs);
@@ -37,6 +38,8 @@ public:
 
 	static const double Factor; ///< Scaling factor for r, i.e. distance between two atoms.
 	static const double Factor_Inverse; ///< 1 / Factor.
+private:
+	static const std::array<float, n> vdw; //!< Van der Waals distances for XScore atom types.
 };
 
 #endif
