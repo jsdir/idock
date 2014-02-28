@@ -27,8 +27,8 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 		if (record == "ATOM  " || record == "HETATM")
 		{
 			// Whenever an ATOM/HETATM line shows up, the current frame must be the last one.
-			BOOST_ASSERT(current == frames.size() - 1);
-			BOOST_ASSERT(f == &frames.back());
+			assert(current == frames.size() - 1);
+			assert(f == &frames.back());
 
 			// This line will be dumped to the output ligand file.
 			lines.push_back(line);
@@ -62,7 +62,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			else // Current atom is a heavy atom.
 			{
 				// Find bonds between the current atom and the other atoms of the same frame.
-				BOOST_ASSERT(bonds.size() == heavy_atoms.size());
+				assert(bonds.size() == heavy_atoms.size());
 				bonds.push_back(vector<size_t>());
 				bonds.back().reserve(4); // An atom typically consists of <= 4 bonds.
 				for (size_t i = heavy_atoms.size(); i > f->habegin;)
@@ -173,8 +173,8 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			lines.push_back(line);
 		}
 	}
-	BOOST_ASSERT(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
-	BOOST_ASSERT(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
+	assert(current == 0); // current should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
+	assert(f == &frames.front()); // The frame pointer should remain its original value if "BRANCH" and "ENDBRANCH" properly match each other.
 
 	// Determine num_heavy_atoms, num_hydrogens, and num_heavy_atoms_inverse.
 	num_heavy_atoms = heavy_atoms.size();
@@ -185,13 +185,13 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 
 	// Determine num_frames, num_torsions, flexibility_penalty_factor.
 	num_frames = frames.size();
-	BOOST_ASSERT(num_frames >= 1);
+	assert(num_frames >= 1);
 	num_torsions = num_frames - 1;
-	BOOST_ASSERT(num_torsions + 1 == num_frames);
-	BOOST_ASSERT(num_torsions >= num_active_torsions);
-	BOOST_ASSERT(num_heavy_atoms + num_hydrogens + (num_torsions << 1) + 3 == lines.size()); // ATOM/HETATM lines + BRANCH/ENDBRANCH lines + ROOT/ENDROOT/TORSDOF lines == lines.size()
+	assert(num_torsions + 1 == num_frames);
+	assert(num_torsions >= num_active_torsions);
+	assert(num_heavy_atoms + num_hydrogens + (num_torsions << 1) + 3 == lines.size()); // ATOM/HETATM lines + BRANCH/ENDBRANCH lines + ROOT/ENDROOT/TORSDOF lines == lines.size()
 	flexibility_penalty_factor = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
-	BOOST_ASSERT(flexibility_penalty_factor <= 1);
+	assert(flexibility_penalty_factor <= 1);
 
 	// Update heavy_atoms[].coordinate and hydrogens[].coordinate relative to frame origin.
 	for (size_t k = 0; k < num_frames; ++k)
@@ -329,18 +329,18 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active)
 		{
-			BOOST_ASSERT(f.habegin + 1 == f.haend);
-			BOOST_ASSERT(f.habegin == f.rotorYidx);
+			assert(f.habegin + 1 == f.haend);
+			assert(f.habegin == f.rotorYidx);
 			coordinates[f.rotorYidx] = origins[k];
 			continue;
 		}
 
 		// Update orientation.
-		BOOST_ASSERT(normalized(f.parent_rotorX_to_current_rotorY));
+		assert(normalized(f.parent_rotorX_to_current_rotorY));
 		axes[k] = orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY;
-		BOOST_ASSERT(normalized(axes[k]));
+		assert(normalized(axes[k]));
 		orientations_q[k] = vec4_to_qtn4(axes[k], conf.torsions[t++]) * orientations_q[f.parent];
-		BOOST_ASSERT(normalized(orientations_q[k]));
+		assert(normalized(orientations_q[k]));
 		orientations_m[k] = qtn4_to_mat3(orientations_q[k]);
 
 		// Update coordinates.
@@ -375,15 +375,15 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	{
 		// Retrieve the grid map in need.
 		const array3d<double>& grid_map = grid_maps[heavy_atoms[i].xs];
-		BOOST_ASSERT(grid_map.initialized());
+		assert(grid_map.initialized());
 
 		// Find the index and fraction of the current coordinates.
 		const array<size_t, 3> index = b.grid_index(coordinates[i]);
 
 		// Assert the validity of index.
-		BOOST_ASSERT(index[0] < b.num_grids[0]);
-		BOOST_ASSERT(index[1] < b.num_grids[1]);
-		BOOST_ASSERT(index[2] < b.num_grids[2]);
+		assert(index[0] < b.num_grids[0]);
+		assert(index[1] < b.num_grids[1]);
+		assert(index[2] < b.num_grids[2]);
 
 		// (x0, y0, z0) is the beginning corner of the partition.
 		const size_t x0 = index[0];
@@ -521,8 +521,8 @@ result ligand::compose_result(const double e, const double f, const conformation
 
 void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const vector<array3d<double>>& grid_maps)
 {
-	BOOST_ASSERT(num_conformations > 0);
-	BOOST_ASSERT(num_conformations <= results.size());
+	assert(num_conformations > 0);
+	assert(num_conformations <= results.size());
 
 	const size_t num_lines = lines.size();
 

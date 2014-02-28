@@ -151,7 +151,7 @@ int main(int argc, char* argv[])
 		// Validate log_path.
 		if (is_directory(log_path))
 		{
-			cerr << "log path " << log_path << " is a directory" << endl;
+			cerr << "Option log " << log_path << " is a directory" << endl;
 			return 1;
 		}
 
@@ -202,8 +202,8 @@ int main(int argc, char* argv[])
 		{
 			rs[i] = sqrt(i * scoring_function::Factor_Inverse);
 		}
-		BOOST_ASSERT(rs.front() == 0);
-		BOOST_ASSERT(rs.back() == scoring_function::Cutoff);
+		assert(rs.front() == 0);
+		assert(rs.back() == scoring_function::Cutoff);
 
 		// Populate the scoring function task container.
 		const size_t num_sf_tasks = ((sf.n + 1) * sf.n) >> 1;
@@ -261,9 +261,8 @@ int main(int argc, char* argv[])
 	// Perform docking for each file in the ligand folder.
 	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand" << endl
 	     << "   Index        Ligand    pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
-	log_engine log;
 	cout.setf(ios::fixed, ios::floatfield);
-	size_t num_conformations; // Number of conformation to output.
+	log_engine log;
 	for (directory_iterator dir_iter(input_folder_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
 	{
 		// Filter files with .pdbqt extension name.
@@ -274,17 +273,17 @@ int main(int argc, char* argv[])
 		ligand lig(input_ligand_path);
 
 		// Create grid maps on the fly if necessary.
-		BOOST_ASSERT(atom_types_to_populate.empty());
+		assert(atom_types_to_populate.empty());
 		const vector<size_t> ligand_atom_types = lig.get_atom_types();
 		const size_t num_ligand_atom_types = ligand_atom_types.size();
 		for (size_t i = 0; i < num_ligand_atom_types; ++i)
 		{
 			const size_t t = ligand_atom_types[i];
-			BOOST_ASSERT(t < sf.n);
+			assert(t < sf.n);
 			array3d<double>& grid_map = grid_maps[t];
 			if (grid_map.initialized()) continue; // The grid map of XScore atom type t has already been populated.
 			grid_map.resize(b.num_probes); // An exception may be thrown in case memory is exhausted.
-			atom_types_to_populate.push_back(t);  // The grid map of XScore atom type t has not been populated and should be populated now.
+			atom_types_to_populate.push_back(t); // The grid map of XScore atom type t has not been populated and should be populated now.
 		}
 		if (atom_types_to_populate.size())
 		{
@@ -298,8 +297,6 @@ int main(int argc, char* argv[])
 					cnt.increment();
 				});
 			}
-
-			// Block until all the grid map tasks are completed.
 			cnt.wait();
 			atom_types_to_populate.clear();
 		}
@@ -312,7 +309,7 @@ int main(int argc, char* argv[])
 		cnt.init(num_mc_tasks);
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
-			BOOST_ASSERT(result_containers[i].empty());
+			assert(result_containers[i].empty());
 			const size_t s = eng();
 			io.post([&,i,s]()
 			{
@@ -323,7 +320,7 @@ int main(int argc, char* argv[])
 		cnt.wait();
 
 		// Merge results from all the tasks into one single result container.
-		BOOST_ASSERT(results.empty());
+		assert(results.empty());
 		const double required_square_error = 4 * lig.num_heavy_atoms; // Ligands with RMSD < 2.0 will be clustered into the same cluster.
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{

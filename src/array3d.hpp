@@ -3,7 +3,7 @@
 #define IDOCK_ARRAY3D_HPP
 
 #include <vector>
-#include <boost/assert.hpp>
+#include <cassert>
 #include <boost/array.hpp>
 
 /// Represents a generic 3D array.

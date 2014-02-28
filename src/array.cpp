@@ -1,5 +1,5 @@
 #include <cmath>
-#include <boost/assert.hpp>
+#include <cassert>
 #include "array.hpp"
 
 inline bool zero(const double a)
@@ -133,8 +133,8 @@ double distance_sqr(const array<double, 3>& a, const array<double, 3>& b)
 double distance_sqr(const vector<array<double, 3>>& a, const vector<array<double, 3>>& b)
 {
 	const size_t n = a.size();
-	BOOST_ASSERT(n > 0);
-	BOOST_ASSERT(n == b.size());
+	assert(n > 0);
+	assert(n == b.size());
 	double sum = 0;
 	for (size_t i = 0; i < n; ++i)
 	{
@@ -156,7 +156,7 @@ array<double, 3> operator*(const array<double, 9>& m, const array<double, 3>& v)
 
 array<double, 4> vec4_to_qtn4(const array<double, 3>& axis, const double angle)
 {
-	BOOST_ASSERT(normalized(axis));
+	assert(normalized(axis));
 	const double h = angle * 0.5;
 	const double s = sin(h);
 	const double c = cos(h);

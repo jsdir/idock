@@ -52,7 +52,7 @@ inline bool is_hbond(const size_t t0, const size_t t1)
 
 double scoring_function::score(const size_t t0, const size_t t1, const double r)
 {
-	BOOST_ASSERT(r <= Cutoff);
+	assert(r <= Cutoff);
 
 	// Calculate the surface distance d.
 	const double d = r - (vdw[t0] + vdw[t1]);
@@ -68,7 +68,7 @@ double scoring_function::score(const size_t t0, const size_t t1, const double r)
 
 void scoring_function::score5(float* const v, const size_t t0, const size_t t1, const double r2)
 {
-	BOOST_ASSERT(r2 <= Cutoff_Sqr);
+	assert(r2 <= Cutoff_Sqr);
 
 	// Calculate the surface distance d.
 	const double d = sqrt(r2) - (vdw[t0] + vdw[t1]);
@@ -85,7 +85,7 @@ void scoring_function::score5(float* const v, const size_t t0, const size_t t1, 
 void scoring_function::precalculate(const size_t t0, const size_t t1, const vector<double>& rs)
 {
 	vector<scoring_function_element>& p = (*this)[triangular_matrix_restrictive_index(t0, t1)];
-	BOOST_ASSERT(p.size() == Num_Samples);
+	assert(p.size() == Num_Samples);
 
 	// Calculate the value of scoring function evaluated at (t0, t1, d).
 	for (size_t i = 0; i < Num_Samples; ++i)
@@ -104,6 +104,6 @@ void scoring_function::precalculate(const size_t t0, const size_t t1, const vect
 
 scoring_function_element scoring_function::evaluate(const size_t type_pair_index, const double r2) const
 {
-	BOOST_ASSERT(r2 <= Cutoff_Sqr);
+	assert(r2 <= Cutoff_Sqr);
 	return (*this)[type_pair_index][static_cast<size_t>(Factor * r2)];
 }

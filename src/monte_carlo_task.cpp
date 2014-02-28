@@ -77,7 +77,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 
 			// Determine an entity to mutate.
 			mutation_entity = uniform_entity_gen(eng);
-			BOOST_ASSERT(mutation_entity < num_entities);
+			assert(mutation_entity < num_entities);
 			if (mutation_entity < lig.num_active_torsions) // Mutate an active torsion.
 			{
 				c1.torsions[mutation_entity] = uniform_pi_gen(eng);
@@ -89,7 +89,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 			else // Mutate orientation.
 			{
 				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * array<double, 3>{uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng)}) * c1.orientation;
-				BOOST_ASSERT(normalized(c1.orientation));
+				assert(normalized(c1.orientation));
 			}
 			++num_mutations;
 		} while (!lig.evaluate(c1, sf, b, grid_maps, e_upper_bound, e1, f1, g1));
@@ -129,9 +129,9 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 
 				// Calculate c2 = c1 + ap.
 				c2.position = c1.position + alpha * array<double, 3>{p[0], p[1], p[2]};
-				BOOST_ASSERT(normalized(c1.orientation));
+				assert(normalized(c1.orientation));
 				c2.orientation = vec3_to_qtn4(alpha * array<double, 3>{p[3], p[4], p[5]}) * c1.orientation;
-				BOOST_ASSERT(normalized(c2.orientation));
+				assert(normalized(c2.orientation));
 				for (size_t i = 0; i < lig.num_active_torsions; ++i)
 				{
 					c2.torsions[i] = c1.torsions[i] + alpha * p[6 + i];

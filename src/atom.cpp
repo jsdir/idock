@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <boost/assert.hpp>
+#include <cassert>
 #include "array.hpp"
 #include "atom.hpp"
 
@@ -160,7 +160,7 @@ double atom::covalent_radius() const
 /// Returns true if the current atom is covalently bonded to a given atom.
 bool atom::is_neighbor(const atom& a) const
 {
-	BOOST_ASSERT(this != &a);
+	assert(this != &a);
 	const double r = covalent_radius() + a.covalent_radius();
 	return distance_sqr(coordinate, a.coordinate) < r * r;
 }
@@ -179,6 +179,6 @@ void atom::donorize()
 /// For carbon, revises the XScore atom type to make it non-hydrophobic.
 void atom::dehydrophobicize()
 {
-	BOOST_ASSERT(xs <= 1);
+	assert(xs <= 1);
 	xs = 1; // Carbon, bonded to a hetero atom.
 }
