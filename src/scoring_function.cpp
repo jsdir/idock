@@ -6,6 +6,25 @@ const double scoring_function::Factor = static_cast<double>(256);
 const double scoring_function::Factor_Inverse = 1 / Factor;
 const size_t scoring_function::Num_Samples = static_cast<size_t>(Factor * Cutoff_Sqr) + 1;
 
+const double xs_vdw_radii[] = ///< Van der Waals radii for XScore atom types.
+{
+	1.9, //  0 = XS_TYPE_C_H
+	1.9, //  1 = XS_TYPE_C_P
+	1.8, //  2 = XS_TYPE_N_P
+	1.8, //  3 = XS_TYPE_N_D
+	1.8, //  4 = XS_TYPE_N_A
+	1.8, //  5 = XS_TYPE_N_DA
+	1.7, //  6 = XS_TYPE_O_A
+	1.7, //  7 = XS_TYPE_O_DA
+	2.0, //  8 = XS_TYPE_S_P
+	2.1, //  9 = XS_TYPE_P_P
+	1.5, // 10 = XS_TYPE_F_H
+	1.8, // 11 = XS_TYPE_Cl_H
+	2.0, // 12 = XS_TYPE_Br_H
+	2.2, // 13 = XS_TYPE_I_H
+	1.2  // 14 = XS_TYPE_Met_D
+};
+
 /// Returns Van der Waals radius from an XScore atom type.
 inline double xs_vdw_radius(const size_t xs)
 {

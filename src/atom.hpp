@@ -169,25 +169,6 @@ const size_t XS_TYPE_I_H   = 13; ///< Iodine, hydrophobic.
 const size_t XS_TYPE_Met_D = 14; ///< Metal, hydrogen bond donor.
 const size_t XS_TYPE_SIZE  = 15; ///< Number of supported XScore atom types.
 
-const double xs_vdw_radii[] = ///< Van der Waals radii for XScore atom types.
-{
-	1.9, //  0 = XS_TYPE_C_H
-	1.9, //  1 = XS_TYPE_C_P
-	1.8, //  2 = XS_TYPE_N_P
-	1.8, //  3 = XS_TYPE_N_D
-	1.8, //  4 = XS_TYPE_N_A
-	1.8, //  5 = XS_TYPE_N_DA
-	1.7, //  6 = XS_TYPE_O_A
-	1.7, //  7 = XS_TYPE_O_DA
-	2.0, //  8 = XS_TYPE_S_P
-	2.1, //  9 = XS_TYPE_P_P
-	1.5, // 10 = XS_TYPE_F_H
-	1.8, // 11 = XS_TYPE_Cl_H
-	2.0, // 12 = XS_TYPE_Br_H
-	2.2, // 13 = XS_TYPE_I_H
-	1.2  // 14 = XS_TYPE_Met_D
-};
-
 /// Mapping from AutoDock4 atom type to XScore atom type.
 const size_t ad_to_xs[] =
 {
