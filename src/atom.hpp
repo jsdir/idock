@@ -36,7 +36,9 @@ const size_t AD_TYPE_Co   = 25; ///< Cobalt.
 const size_t AD_TYPE_Cd   = 26; ///< Cadmium.
 const size_t AD_TYPE_As   = 27; ///< Arsenic.
 const size_t AD_TYPE_Sr   = 28; ///< Strontium.
-const size_t AD_TYPE_SIZE = 29; ///< Number of supported AutoDock4 atom types.
+const size_t AD_TYPE_U    = 29; ///< Uranium.
+const size_t AD_TYPE_Cs   = 30; ///< Caesium.
+const size_t AD_TYPE_SIZE = 31; ///< Number of supported AutoDock4 atom types.
 
 const string ad_type_strings[] = ///< AutoDock4 atom type names.
 {
@@ -69,6 +71,8 @@ const string ad_type_strings[] = ///< AutoDock4 atom type names.
 	"Cd", // 26 = AD_TYPE_Cd
 	"As", // 27 = AD_TYPE_As
 	"Sr", // 28 = AD_TYPE_Sr
+	"U" , // 29 = AD_TYPE_U
+	"Cs", // 30 = AD_TYPE_Cs
 };
 
 /// Parses AutoDock4 atom type name, and returns AD_TYPE_SIZE if it does not match any supported AutoDock4 atom types.
@@ -137,6 +141,8 @@ const double ad_covalent_radii[] = ///< AutoDock4 covalent radii, factorized by 
 	1.628, // 26 = AD_TYPE_Cd, 1.628 = 1.1 * 1.48
 	1.309, // 27 = AD_TYPE_As, 1.309 = 1.1 * 1.19
 	2.112, // 28 = AD_TYPE_Sr, 2.112 = 1.1 * 1.92
+	2.156, // 29 = AD_TYPE_U , 2.156 = 1.1 * 1.96
+	2.475, // 30 = AD_TYPE_Cs, 2.475 = 1.1 * 2.25
 };
 
 /// Returns covalent radius from an AutoDock4 atom type.
@@ -266,6 +272,8 @@ const size_t ad_to_xs[] =
 	XS_TYPE_Met_D, // 26 = AD_TYPE_Cd
 	XS_TYPE_Met_D, // 27 = AD_TYPE_As
 	XS_TYPE_Met_D, // 28 = AD_TYPE_Sr
+	XS_TYPE_Met_D, // 29 = AD_TYPE_U
+	XS_TYPE_Met_D, // 30 = AD_TYPE_Cs
 };
 
 /// Represents an atom by very simple fields.
