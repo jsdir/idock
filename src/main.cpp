@@ -12,7 +12,6 @@
 #include "safe_counter.hpp"
 #include "random_forest.hpp"
 #include "log.hpp"
-using namespace std;
 
 int main(int argc, char* argv[])
 {
