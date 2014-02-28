@@ -9,7 +9,7 @@
 #include "io_service_pool.hpp"
 #include "grid_map_task.hpp"
 #include "monte_carlo_task.hpp"
-#include "utility.hpp"
+#include "safe_counter.hpp"
 #include "random_forest.hpp"
 #include "log.hpp"
 using namespace std;

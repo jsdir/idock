@@ -1,8 +1,7 @@
 #pragma once
-#ifndef IDOCK_UTILITY_HPP
-#define IDOCK_UTILITY_HPP
+#ifndef IDOCK_SAFE_COUNTER_HPP
+#define IDOCK_SAFE_COUNTER_HPP
 
-#include <functional>
 #include <condition_variable>
 using namespace std;
 
