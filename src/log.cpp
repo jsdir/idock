@@ -16,7 +16,7 @@ void log_engine::write(const path& log_path) const
 	for (const auto& r : *this)
 	{
 		log << r.stem;
-		for (const float a : r.affinities)
+		for (const auto a : r.affinities)
 		{
 			log << ',' << a;
 		}

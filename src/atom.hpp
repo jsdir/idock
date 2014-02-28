@@ -12,7 +12,7 @@ class atom
 private:
 	static const size_t n = 31; //!< Number of AutoDock4 atom types.
 	static const array<string, n> ad_strings; //!< AutoDock4 atom type strings, e.g. H, HD, C, A.
-	static const array<float, n> ad_covalent_radii; //!< Covalent radii of AutoDock4 atom types.
+	static const array<double, n> ad_covalent_radii; //!< Covalent radii of AutoDock4 atom types.
 	static const array<size_t, n> ad_to_xs; //!< AutoDock4 to XScore atom type conversion.
 public:
 	size_t serial; //!< Serial number.

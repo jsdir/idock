@@ -7,7 +7,7 @@ const double scoring_function::Factor = static_cast<double>(256);
 const double scoring_function::Factor_Inverse = 1 / Factor;
 const size_t scoring_function::Num_Samples = static_cast<size_t>(Factor * Cutoff_Sqr) + 1;
 
-const array<float, scoring_function::n> scoring_function::vdw =
+const array<double, scoring_function::n> scoring_function::vdw =
 {
 	1.9, //   C_H
 	1.9, //   C_P

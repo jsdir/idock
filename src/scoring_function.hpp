@@ -39,7 +39,7 @@ public:
 	static const double Factor; //!< Scaling factor for r, i.e. distance between two atoms.
 	static const double Factor_Inverse; //!< 1 / Factor.
 private:
-	static const array<float, n> vdw; //!< Van der Waals distances for XScore atom types.
+	static const array<double, n> vdw; //!< Van der Waals distances for XScore atom types.
 };
 
 #endif
