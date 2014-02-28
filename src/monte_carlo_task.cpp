@@ -2,7 +2,7 @@
 #include "monte_carlo_task.hpp"
 using namespace std;
 
-void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const box& b, const receptor& rec)
+void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size_t seed, const scoring_function& sf, const receptor& rec)
 {
 	// Define constants.
 	const size_t num_mc_iterations = 100 * lig.num_heavy_atoms; //!< The number of iterations correlates to the complexity of ligand.
@@ -16,9 +16,9 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 	uniform_real_distribution<double> uniform_01_gen(  0,  1);
 	uniform_real_distribution<double> uniform_11_gen( -1,  1);
 	uniform_real_distribution<double> uniform_pi_gen(-pi, pi);
-	uniform_real_distribution<double> uniform_box0_gen(b.corner1[0], b.corner2[0]);
-	uniform_real_distribution<double> uniform_box1_gen(b.corner1[1], b.corner2[1]);
-	uniform_real_distribution<double> uniform_box2_gen(b.corner1[2], b.corner2[2]);
+	uniform_real_distribution<double> uniform_box0_gen(rec.corner1[0], rec.corner2[0]);
+	uniform_real_distribution<double> uniform_box1_gen(rec.corner1[1], rec.corner2[1]);
+	uniform_real_distribution<double> uniform_box2_gen(rec.corner1[2], rec.corner2[2]);
 	uniform_int_distribution<size_t> uniform_entity_gen(0, num_entities - 1);
 	normal_distribution<double> normal_01_gen(0, 1);
 
@@ -36,7 +36,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 		{
 			c0.torsions[i] = uniform_pi_gen(eng);
 		}
-		valid_conformation = lig.evaluate(c0, sf, b, rec, e_upper_bound, e0, f0, g0);
+		valid_conformation = lig.evaluate(c0, sf, rec, e_upper_bound, e0, f0, g0);
 	}
 	if (!valid_conformation) return;
 	double best_e = e0; // The best free energy so far.
@@ -91,7 +91,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 				assert(normalized(c1.orientation));
 			}
 			++num_mutations;
-		} while (!lig.evaluate(c1, sf, b, rec, e_upper_bound, e1, f1, g1));
+		} while (!lig.evaluate(c1, sf, rec, e_upper_bound, e1, f1, g1));
 
 		// Initialize the Hessian matrix to identity.
 		h = identity_hessian;
@@ -139,7 +139,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 				// Evaluate c2, subject to Wolfe conditions http://en.wikipedia.org/wiki/Wolfe_conditions
 				// 1) Armijo rule ensures that the step length alpha decreases f sufficiently.
 				// 2) The curvature condition ensures that the slope has been reduced sufficiently.
-				if (lig.evaluate(c2, sf, b, rec, e1 + 0.0001 * alpha * pg1, e2, f2, g2))
+				if (lig.evaluate(c2, sf, rec, e1 + 0.0001 * alpha * pg1, e2, f2, g2))
 				{
 					pg2 = 0;
 					for (size_t i = 0; i < num_variables; ++i)

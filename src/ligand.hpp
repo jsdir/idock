@@ -7,7 +7,6 @@
 #include "atom.hpp"
 #include "matrix.hpp"
 #include "scoring_function.hpp"
-#include "box.hpp"
 #include "result.hpp"
 #include "receptor.hpp"
 using namespace boost::filesystem;
@@ -67,13 +66,13 @@ public:
 	vector<size_t> get_atom_types() const;
 
 	//! Evaluates free energy e, force f, and change g. Returns true if the conformation is accepted.
-	bool evaluate(const conformation& conf, const scoring_function& sf, const box& b, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const;
+	bool evaluate(const conformation& conf, const scoring_function& sf, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const;
 
 	//! Composes a result from free energy, inter-molecular free energy f, and conformation conf.
 	result compose_result(const double e, const double f, const conformation& conf) const;
 
 	//! Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	void write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const receptor& rec);
+	void write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const receptor& rec);
 
 private:
 	double num_heavy_atoms_inverse; //!< 1 / num_heavy_atoms.

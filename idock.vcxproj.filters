@@ -11,9 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\box.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\grid_map_task.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -59,9 +56,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\atom.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\box.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\grid_map_task.hpp">

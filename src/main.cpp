@@ -119,14 +119,14 @@ int main(int argc, char* argv[])
 		}
 
 		// Validate size.
-		if (size[0] < box::Default_Partition_Granularity ||
-		    size[1] < box::Default_Partition_Granularity ||
-		    size[2] < box::Default_Partition_Granularity)
+		if (size[0] < receptor::Default_Partition_Granularity ||
+			size[1] < receptor::Default_Partition_Granularity ||
+			size[2] < receptor::Default_Partition_Granularity)
 		{
 			cerr << "Search space must be "
-				 << box::Default_Partition_Granularity << "A x "
-				 << box::Default_Partition_Granularity << "A x "
-				 << box::Default_Partition_Granularity << "A or larger" << endl;
+				 << receptor::Default_Partition_Granularity << "A x "
+				 << receptor::Default_Partition_Granularity << "A x "
+				 << receptor::Default_Partition_Granularity << "A or larger" << endl;
 			return 1;
 		}
 
@@ -219,13 +219,10 @@ int main(int argc, char* argv[])
 		cnt.wait();
 	}
 
-	// Initialize the search space of cuboid shape.
-	const box b(center, size, grid_granularity);
-	const size_t num_gm_tasks = b.num_probes[0];
-
 	// Parse the receptor.
 	cout << "Parsing receptor " << receptor_path << endl;
-	receptor rec(receptor_path, b);
+	receptor rec(receptor_path, center, size, grid_granularity);
+	const size_t num_gm_tasks = rec.num_probes[0];
 
 	// Reserve storage for result containers. ptr_vector<T> is used for fast sorting.
 	const size_t max_results = 20; // Maximum number of results obtained from a single Monte Carlo task.
@@ -280,7 +277,7 @@ int main(int argc, char* argv[])
 			assert(t < sf.n);
 			vector<double>& grid_map = rec.grid_maps[t];
 			if (grid_map.size()) continue; // The grid map of XScore atom type t has already been populated.
-			grid_map.resize(b.num_probes[0] * b.num_probes[1] * b.num_probes[2]); // An exception may be thrown in case memory is exhausted.
+			grid_map.resize(rec.num_probes[0] * rec.num_probes[1] * rec.num_probes[2]); // An exception may be thrown in case memory is exhausted.
 			atom_types_to_populate.push_back(t); // The grid map of XScore atom type t has not been populated and should be populated now.
 		}
 		if (atom_types_to_populate.size())
@@ -291,7 +288,7 @@ int main(int argc, char* argv[])
 			{
 				io.post([&,x]()
 				{
-					grid_map_task(atom_types_to_populate, x, sf, b, rec);
+					grid_map_task(atom_types_to_populate, x, sf, rec);
 					cnt.increment();
 				});
 			}
@@ -311,7 +308,7 @@ int main(int argc, char* argv[])
 			const size_t s = rng();
 			io.post([&, i, s]()
 			{
-				monte_carlo_task(result_containers[i], lig, s, sf, b, rec);
+				monte_carlo_task(result_containers[i], lig, s, sf, rec);
 				cnt.increment();
 			});
 		}
@@ -349,7 +346,7 @@ int main(int argc, char* argv[])
 
 		// Write models to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		lig.write_models(output_ligand_path, results, num_results, b, rec);
+		lig.write_models(output_ligand_path, results, num_results, rec);
 
 		// Display the free energies of the top 9 conformations.
 		const size_t num_energies = min<size_t>(num_results, 9);

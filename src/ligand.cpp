@@ -1,7 +1,6 @@
 #include <iomanip>
 #include <boost/filesystem/fstream.hpp>
 #include "ligand.hpp"
-using std::setw;
 
 ligand::ligand(const path& p) : num_active_torsions(0)
 {
@@ -279,9 +278,9 @@ vector<size_t> ligand::get_atom_types() const
 	return atom_types;
 }
 
-bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const box& b, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const
+bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const
 {
-	if (!b.within(conf.position))
+	if (!rec.within(conf.position))
 		return false;
 
 	// Initialize frame-wide conformational variables.
@@ -312,7 +311,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
 		coordinates[i] = origins.front() + orientations_m.front() * heavy_atoms[i].coordinate;
-		if (!b.within(coordinates[i]))
+		if (!rec.within(coordinates[i]))
 			return false;
 	}
 
@@ -323,7 +322,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 
 		// Update origin.
 		origins[k] = origins[f.parent] + orientations_m[f.parent] * f.parent_rotorY_to_current_rotorY;
-		if (!b.within(origins[k]))
+		if (!rec.within(origins[k]))
 			return false;
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
@@ -347,7 +346,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
 			coordinates[i] = origins[k] + orientations_m[k] * heavy_atoms[i].coordinate;
-			if (!b.within(coordinates[i]))
+			if (!rec.within(coordinates[i]))
 				return false;
 		}
 	}
@@ -378,26 +377,26 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		assert(grid_map.size());
 
 		// Find the index and fraction of the current coordinates.
-		const array<size_t, 3> index = b.grid_index(coordinates[i]);
+		const array<size_t, 3> index = rec.grid_index(coordinates[i]);
 
 		// Assert the validity of index.
-		assert(index[0] < b.num_grids[0]);
-		assert(index[1] < b.num_grids[1]);
-		assert(index[2] < b.num_grids[2]);
+		assert(index[0] < rec.num_grids[0]);
+		assert(index[1] < rec.num_grids[1]);
+		assert(index[2] < rec.num_grids[2]);
 
 		// (x0, y0, z0) is the beginning corner of the partition.
 		const size_t x0 = index[0];
 		const size_t y0 = index[1];
 		const size_t z0 = index[2];
-		const double e000 = grid_map[b.grid_index(array<size_t, 3>{x0, y0, z0})];
+		const double e000 = grid_map[rec.grid_index(array<size_t, 3>{x0, y0, z0})];
 
 		// The derivative of probe atoms can be precalculated at the cost of massive memory storage.
-		const double e100 = grid_map[b.grid_index(array<size_t, 3>{x0 + 1, y0,     z0    })];
-		const double e010 = grid_map[b.grid_index(array<size_t, 3>{x0,     y0 + 1, z0    })];
-		const double e001 = grid_map[b.grid_index(array<size_t, 3>{x0,     y0,     z0 + 1})];
-		derivatives[i][0] = (e100 - e000) * b.grid_granularity_inverse;
-		derivatives[i][1] = (e010 - e000) * b.grid_granularity_inverse;
-		derivatives[i][2] = (e001 - e000) * b.grid_granularity_inverse;
+		const double e100 = grid_map[rec.grid_index(array<size_t, 3>{x0 + 1, y0, z0    })];
+		const double e010 = grid_map[rec.grid_index(array<size_t, 3>{x0, y0 + 1, z0    })];
+		const double e001 = grid_map[rec.grid_index(array<size_t, 3>{x0, y0, z0 + 1})];
+		derivatives[i][0] = (e100 - e000) * rec.grid_granularity_inverse;
+		derivatives[i][1] = (e010 - e000) * rec.grid_granularity_inverse;
+		derivatives[i][2] = (e001 - e000) * rec.grid_granularity_inverse;
 
 		e += e000; // Aggregate the energy.
 	}
@@ -519,7 +518,7 @@ result ligand::compose_result(const double e, const double f, const conformation
 	return result(e, f, static_cast<vector<array<double, 3>>&&>(heavy_atoms), static_cast<vector<array<double, 3>>&&>(hydrogens));
 }
 
-void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const receptor& rec)
+void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const receptor& rec)
 {
 	assert(num_conformations > 0);
 	assert(num_conformations <= results.size());
@@ -545,7 +544,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			const string& line = lines[j];
 			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
 			{
-				const double   free_energy = line[77] == 'H' ? 0 : rec.grid_maps[heavy_atoms[heavy_atom].xs][b.grid_index(b.grid_index(r.heavy_atoms[heavy_atom]))];
+				const double   free_energy = line[77] == 'H' ? 0 : rec.grid_maps[heavy_atoms[heavy_atom].xs][rec.grid_index(rec.grid_index(r.heavy_atoms[heavy_atom]))];
 				const array<double, 3>& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
