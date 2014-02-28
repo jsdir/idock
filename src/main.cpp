@@ -7,7 +7,6 @@
 #include "receptor.hpp"
 #include "ligand.hpp"
 #include "io_service_pool.hpp"
-#include "grid_map_task.hpp"
 #include "monte_carlo_task.hpp"
 #include "safe_counter.hpp"
 #include "random_forest.hpp"
@@ -288,7 +287,7 @@ int main(int argc, char* argv[])
 			{
 				io.post([&,x]()
 				{
-					grid_map_task(atom_types_to_populate, x, sf, rec);
+					rec.populate(atom_types_to_populate, x, sf);
 					cnt.increment();
 				});
 			}

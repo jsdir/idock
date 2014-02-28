@@ -3,7 +3,7 @@
 #define IDOCK_RECEPTOR_HPP
 
 #include <boost/filesystem/path.hpp>
-#include "atom.hpp"
+#include "scoring_function.hpp"
 using namespace boost::filesystem;
 
 //! Represents a receptor.
@@ -60,6 +60,8 @@ public:
 
 	size_t grid_index(const array<size_t, 3>& a) const;
 	size_t partition_index(const array<size_t, 3>& a) const;
+
+	void populate(const vector<size_t>& atom_types_to_populate, const size_t x, const scoring_function& sf);
 };
 
 #endif
