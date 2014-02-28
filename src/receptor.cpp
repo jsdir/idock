@@ -104,8 +104,8 @@ receptor::receptor(const path& p, const box& b) : partitions(b.num_partitions)
 		par.reserve(num_receptor_atoms_within_cutoff);
 		const array<size_t, 3> index1 = {{ x,     y,     z     }};
 		const array<size_t, 3> index2 = {{ x + 1, y + 1, z + 1 }};
-		const vec3 corner1 = b.partition_corner1(index1);
-		const vec3 corner2 = b.partition_corner1(index2);
+		const array<double, 3> corner1 = b.partition_corner1(index1);
+		const array<double, 3> corner2 = b.partition_corner1(index2);
 		for (size_t l = 0; l < num_receptor_atoms_within_cutoff; ++l)
 		{
 			const size_t i = receptor_atoms_within_cutoff[l];

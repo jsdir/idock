@@ -31,8 +31,8 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 	for (size_t i = 0; (i < 1000) && (!valid_conformation); ++i)
 	{
 		// Randomize conformation c0.
-		c0.position = vec3(uniform_box0_gen(eng), uniform_box1_gen(eng), uniform_box2_gen(eng));
-		c0.orientation = normalize(std::array<double, 4>{normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng)});
+		c0.position = array<double, 3>{uniform_box0_gen(eng), uniform_box1_gen(eng), uniform_box2_gen(eng)};
+		c0.orientation = normalize(array<double, 4>{normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng)});
 		for (size_t i = 0; i < lig.num_active_torsions; ++i)
 		{
 			c0.torsions[i] = uniform_pi_gen(eng);
@@ -84,11 +84,11 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 			}
 			else if (mutation_entity == lig.num_active_torsions) // Mutate position.
 			{
-				c1.position += vec3(uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng));
+				c1.position += array<double, 3>{uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng)};
 			}
 			else // Mutate orientation.
 			{
-				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * vec3(uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng))) * c1.orientation;
+				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * array<double, 3>{uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng)}) * c1.orientation;
 				BOOST_ASSERT(normalized(c1.orientation));
 			}
 			++num_mutations;
@@ -128,9 +128,9 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 				alpha *= 0.1;
 
 				// Calculate c2 = c1 + ap.
-				c2.position = c1.position + alpha * vec3(p[0], p[1], p[2]);
+				c2.position = c1.position + alpha * array<double, 3>{p[0], p[1], p[2]};
 				BOOST_ASSERT(normalized(c1.orientation));
-				c2.orientation = vec3_to_qtn4(alpha * vec3(p[3], p[4], p[5])) * c1.orientation;
+				c2.orientation = vec3_to_qtn4(alpha * array<double, 3>{p[3], p[4], p[5]}) * c1.orientation;
 				BOOST_ASSERT(normalized(c2.orientation));
 				for (size_t i = 0; i < lig.num_active_torsions; ++i)
 				{

@@ -158,8 +158,8 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 
 			// Calculate parent_rotorY_to_current_rotorY and parent_rotorX_to_current_rotorY.
 			const frame& p = frames[f->parent];
-			f->parent_rotorY_to_current_rotorY =  rotorY.coordinate - heavy_atoms[p.rotorYidx].coordinate;
-			f->parent_rotorX_to_current_rotorY = (rotorY.coordinate - rotorX.coordinate).normalize();
+			f->parent_rotorY_to_current_rotorY = rotorY.coordinate - heavy_atoms[p.rotorYidx].coordinate;
+			f->parent_rotorX_to_current_rotorY = normalize(rotorY.coordinate - rotorX.coordinate);
 
 			// Now the parent of the following frame is the parent of current frame.
 			current = f->parent;
@@ -197,7 +197,7 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	for (size_t k = 0; k < num_frames; ++k)
 	{
 		const frame& f = frames[k];
-		const vec3 origin = heavy_atoms[f.rotorYidx].coordinate;
+		const array<double, 3> origin = heavy_atoms[f.rotorYidx].coordinate;
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
 			heavy_atoms[i].coordinate -= origin;
@@ -285,12 +285,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		return false;
 
 	// Initialize frame-wide conformational variables.
-	vector<vec3> origins; ///< Origin coordinate, which is rotorY.
-	vector<vec3> axes; ///< Vector pointing from rotor Y to rotor X.
-	vector<std::array<double, 4>> orientations_q; ///< Orientation in the form of quaternion.
-	vector<std::array<double, 9>> orientations_m; ///< Orientation in the form of 3x3 matrix.
-	vector<vec3> forces; ///< Aggregated derivatives of heavy atoms.
-	vector<vec3> torques; /// Torque of the force.
+	vector<array<double, 3>> origins; ///< Origin coordinate, which is rotorY.
+	vector<array<double, 3>> axes; ///< Vector pointing from rotor Y to rotor X.
+	vector<array<double, 4>> orientations_q; ///< Orientation in the form of quaternion.
+	vector<array<double, 9>> orientations_m; ///< Orientation in the form of 3x3 matrix.
+	vector<array<double, 3>> forces; ///< Aggregated derivatives of heavy atoms.
+	vector<array<double, 3>> torques; /// Torque of the force.
 	origins.resize(num_frames);
 	axes.resize(num_frames);
 	orientations_q.resize(num_frames);
@@ -299,8 +299,8 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	torques.resize(num_frames, zero3); // Initialize torques to zero3 for subsequent aggregation.
 
 	// Initialize atom-wide conformational variables.
-	vector<vec3> coordinates; ///< Heavy atom coordinates.
-	vector<vec3> derivatives; ///< Heavy atom derivatives.
+	vector<array<double, 3>> coordinates; ///< Heavy atom coordinates.
+	vector<array<double, 3>> derivatives; ///< Heavy atom derivatives.
 	coordinates.resize(num_heavy_atoms);
 	derivatives.resize(num_heavy_atoms);
 
@@ -336,9 +336,9 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		}
 
 		// Update orientation.
-		BOOST_ASSERT(f.parent_rotorX_to_current_rotorY.normalized());
+		BOOST_ASSERT(normalized(f.parent_rotorX_to_current_rotorY));
 		axes[k] = orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY;
-		BOOST_ASSERT(axes[k].normalized());
+		BOOST_ASSERT(normalized(axes[k]));
 		orientations_q[k] = vec4_to_qtn4(axes[k], conf.torsions[t++]) * orientations_q[f.parent];
 		BOOST_ASSERT(normalized(orientations_q[k]));
 		orientations_m[k] = qtn4_to_mat3(orientations_q[k]);
@@ -410,13 +410,13 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	for (size_t i = 0; i < num_interacting_pairs; ++i)
 	{
 		const interacting_pair& p = interacting_pairs[i];
-		const vec3 r = coordinates[p.i2] - coordinates[p.i1];
-		const double r2 = r.norm_sqr();
+		const array<double, 3> r = coordinates[p.i2] - coordinates[p.i1];
+		const double r2 = norm_sqr(r);
 		if (r2 < scoring_function::Cutoff_Sqr)
 		{
 			const scoring_function_element element = sf.evaluate(p.type_pair_index, r2);
 			e += element.e;
-			const vec3 derivative = element.dor * r;
+			const array<double, 3> derivative = element.dor * r;
 			derivatives[p.i1] -= derivative;
 			derivatives[p.i2] += derivative;
 		}
@@ -472,11 +472,11 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 
 result ligand::compose_result(const double e, const double f, const conformation& conf) const
 {
-	vector<vec3> origins(num_frames);
-	vector<std::array<double, 4>> orientations_q(num_frames);
-	vector<std::array<double, 9>> orientations_m(num_frames);
-	vector<vec3> heavy_atoms(num_heavy_atoms);
-	vector<vec3> hydrogens(num_hydrogens);
+	vector<array<double, 3>> origins(num_frames);
+	vector<array<double, 4>> orientations_q(num_frames);
+	vector<array<double, 9>> orientations_m(num_frames);
+	vector<array<double, 3>> heavy_atoms(num_heavy_atoms);
+	vector<array<double, 3>> hydrogens(num_hydrogens);
 
 	origins.front() = conf.position;
 	orientations_q.front() = conf.orientation;
@@ -516,7 +516,7 @@ result ligand::compose_result(const double e, const double f, const conformation
 		}
 	}
 
-	return result(e, f, static_cast<vector<vec3>&&>(heavy_atoms), static_cast<vector<vec3>&&>(hydrogens));
+	return result(e, f, static_cast<vector<array<double, 3>>&&>(heavy_atoms), static_cast<vector<array<double, 3>>&&>(hydrogens));
 }
 
 void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const box& b, const vector<array3d<double>>& grid_maps)
@@ -546,7 +546,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
 			{
 				const double   free_energy = line[77] == 'H' ? 0 : grid_maps[heavy_atoms[heavy_atom].xs](b.grid_index(r.heavy_atoms[heavy_atom]));
-				const vec3& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
+				const array<double, 3>& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
 					<< setw(8) << coordinate[1]

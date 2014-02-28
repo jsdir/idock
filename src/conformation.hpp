@@ -8,8 +8,8 @@
 class conformation
 {
 public:
-	vec3 position; ///< Ligand origin coordinate.
-	std::array<double, 4> orientation; ///< Ligand orientation.
+	array<double, 3> position; ///< Ligand origin coordinate.
+	array<double, 4> orientation; ///< Ligand orientation.
 	vector<double> torsions; ///< Ligand torsions.
 
 	/// Constructs an initial conformation.

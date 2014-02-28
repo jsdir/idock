@@ -1,3 +1,4 @@
+#include "array.hpp"
 #include "grid_map_task.hpp"
 
 void grid_map_task(vector<array3d<double>>& grid_maps, const vector<size_t>& atom_types_to_populate, const size_t x, const scoring_function& sf, const box& b, const receptor& rec)
@@ -12,8 +13,8 @@ void grid_map_task(vector<array3d<double>>& grid_maps, const vector<size_t>& ato
 	for (size_t z = 0; z < num_z_probes; ++z)
 	{
 		// Find the possibly interacting receptor atoms via partitions.
-		const boost::array<size_t, 3> grid_index = {{ x, y, z }};
-		const vec3 probe_coords = b.grid_corner1(grid_index);
+		const array<size_t, 3> grid_index = {{ x, y, z }};
+		const array<double, 3> probe_coords = b.grid_corner1(grid_index);
 		const vector<size_t>& receptor_atoms = rec.partitions(b.partition_index(probe_coords));
 
 		// Accumulate individual free energies for each atom types to populate.

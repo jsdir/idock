@@ -16,7 +16,7 @@
 int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
-	double center_x, center_y, center_z, size_x, size_y, size_z;
+	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_mc_tasks, max_conformations;
 	double grid_granularity;
 
@@ -39,12 +39,12 @@ int main(int argc, char* argv[])
 		input_options.add_options()
 			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
 			("input_folder", value<path>(&input_folder_path)->required(), "folder of ligands in PDBQT format")
-			("center_x", value<double>(&center_x)->required(), "x coordinate of the search space center")
-			("center_y", value<double>(&center_y)->required(), "y coordinate of the search space center")
-			("center_z", value<double>(&center_z)->required(), "z coordinate of the search space center")
-			("size_x", value<double>(&size_x)->required(), "size in the x dimension in Angstrom")
-			("size_y", value<double>(&size_y)->required(), "size in the y dimension in Angstrom")
-			("size_z", value<double>(&size_z)->required(), "size in the z dimension in Angstrom")
+			("center_x", value<double>(&center[0])->required(), "x coordinate of the search space center")
+			("center_y", value<double>(&center[1])->required(), "y coordinate of the search space center")
+			("center_z", value<double>(&center[2])->required(), "z coordinate of the search space center")
+			("size_x", value<double>(&size[0])->required(), "size in the x dimension in Angstrom")
+			("size_y", value<double>(&size[1])->required(), "size in the y dimension in Angstrom")
+			("size_z", value<double>(&size[2])->required(), "size in the z dimension in Angstrom")
 			;
 		options_description output_options("output (optional)");
 		output_options.add_options()
@@ -119,9 +119,9 @@ int main(int argc, char* argv[])
 		}
 
 		// Validate size_x, size_y, size_z.
-		if (size_x < box::Default_Partition_Granularity ||
-		    size_y < box::Default_Partition_Granularity ||
-		    size_z < box::Default_Partition_Granularity)
+		if (size[0] < box::Default_Partition_Granularity ||
+		    size[1] < box::Default_Partition_Granularity ||
+		    size[2] < box::Default_Partition_Granularity)
 		{
 			cerr << "Search space must be "
 				 << box::Default_Partition_Granularity << "A x "
@@ -221,7 +221,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Initialize the search space of cuboid shape.
-	const box b(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size_z), grid_granularity);
+	const box b(center, size, grid_granularity);
 	const size_t num_gm_tasks = b.num_probes[0];
 
 	// Parse the receptor.

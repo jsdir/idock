@@ -1,7 +1,10 @@
+#include <algorithm>
+#include <boost/assert.hpp>
+#include "array.hpp"
 #include "atom.hpp"
 
 //! AutoDock4 atom type strings, e.g. H, HD, C, A.
-const std::array<string, atom::n> atom::ad_strings =
+const array<string, atom::n> atom::ad_strings =
 {
 	"H" , //  0
 	"HD", //  1
@@ -37,7 +40,7 @@ const std::array<string, atom::n> atom::ad_strings =
 };
 
 //! Covalent radii of AutoDock4 atom types, factorized by 1.1 for extra allowance. http://en.wikipedia.org/wiki/Atomic_radii_of_the_elements_(data_page)
-const std::array<float, atom::n> atom::ad_covalent_radii =
+const array<float, atom::n> atom::ad_covalent_radii =
 {
 	0.407, //  0 = H , 0.407 = 1.1 * 0.37
 	0.407, //  1 = HD, 0.407 = 1.1 * 0.37
@@ -73,7 +76,7 @@ const std::array<float, atom::n> atom::ad_covalent_radii =
 };
 
 //! Mapping from AutoDock4 atom types to XScore atom types.
-const std::array<size_t, atom::n> atom::ad_to_xs =
+const array<size_t, atom::n> atom::ad_to_xs =
 {
 	 n, //  0 = H  -> dummy
 	 n, //  1 = HD -> dummy
@@ -112,7 +115,7 @@ const std::array<size_t, atom::n> atom::ad_to_xs =
 atom::atom(const string& line) :
 	serial(stoul(line.substr(6, 5))),
 	name(line.substr(12, 4)),
-	coordinate(stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8))),
+	coordinate({stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8))}),
 	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
 	xs(ad_to_xs[ad])
 {

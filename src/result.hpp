@@ -14,14 +14,14 @@ public:
 	double e; ///< Free energy.
 	double f; ///< Inter-molecular free energy.
 	double e_nd; ///< Normalized free energy, only for output purpose.
-	vector<vec3> heavy_atoms; ///< Heavy atom coordinates.
-	vector<vec3> hydrogens; ///< Hydrogen atom coordinates.
+	vector<array<double, 3>> heavy_atoms; ///< Heavy atom coordinates.
+	vector<array<double, 3>> hydrogens; ///< Hydrogen atom coordinates.
 
 	/// Constructs a result from free energy e, force f, heavy atom coordinates and hydrogen atom coordinates.
-	explicit result(const double e, const double f, vector<vec3>&& heavy_atoms_, vector<vec3>&& hydrogens_) : e(e), f(f), heavy_atoms(static_cast<vector<vec3>&&>(heavy_atoms_)), hydrogens(static_cast<vector<vec3>&&>(hydrogens_)) {}
+	explicit result(const double e, const double f, vector<array<double, 3>>&& heavy_atoms_, vector<array<double, 3>>&& hydrogens_) : e(e), f(f), heavy_atoms(static_cast<vector<array<double, 3>>&&>(heavy_atoms_)), hydrogens(static_cast<vector<array<double, 3>>&&>(hydrogens_)) {}
 
 	/// Move constructor.
-	result(result&& r) : e(r.e), f(r.f), heavy_atoms(static_cast<vector<vec3>&&>(r.heavy_atoms)), hydrogens(static_cast<vector<vec3>&&>(r.hydrogens)) {}
+	result(result&& r) : e(r.e), f(r.f), heavy_atoms(static_cast<vector<array<double, 3>>&&>(r.heavy_atoms)), hydrogens(static_cast<vector<array<double, 3>>&&>(r.hydrogens)) {}
 
 	/// For sorting ptr_vector<result>.
 	bool operator<(const result& r) const

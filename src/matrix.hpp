@@ -2,6 +2,10 @@
 #ifndef IDOCK_MATRIX_HPP
 #define IDOCK_MATRIX_HPP
 
+#include <vector>
+#include <boost/assert.hpp>
+using namespace std;
+
 /// Returns the flattened 1D index of a 2D index (i, j) where j is the lowest dimension.
 inline size_t triangular_matrix_restrictive_index(const size_t i, const size_t j)
 {
