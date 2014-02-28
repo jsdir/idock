@@ -410,15 +410,15 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	for (size_t i = 0; i < num_interacting_pairs; ++i)
 	{
 		const interacting_pair& p = interacting_pairs[i];
-		const array<double, 3> r = coordinates[p.i2] - coordinates[p.i1];
+		const array<double, 3> r = coordinates[p.i1] - coordinates[p.i0];
 		const double r2 = norm_sqr(r);
 		if (r2 < scoring_function::Cutoff_Sqr)
 		{
 			const scoring_function_element element = sf.evaluate(p.type_pair_index, r2);
 			e += element.e;
 			const array<double, 3> derivative = element.dor * r;
-			derivatives[p.i1] -= derivative;
-			derivatives[p.i2] += derivative;
+			derivatives[p.i0] -= derivative;
+			derivatives[p.i1] += derivative;
 		}
 	}
 
