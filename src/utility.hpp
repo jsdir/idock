@@ -2,20 +2,9 @@
 #ifndef IDOCK_UTILITY_HPP
 #define IDOCK_UTILITY_HPP
 
-#include <vector>
 #include <functional>
 #include <condition_variable>
 using namespace std;
-
-//! Represents a thread safe function.
-class safe_function
-{
-public:
-	//! Executes a function in a thread safe manner.
-	void operator()(function<void(void)>&& f);
-private:
-	mutex m;
-};
 
 //! Represents a thread safe counter.
 template <typename T>
@@ -35,23 +24,6 @@ private:
 	condition_variable cv;
 	T n; //!< Expected hit value.
 	T i; //!< Counter value.
-};
-
-//! Represents a thread safe vector.
-template <typename T>
-class safe_vector : public vector<T>
-{
-public:
-	using vector<T>::vector;
-
-	//! Pushes back a new element in a thread safe manner, and wakes up the calling thread waiting on new elements to come.
-	void safe_push_back(const T x);
-
-	//! Waits until the vector is not empty, and pops back the last element in a thread safe manner.
-	T safe_pop_back();
-private:
-	mutex m;
-	condition_variable cv;
 };
 
 #endif
