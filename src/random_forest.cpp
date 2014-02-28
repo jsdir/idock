@@ -20,7 +20,7 @@ void tree::train(const size_t mtry, const function<double()> u01)
 		node& n = (*this)[k];
 
 		// Evaluate node y and purity.
-		float sum = 0.0f;
+		double sum = 0;
 		for (const size_t s : n.samples) sum += y[s];
 		n.y = sum / n.samples.size();
 		n.p = n.y * n.y * n.samples.size(); // Equivalent to sum * sum / n.samples.size().
@@ -29,7 +29,7 @@ void tree::train(const size_t mtry, const function<double()> u01)
 		if (n.samples.size() <= 5) continue;
 
 		// Find the best split that has the highest increase in node purity.
-		float bestChildNodePurity = n.p;
+		double bestChildNodePurity = n.p;
 		array<size_t, nv> mind;
 		iota(mind.begin(), mind.end(), 0);
 		for (size_t i = 0; i < mtry; ++i)
@@ -48,24 +48,24 @@ void tree::train(const size_t mtry, const function<double()> u01)
 			});
 
 			// Search through the gaps in the selected variable.
-			float suml = 0.0f;
-			float sumr = sum;
+			double suml = 0;
+			double sumr = sum;
 			size_t popl = 0;
 			size_t popr = n.samples.size();
 			for (size_t j = 0; j < n.samples.size() - 1; ++j)
 			{
-				const float d = y[n.samples[ncase[j]]];
+				const double d = y[n.samples[ncase[j]]];
 				suml += d;
 				sumr -= d;
 				++popl;
 				--popr;
 				if (x[n.samples[ncase[j]]][v] == x[n.samples[ncase[j+1]]][v]) continue;
-				const float curChildNodePurity = (suml * suml / popl) + (sumr * sumr / popr);
+				const double curChildNodePurity = (suml * suml / popl) + (sumr * sumr / popr);
 				if (curChildNodePurity > bestChildNodePurity)
 				{
 					bestChildNodePurity = curChildNodePurity;
 					n.var = v;
-					n.val = (x[n.samples[ncase[j]]][v] + x[n.samples[ncase[j+1]]][v]) * 0.5f;
+					n.val = (x[n.samples[ncase[j]]][v] + x[n.samples[ncase[j+1]]][v]) * 0.5;
 				}
 			}
 		}
@@ -85,7 +85,7 @@ void tree::train(const size_t mtry, const function<double()> u01)
 	}
 }
 
-float tree::operator()(const array<float, nv>& x) const
+double tree::operator()(const array<double, nv>& x) const
 {
 	size_t k;
 	for (k = 0; (*this)[k].children[0]; k = (*this)[k].children[x[(*this)[k].var] > (*this)[k].val]);
@@ -108,9 +108,9 @@ forest::forest(const size_t nt, const size_t seed) : vector<tree>(nt), rng(seed)
 {
 }
 
-float forest::operator()(const array<float, tree::nv>& x) const
+double forest::operator()(const array<double, tree::nv>& x) const
 {
-	float y = 0.0f;
+	double y = 0;
 	for (const tree& t : *this)
 	{
 		y += t(x);

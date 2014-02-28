@@ -25,7 +25,7 @@ public:
 	//! Returns the score between two atoms of XScore atom types t0 and t1 and distance r.
 	static double score(const size_t t0, const size_t t1, const double r);
 
-	static void score5(float* const v, const size_t t0, const size_t t1, const double r2);
+	static void score(double* const v, const size_t t0, const size_t t1, const double r2);
 
 	//! Constructs an empty scoring function.
 	scoring_function() : triangular_matrix<vector<scoring_function_element>>(n, vector<scoring_function_element>(Num_Samples, scoring_function_element())) {}

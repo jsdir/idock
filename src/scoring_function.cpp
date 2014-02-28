@@ -66,7 +66,7 @@ double scoring_function::score(const size_t t0, const size_t t1, const double r)
 		+  (-0.587439) * ((is_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
 }
 
-void scoring_function::score5(float* const v, const size_t t0, const size_t t1, const double r2)
+void scoring_function::score(double* const v, const size_t t0, const size_t t1, const double r2)
 {
 	assert(r2 <= Cutoff_Sqr);
 

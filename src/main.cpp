@@ -321,7 +321,7 @@ int main(int argc, char* argv[])
 
 		// Merge results from all the tasks into one single result container.
 		assert(results.empty());
-		const double required_square_error = 4 * lig.num_heavy_atoms; // Ligands with RMSD < 2.0 will be clustered into the same cluster.
+		const double required_square_error = 4.0 * lig.num_heavy_atoms; // Ligands with RMSD < 2.0 will be clustered into the same cluster.
 		for (size_t i = 0; i < num_mc_tasks; ++i)
 		{
 			ptr_vector<result>& task_results = result_containers[i];

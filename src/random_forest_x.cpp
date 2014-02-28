@@ -1,6 +1,6 @@
 #include "random_forest.hpp"
 
-const array<array<float, tree::nv>, tree::ns> tree::x =
+const array<array<double, tree::nv>, tree::ns> tree::x =
 {
 	3.3908,41.6519,0.1594,1.0729,0.2132,
 	2.1857,31.1600,0.1407,0.7783,0.2177,

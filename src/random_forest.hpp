@@ -13,10 +13,10 @@ class node
 {
 public:
 	vector<size_t> samples; //!< Node samples.
-	float y; //!< Average of y values of node samples.
-	float p; //!< Node purity, measured as either y * y * nSamples or sum * sum / nSamples.
+	double y; //!< Average of y values of node samples.
+	double p; //!< Node purity, measured as either y * y * nSamples or sum * sum / nSamples.
 	size_t var; //!< Variable used for node split.
-	float val; //!< Value used for node split.
+	double val; //!< Value used for node split.
 	array<size_t, 2> children; //!< Two child nodes.
 
 	//! Constructs an empty node.
@@ -33,14 +33,14 @@ public:
 	void train(const size_t mtry, const function<double()> u01);
 
 	//! Predicts the y value of the given sample x.
-	float operator()(const array<float, nv>& x) const;
+	double operator()(const array<double, nv>& x) const;
 
 	//! Clears node samples to save memory.
 	void clear();
 private:
 	static const size_t ns = 2959; //!< Number of training samples.
-	static const array<array<float, nv>, ns> x; //!< Training samples.
-	static const array<float, ns> y; //!< y values of training samples.
+	static const array<array<double, nv>, ns> x; //!< Training samples.
+	static const array<double, ns> y; //!< y values of training samples.
 };
 
 //! Represents a random forest.
@@ -51,7 +51,7 @@ public:
 	forest(const size_t nt, const size_t seed);
 
 	//! Predicts the y value of the given sample x.
-	float operator()(const array<float, tree::nv>& x) const;
+	double operator()(const array<double, tree::nv>& x) const;
 
 	//! Clears node samples to save memory.
 	void clear();
