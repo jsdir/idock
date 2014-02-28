@@ -294,7 +294,7 @@ int main(int argc, char* argv[])
 			{
 				io.post([&,x]()
 				{
-					grid_map_task(grid_maps, atom_types_to_populate, x, sf, b, rec, f);
+					grid_map_task(grid_maps, atom_types_to_populate, x, sf, b, rec);
 					cnt.increment();
 				});
 			}
