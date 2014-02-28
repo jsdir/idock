@@ -287,8 +287,8 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	// Initialize frame-wide conformational variables.
 	vector<vec3> origins; ///< Origin coordinate, which is rotorY.
 	vector<vec3> axes; ///< Vector pointing from rotor Y to rotor X.
-	vector<qtn4> orientations_q; ///< Orientation in the form of quaternion.
-	vector<mat3> orientations_m; ///< Orientation in the form of 3x3 matrix.
+	vector<std::array<double, 4>> orientations_q; ///< Orientation in the form of quaternion.
+	vector<std::array<double, 9>> orientations_m; ///< Orientation in the form of 3x3 matrix.
 	vector<vec3> forces; ///< Aggregated derivatives of heavy atoms.
 	vector<vec3> torques; /// Torque of the force.
 	origins.resize(num_frames);
@@ -308,7 +308,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	const frame& root = frames.front();
 	origins.front() = conf.position;
 	orientations_q.front() = conf.orientation;
-	orientations_m.front() = conf.orientation.to_mat3();
+	orientations_m.front() = qtn4_to_mat3(conf.orientation);
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
 		coordinates[i] = origins.front() + orientations_m.front() * heavy_atoms[i].coordinate;
@@ -339,9 +339,9 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		BOOST_ASSERT(f.parent_rotorX_to_current_rotorY.normalized());
 		axes[k] = orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY;
 		BOOST_ASSERT(axes[k].normalized());
-		orientations_q[k] = qtn4(axes[k], conf.torsions[t++]) * orientations_q[f.parent];
-		BOOST_ASSERT(orientations_q[k].is_normalized());
-		orientations_m[k] = orientations_q[k].to_mat3();
+		orientations_q[k] = vec4_to_qtn4(axes[k], conf.torsions[t++]) * orientations_q[f.parent];
+		BOOST_ASSERT(normalized(orientations_q[k]));
+		orientations_m[k] = qtn4_to_mat3(orientations_q[k]);
 
 		// Update coordinates.
 		for (size_t i = f.habegin; i < f.haend; ++i)
@@ -473,14 +473,14 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 result ligand::compose_result(const double e, const double f, const conformation& conf) const
 {
 	vector<vec3> origins(num_frames);
-	vector<qtn4> orientations_q(num_frames);
-	vector<mat3> orientations_m(num_frames);
+	vector<std::array<double, 4>> orientations_q(num_frames);
+	vector<std::array<double, 9>> orientations_m(num_frames);
 	vector<vec3> heavy_atoms(num_heavy_atoms);
 	vector<vec3> hydrogens(num_hydrogens);
 
 	origins.front() = conf.position;
 	orientations_q.front() = conf.orientation;
-	orientations_m.front() = conf.orientation.to_mat3();
+	orientations_m.front() = qtn4_to_mat3(conf.orientation);
 
 	// Calculate the coordinates of both heavy atoms and hydrogens of ROOT frame.
 	const frame& root = frames.front();
@@ -502,8 +502,8 @@ result ligand::compose_result(const double e, const double f, const conformation
 		origins[k] = origins[f.parent] + orientations_m[f.parent] * f.parent_rotorY_to_current_rotorY;
 
 		// Update orientation.
-		orientations_q[k] = qtn4(orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY, f.active ? conf.torsions[t++] : 0) * orientations_q[f.parent];
-		orientations_m[k] = orientations_q[k].to_mat3();
+		orientations_q[k] = vec4_to_qtn4(orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY, f.active ? conf.torsions[t++] : 0) * orientations_q[f.parent];
+		orientations_m[k] = qtn4_to_mat3(orientations_q[k]);
 
 		// Update coordinates.
 		for (size_t i = f.habegin; i < f.haend; ++i)

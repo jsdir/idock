@@ -32,7 +32,7 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 	{
 		// Randomize conformation c0.
 		c0.position = vec3(uniform_box0_gen(eng), uniform_box1_gen(eng), uniform_box2_gen(eng));
-		c0.orientation = qtn4(normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng)).normalize();
+		c0.orientation = normalize(std::array<double, 4>{normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng), normal_01_gen(eng)});
 		for (size_t i = 0; i < lig.num_active_torsions; ++i)
 		{
 			c0.torsions[i] = uniform_pi_gen(eng);
@@ -88,8 +88,8 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 			}
 			else // Mutate orientation.
 			{
-				c1.orientation = qtn4(static_cast<double>(0.01) * vec3(uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng))) * c1.orientation;
-				BOOST_ASSERT(c1.orientation.is_normalized());
+				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * vec3(uniform_11_gen(eng), uniform_11_gen(eng), uniform_11_gen(eng))) * c1.orientation;
+				BOOST_ASSERT(normalized(c1.orientation));
 			}
 			++num_mutations;
 		} while (!lig.evaluate(c1, sf, b, grid_maps, e_upper_bound, e1, f1, g1));
@@ -129,9 +129,9 @@ void monte_carlo_task(ptr_vector<result>& results, const ligand& lig, const size
 
 				// Calculate c2 = c1 + ap.
 				c2.position = c1.position + alpha * vec3(p[0], p[1], p[2]);
-				BOOST_ASSERT(c1.orientation.is_normalized());
-				c2.orientation = qtn4(alpha * vec3(p[3], p[4], p[5])) * c1.orientation;
-				BOOST_ASSERT(c2.orientation.is_normalized());
+				BOOST_ASSERT(normalized(c1.orientation));
+				c2.orientation = vec3_to_qtn4(alpha * vec3(p[3], p[4], p[5])) * c1.orientation;
+				BOOST_ASSERT(normalized(c2.orientation));
 				for (size_t i = 0; i < lig.num_active_torsions; ++i)
 				{
 					c2.torsions[i] = c1.torsions[i] + alpha * p[6 + i];

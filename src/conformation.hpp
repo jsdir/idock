@@ -2,14 +2,14 @@
 #ifndef IDOCK_CONFORMATION_HPP
 #define IDOCK_CONFORMATION_HPP
 
-#include "quaternion.hpp"
+#include "array.hpp"
 
 /// Represents a ligand conformation.
 class conformation
 {
 public:
 	vec3 position; ///< Ligand origin coordinate.
-	qtn4 orientation; ///< Ligand orientation.
+	std::array<double, 4> orientation; ///< Ligand orientation.
 	vector<double> torsions; ///< Ligand torsions.
 
 	/// Constructs an initial conformation.
