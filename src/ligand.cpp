@@ -33,18 +33,16 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			// This line will be dumped to the output ligand file.
 			lines.push_back(line);
 
-			// Parse and validate AutoDock4 atom type.
-			const string ad_type_string = line.substr(77, isspace(line[78]) ? 1 : 2);
-			const size_t ad = parse_ad_type_string(ad_type_string);
-			if (ad == AD_TYPE_SIZE) continue;
+			// Parse the line.
+			atom a(line);
 
-			// Parse the Cartesian coordinate.
-			atom a(stoul(line.substr(6, 5)), line.substr(12, 4), vec3(stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))), ad);
+			// Skip unsupported atom types.
+			if (a.ad_unsupported()) continue;
 
 			if (a.is_hydrogen()) // Current atom is a hydrogen.
 			{
 				// For a polar hydrogen, the bonded hetero atom must be a hydrogen bond donor.
-				if (ad == AD_TYPE_HD)
+				if (a.is_polar_hydrogen())
 				{
 					for (size_t i = heavy_atoms.size(); i > f->habegin;)
 					{

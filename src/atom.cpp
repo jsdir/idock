@@ -108,13 +108,32 @@ const std::array<size_t, atom::n> atom::ad_to_xs =
 	14, // 30 = Cs -> Met_D = 14, Metal, hydrogen bond donor.
 };
 
-/// Constructs an atom with 3D coordinate and AutoDock4 atom type.
-atom::atom(const size_t serial, const string& name, const vec3& coordinate, const size_t ad) : serial(serial), name(name), coordinate(coordinate), ad(ad), xs(ad_to_xs[ad]) {}
-
-/// Returns the covalent radius of current AutoDock4 atom type.
-double atom::covalent_radius() const
+//! Constructs an atom from an ATOM/HETATM line in PDBQT format.
+atom::atom(const string& line) :
+	serial(stoul(line.substr(6, 5))),
+	name(line.substr(12, 4)),
+	coordinate(stof(line.substr(30, 8)), stof(line.substr(38, 8)), stof(line.substr(46, 8))),
+	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
+	xs(ad_to_xs[ad])
 {
-	return ad_covalent_radii[ad];
+}
+
+//! Returns true if the AutoDock4 atom type is not supported.
+bool atom::ad_unsupported() const
+{
+	return ad == n;
+}
+
+//! Returns true if the atom is a nonpolar hydrogen atom.
+bool atom::is_nonpolar_hydrogen() const
+{
+	return ad == 0;
+}
+
+/// Returns true if the atom is polar hydrogen.
+bool atom::is_polar_hydrogen() const
+{
+	return ad == 1;
 }
 
 /// Returns true if the atom is hydrogen.
@@ -127,6 +146,12 @@ bool atom::is_hydrogen() const
 bool atom::is_hetero() const
 {
 	return ad >= 4;
+}
+
+/// Returns the covalent radius of current AutoDock4 atom type.
+double atom::covalent_radius() const
+{
+	return ad_covalent_radii[ad];
 }
 
 /// Returns true if the current atom is covalently bonded to a given atom.

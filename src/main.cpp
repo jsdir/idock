@@ -187,6 +187,39 @@ int main(int argc, char* argv[])
 	cout << "Using random seed " << seed << endl;
 	mt19937_64 eng(seed);
 
+	// Initialize an io service pool and create worker threads for later use.
+	cout << "Creating an io service pool of " << num_threads << " worker thread" << (num_threads == 1 ? "" : "s") << endl;
+	io_service_pool io(num_threads);
+	safe_counter<size_t> cnt;
+
+	// Precalculate the scoring function in parallel.
+	cout << "Precalculating scoring function in parallel" << endl;
+	scoring_function sf;
+	{
+		// Precalculate reciprocal square root values.
+		vector<double> rs(scoring_function::Num_Samples, 0);
+		for (size_t i = 0; i < scoring_function::Num_Samples; ++i)
+		{
+			rs[i] = sqrt(i * scoring_function::Factor_Inverse);
+		}
+		BOOST_ASSERT(rs.front() == 0);
+		BOOST_ASSERT(rs.back() == scoring_function::Cutoff);
+
+		// Populate the scoring function task container.
+		const size_t num_sf_tasks = ((sf.n + 1) * sf.n) >> 1;
+		cnt.init(num_sf_tasks);
+		for (size_t t0 =  0; t0 < sf.n; ++t0)
+		for (size_t t1 = t0; t1 < sf.n; ++t1)
+		{
+			io.post([&,t0,t1]()
+			{
+				sf.precalculate(t0, t1, rs);
+				cnt.increment();
+			});
+		}
+		cnt.wait();
+	}
+
 	// Initialize the search space of cuboid shape.
 	const box b(vec3(center_x, center_y, center_z), vec3(size_x, size_y, size_z), grid_granularity);
 	const size_t num_gm_tasks = b.num_probes[0];
@@ -207,42 +240,9 @@ int main(int argc, char* argv[])
 	results.reserve(max_results * num_mc_tasks);
 
 	// Initialize a vector of empty grid maps. Each grid map corresponds to an XScore atom type.
-	vector<array3d<double>> grid_maps(XS_TYPE_SIZE);
+	vector<array3d<double>> grid_maps(sf.n);
 	vector<size_t> atom_types_to_populate;
-	atom_types_to_populate.reserve(XS_TYPE_SIZE);
-
-	// Initialize an io service pool and create worker threads for later use.
-	cout << "Creating an io service pool of " << num_threads << " worker thread" << (num_threads == 1 ? "" : "s") << endl;
-	io_service_pool io(num_threads);
-	safe_counter<size_t> cnt;
-
-	// Precalculate the scoring function in parallel.
-	cout << "Precalculating scoring function in parallel" << endl;
-	scoring_function sf;
-	{
-		// Precalculate reciprocal square root values.
-		vector<double> rs(scoring_function::Num_Samples, 0);
-		for (size_t i = 0; i < scoring_function::Num_Samples; ++i)
-		{
-			rs[i] = sqrt(i * scoring_function::Factor_Inverse);
-		}
-		BOOST_ASSERT(rs.front() == 0);
-		BOOST_ASSERT(rs.back() == scoring_function::Cutoff);
-
-		// Populate the scoring function task container.
-		const size_t num_sf_tasks = ((XS_TYPE_SIZE + 1) * XS_TYPE_SIZE) >> 1;
-		cnt.init(num_sf_tasks);
-		for (size_t t0 =  0; t0 < XS_TYPE_SIZE; ++t0)
-		for (size_t t1 = t0; t1 < XS_TYPE_SIZE; ++t1)
-		{
-			io.post([&,t0,t1]()
-			{
-				sf.precalculate(t0, t1, rs);
-				cnt.increment();
-			});
-		}
-		cnt.wait();
-	}
+	atom_types_to_populate.reserve(sf.n);
 
 	cout << "Training a random forest of " << num_trees << " trees with seed " << seed << " in parallel" << endl;
 	forest f(num_trees, seed);
@@ -280,7 +280,7 @@ int main(int argc, char* argv[])
 		for (size_t i = 0; i < num_ligand_atom_types; ++i)
 		{
 			const size_t t = ligand_atom_types[i];
-			BOOST_ASSERT(t < XS_TYPE_SIZE);
+			BOOST_ASSERT(t < sf.n);
 			array3d<double>& grid_map = grid_maps[t];
 			if (grid_map.initialized()) continue; // The grid map of XScore atom type t has already been populated.
 			grid_map.resize(b.num_probes); // An exception may be thrown in case memory is exhausted.

@@ -22,17 +22,26 @@ public:
 	size_t ad; ///< AutoDock4 atom type.
 	size_t xs; ///< XScore atom type.
 
-	/// Constructs an atom with 3D coordinate and AutoDock4 atom type.
-	explicit atom(const size_t serial, const string& name, const vec3& coordinate, const size_t ad);
+	//! Constructs an atom from an ATOM/HETATM line in PDBQT format.
+	explicit atom(const string& line);
 
-	/// Returns the covalent radius of current AutoDock4 atom type.
-	double covalent_radius() const;
+	//! Returns true if the AutoDock4 atom type is not supported.
+	bool ad_unsupported() const;
+
+	/// Returns true if the atom is nonpolar hydrogen.
+	bool is_nonpolar_hydrogen() const;
+
+	/// Returns true if the atom is polar hydrogen.
+	bool is_polar_hydrogen() const;
 
 	/// Returns true if the atom is hydrogen.
 	bool is_hydrogen() const;
 
 	/// Returns true if the atom is a hetero atom, i.e. non-carbon heavy atom.
 	bool is_hetero() const;
+
+	/// Returns the covalent radius of current AutoDock4 atom type.
+	double covalent_radius() const;
 
 	/// Returns true if the current atom is covalently bonded to a given atom.
 	bool is_neighbor(const atom& a) const;
