@@ -8,7 +8,7 @@ inline bool zero(const double a)
 }
 
 //! Returns true if the absolute difference between two floating point values is within the constant tolerance.
-inline bool eq(const double a, const double b)
+inline bool equal(const double a, const double b)
 {
 	return zero(a - b);
 }
@@ -34,7 +34,7 @@ double norm(const array<double, 3>& a)
 //! Returns true if the norm equals 1.
 bool normalized(const array<double, 3>& a)
 {
-	return eq(norm_sqr(a), 1);
+	return equal(norm(a), 1);
 }
 
 //! Returns the dot product of the current vector and the given vector.
@@ -195,7 +195,7 @@ double norm(const array<double, 4>& a)
 
 bool normalized(const array<double, 4>& a)
 {
-	return fabs(norm_sqr(a) - 1.0) < 1e-5;
+	return equal(norm(a), 1);
 }
 
 array<double, 4> normalize(const array<double, 4>& a)
