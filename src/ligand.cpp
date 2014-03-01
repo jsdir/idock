@@ -253,9 +253,13 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			for (size_t k2 = k1 + 1; k2 < num_frames; ++k2)
 			{
 				const frame& f2 = frames[k2];
+				const frame& f3 = frames[f2.parent];
 				for (size_t j = f2.habegin; j < f2.haend; ++j)
 				{
-					if (((k1 == f2.parent) && ((j == f2.rotorYidx) || (i == f2.rotorXidx))) || (find(neighbors.begin(), neighbors.end(), j) != neighbors.end())) continue;
+					if (k1 == f2.parent && (i == f2.rotorXidx || j == f2.rotorYidx)) continue;
+					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue;
+					if (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) continue;
+					if (find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) continue;
 					const size_t type_pair_index = triangular_matrix_permissive_index(heavy_atoms[i].xs, heavy_atoms[j].xs);
 					interacting_pairs.push_back(interacting_pair(i, j, type_pair_index));
 				}
@@ -545,7 +549,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			const string& line = lines[j];
 			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
 			{
-				const double   free_energy = line[77] == 'H' ? 0 : rec.grid_maps[heavy_atoms[heavy_atom].xs][rec.grid_index(rec.grid_index(r.heavy_atoms[heavy_atom]))];
+				const double free_energy = line[77] == 'H' ? 0 : rec.grid_maps[heavy_atoms[heavy_atom].xs][rec.grid_index(rec.grid_index(r.heavy_atoms[heavy_atom]))];
 				const array<double, 3>& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
