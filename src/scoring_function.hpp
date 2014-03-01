@@ -18,11 +18,12 @@ class scoring_function : public triangular_matrix<vector<scoring_function_elemen
 {
 public:
 	static const size_t n = 15; //!< Number of XScore atom types.
-	static const double Cutoff; //!< Cutoff of a scoring function.
-	static const double Cutoff_Sqr; //!< Square of Cutoff.
-	static const double Factor; //!< Scaling factor for r, i.e. distance between two atoms.
-	static const double Factor_Inverse; //!< 1 / Factor.
-	static const size_t Num_Samples; //!< Number of sampling points within [0, Cutoff].
+	static const size_t np = n*(n+1)>>1; //!< Number of XScore atom type pairs.
+	static const size_t ns = 1024; //!< Number of samples in a unit distance.
+	static const size_t cutoff = 8; //!< Atom type pair distance cutoff.
+	static const size_t nr = ns*cutoff*cutoff+1; //!< Number of samples within the entire cutoff.
+	static const size_t ne = nr*np; //!< Number of values to precalculate.
+	static const double cutoff_sqr; //!< Cutoff square.
 
 	//! Constructs an empty scoring function.
 	explicit scoring_function();

@@ -2,12 +2,7 @@
 #include <cassert>
 #include "scoring_function.hpp"
 
-const double scoring_function::Cutoff = static_cast<double>(8);
-const double scoring_function::Cutoff_Sqr = Cutoff * Cutoff;
-const double scoring_function::Factor = static_cast<double>(256);
-const double scoring_function::Factor_Inverse = 1 / Factor;
-const size_t scoring_function::Num_Samples = static_cast<size_t>(Factor * Cutoff_Sqr) + 1;
-
+const double scoring_function::cutoff_sqr = cutoff * cutoff;
 const array<double, scoring_function::n> scoring_function::vdw =
 {
 	1.9, //   C_H
@@ -51,19 +46,20 @@ inline bool is_hbond(const size_t t0, const size_t t1)
 	return (is_hbdonor(t0) && is_hbacceptor(t1)) || (is_hbdonor(t1) && is_hbacceptor(t0));
 }
 
-scoring_function::scoring_function() : triangular_matrix<vector<scoring_function_element>>(n, vector<scoring_function_element>(Num_Samples, scoring_function_element())), rs(Num_Samples)
+scoring_function::scoring_function() : triangular_matrix<vector<scoring_function_element>>(n, vector<scoring_function_element>(nr, scoring_function_element())), rs(nr)
 {
-	for (size_t i = 0; i < Num_Samples; ++i)
+	const double ns_inv = 1. / ns;
+	for (size_t i = 0; i < nr; ++i)
 	{
-		rs[i] = sqrt(i * Factor_Inverse);
+		rs[i] = sqrt(i * ns_inv);
 	}
 	assert(rs.front() == 0);
-	assert(rs.back() == Cutoff);
+	assert(fabs(rs.back() - cutoff) < 1e-7);
 }
 
 double scoring_function::score(const size_t t0, const size_t t1, const double r)
 {
-	assert(r <= Cutoff);
+	assert(r <= cutoff);
 
 	// Calculate the surface distance d.
 	const double d = r - (vdw[t0] + vdw[t1]);
@@ -79,7 +75,7 @@ double scoring_function::score(const size_t t0, const size_t t1, const double r)
 
 void scoring_function::score(double* const v, const size_t t0, const size_t t1, const double r2)
 {
-	assert(r2 <= Cutoff_Sqr);
+	assert(r2 <= cutoff_sqr);
 
 	// Calculate the surface distance d.
 	const double d = sqrt(r2) - (vdw[t0] + vdw[t1]);
@@ -96,16 +92,16 @@ void scoring_function::score(double* const v, const size_t t0, const size_t t1, 
 void scoring_function::precalculate(const size_t t0, const size_t t1)
 {
 	vector<scoring_function_element>& p = (*this)[triangular_matrix_restrictive_index(t0, t1)];
-	assert(p.size() == Num_Samples);
+	assert(p.size() == nr);
 
 	// Calculate the value of scoring function evaluated at (t0, t1, d).
-	for (size_t i = 0; i < Num_Samples; ++i)
+	for (size_t i = 0; i < nr; ++i)
 	{
 		p[i].e = score(t0, t1, rs[i]);
 	}
 
 	// Calculate the dor of scoring function evaluated at (t0, t1, d).
-	for (size_t i = 1; i < Num_Samples - 1; ++i)
+	for (size_t i = 1; i < nr - 1; ++i)
 	{
 		p[i].dor = (p[i + 1].e - p[i].e) / ((rs[i + 1] - rs[i]) * rs[i]);
 	}
@@ -115,8 +111,8 @@ void scoring_function::precalculate(const size_t t0, const size_t t1)
 
 scoring_function_element scoring_function::evaluate(const size_t type_pair_index, const double r2) const
 {
-	assert(r2 <= Cutoff_Sqr);
-	return (*this)[type_pair_index][static_cast<size_t>(Factor * r2)];
+	assert(r2 <= cutoff_sqr);
+	return (*this)[type_pair_index][static_cast<size_t>(ns * r2)];
 }
 
 void scoring_function::clear()

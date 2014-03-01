@@ -123,7 +123,7 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 					r2 += d * d;
 				}
 			}
-			if (r2 < scoring_function::Cutoff_Sqr)
+			if (r2 < scoring_function::cutoff_sqr)
 			{
 				atoms.push_back(move(a));
 			}
@@ -149,7 +149,7 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 		{
 			const atom& a = atoms[i];
 			const double proj_dist_sqr = project_distance_sqr(corner0, corner1, a.coordinate);
-			if (proj_dist_sqr < scoring_function::Cutoff_Sqr)
+			if (proj_dist_sqr < scoring_function::cutoff_sqr)
 			{
 				par.push_back(i);
 			}
@@ -258,7 +258,7 @@ void receptor::populate(const vector<size_t>& xs, const size_t x, const scoring_
 			const atom& a = atoms[receptor_atoms[l]];
 			if (a.is_hydrogen()) continue;
 			const double r2 = distance_sqr(probe_coords, a.coordinate);
-			if (r2 <= scoring_function::Cutoff_Sqr)
+			if (r2 <= scoring_function::cutoff_sqr)
 			{
 				const size_t t1 = a.xs;
 				for (size_t i = 0; i < num_xs; ++i)

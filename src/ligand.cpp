@@ -410,7 +410,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const interacting_pair& p = interacting_pairs[i];
 		const array<double, 3> r = coordinates[p.i1] - coordinates[p.i0];
 		const double r2 = norm_sqr(r);
-		if (r2 < scoring_function::Cutoff_Sqr)
+		if (r2 < scoring_function::cutoff_sqr)
 		{
 			const scoring_function_element element = sf.evaluate(p.type_pair_index, r2);
 			e += element.e;
