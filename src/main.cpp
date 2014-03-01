@@ -4,10 +4,10 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include "receptor.hpp"
-#include "ligand.hpp"
 #include "io_service_pool.hpp"
 #include "safe_counter.hpp"
+#include "receptor.hpp"
+#include "ligand.hpp"
 #include "random_forest.hpp"
 #include "log.hpp"
 
@@ -193,29 +193,18 @@ int main(int argc, char* argv[])
 	// Precalculate the scoring function in parallel.
 	cout << "Precalculating scoring function in parallel" << endl;
 	scoring_function sf;
+	cnt.init(((sf.n + 1) * sf.n) >> 1);
+	for (size_t t0 =  0; t0 < sf.n; ++t0)
+	for (size_t t1 = t0; t1 < sf.n; ++t1)
 	{
-		// Precalculate reciprocal square root values.
-		vector<double> rs(scoring_function::Num_Samples, 0);
-		for (size_t i = 0; i < scoring_function::Num_Samples; ++i)
+		io.post([&, t0, t1]()
 		{
-			rs[i] = sqrt(i * scoring_function::Factor_Inverse);
-		}
-		assert(rs.front() == 0);
-		assert(rs.back() == scoring_function::Cutoff);
-
-		// Populate the scoring function task container.
-		cnt.init(((sf.n + 1) * sf.n) >> 1);
-		for (size_t t0 =  0; t0 < sf.n; ++t0)
-		for (size_t t1 = t0; t1 < sf.n; ++t1)
-		{
-			io.post([&, t0, t1]()
-			{
-				sf.precalculate(t0, t1, rs);
-				cnt.increment();
-			});
-		}
-		cnt.wait();
+			sf.precalculate(t0, t1);
+			cnt.increment();
+		});
 	}
+	cnt.wait();
+	sf.clear();
 
 	// Parse the receptor.
 	cout << "Parsing receptor " << receptor_path << endl;

@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cassert>
 #include "scoring_function.hpp"
 
 const double scoring_function::Cutoff = static_cast<double>(8);
@@ -50,6 +51,16 @@ inline bool is_hbond(const size_t t0, const size_t t1)
 	return (is_hbdonor(t0) && is_hbacceptor(t1)) || (is_hbdonor(t1) && is_hbacceptor(t0));
 }
 
+scoring_function::scoring_function() : triangular_matrix<vector<scoring_function_element>>(n, vector<scoring_function_element>(Num_Samples, scoring_function_element())), rs(Num_Samples)
+{
+	for (size_t i = 0; i < Num_Samples; ++i)
+	{
+		rs[i] = sqrt(i * Factor_Inverse);
+	}
+	assert(rs.front() == 0);
+	assert(rs.back() == Cutoff);
+}
+
 double scoring_function::score(const size_t t0, const size_t t1, const double r)
 {
 	assert(r <= Cutoff);
@@ -82,7 +93,7 @@ void scoring_function::score(double* const v, const size_t t0, const size_t t1, 
 	v[4] += ((is_hbond(t0, t1)) ? ((d >= 0) ? 0.0 : ((d <= -0.7) ? 1 : d * (-1.4285714285714286))): 0.0);
 }
 
-void scoring_function::precalculate(const size_t t0, const size_t t1, const vector<double>& rs)
+void scoring_function::precalculate(const size_t t0, const size_t t1)
 {
 	vector<scoring_function_element>& p = (*this)[triangular_matrix_restrictive_index(t0, t1)];
 	assert(p.size() == Num_Samples);
@@ -106,4 +117,9 @@ scoring_function_element scoring_function::evaluate(const size_t type_pair_index
 {
 	assert(r2 <= Cutoff_Sqr);
 	return (*this)[type_pair_index][static_cast<size_t>(Factor * r2)];
+}
+
+void scoring_function::clear()
+{
+	rs.clear();
 }
