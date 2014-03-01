@@ -234,10 +234,10 @@ size_t receptor::partition_index(const array<size_t, 3>& a) const
 	return num_partitions[2] * (num_partitions[1] * a[0] + a[1]) + a[2];
 }
 
-void receptor::populate(const vector<size_t>& atom_types_to_populate, const size_t x, const scoring_function& sf)
+void receptor::populate(const vector<size_t>& xs, const size_t x, const scoring_function& sf)
 {
-	const size_t num_atom_types_to_populate = atom_types_to_populate.size();
-	vector<double> e(num_atom_types_to_populate);
+	const size_t num_xs = xs.size();
+	vector<double> e(num_xs);
 
 	// For each probe atom of the given X dimension value.
 	const size_t num_y_probes = num_probes[1];
@@ -261,9 +261,9 @@ void receptor::populate(const vector<size_t>& atom_types_to_populate, const size
 			if (r2 <= scoring_function::Cutoff_Sqr)
 			{
 				const size_t t1 = a.xs;
-				for (size_t i = 0; i < num_atom_types_to_populate; ++i)
+				for (size_t i = 0; i < num_xs; ++i)
 				{
-					const size_t t2 = atom_types_to_populate[i];
+					const size_t t2 = xs[i];
 					const size_t type_pair_index = triangular_matrix_permissive_index(t1, t2);
 					e[i] += sf.evaluate(type_pair_index, r2).e;
 				}
@@ -271,9 +271,9 @@ void receptor::populate(const vector<size_t>& atom_types_to_populate, const size
 		}
 
 		// Save accumulated free energies into grid maps.
-		for (size_t i = 0; i < num_atom_types_to_populate; ++i)
+		for (size_t i = 0; i < num_xs; ++i)
 		{
-			const size_t t = atom_types_to_populate[i];
+			const size_t t = xs[i];
 			grid_maps[t][grid_index(grid_idx)] = e[i];
 		}
 	}

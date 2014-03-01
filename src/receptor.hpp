@@ -62,7 +62,7 @@ public:
 	size_t grid_index(const array<size_t, 3>& a) const;
 	size_t partition_index(const array<size_t, 3>& a) const;
 
-	void populate(const vector<size_t>& atom_types_to_populate, const size_t x, const scoring_function& sf);
+	void populate(const vector<size_t>& xs, const size_t x, const scoring_function& sf);
 };
 
 #endif
