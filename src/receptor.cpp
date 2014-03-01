@@ -77,8 +77,11 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 						break;
 					}
 				}
+				continue;
 			}
-			else if (a.is_hetero()) // It is a hetero atom.
+
+			// For a hetero atom, its connected carbon atoms are no longer hydrophobic.
+			if (a.is_hetero())
 			{
 				for (size_t i = atoms.size(); i > residue_start;)
 				{
@@ -89,7 +92,8 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 					}
 				}
 			}
-			else // It is a carbon atom.
+			// For a carbon atom, it is no longer hydrophobic when connected to a hetero atom.
+			else
 			{
 				for (size_t i = atoms.size(); i > residue_start;)
 				{
