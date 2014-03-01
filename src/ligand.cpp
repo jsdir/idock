@@ -3,7 +3,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include "ligand.hpp"
 
-ligand::ligand(const path& p) : num_active_torsions(0)
+ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 {
 	// Initialize necessary variables for constructing a ligand.
 	lines.reserve(200); // A ligand typically consists of <= 200 lines.
@@ -193,6 +193,12 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 	flexibility_penalty_factor = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
 	assert(flexibility_penalty_factor <= 1);
 
+	// Detect the presence of XScore atom types.
+	for (const auto& a : heavy_atoms)
+	{
+		xs[a.xs] = true;
+	}
+
 	// Update heavy_atoms[].coordinate and hydrogens[].coordinate relative to frame origin.
 	for (size_t k = 0; k < num_frames; ++k)
 	{
@@ -269,18 +275,6 @@ ligand::ligand(const path& p) : num_active_torsions(0)
 			neighbors.clear();
 		}
 	}
-}
-
-vector<size_t> ligand::get_atom_types() const
-{
-	vector<size_t> atom_types;
-	atom_types.reserve(10); // A ligand typically consists of <= 10 XScore atom types.
-	for (size_t i = 0; i < num_heavy_atoms; ++i)
-	{
-		const size_t t = heavy_atoms[i].xs;
-		if (find(atom_types.begin(), atom_types.end(), t) == atom_types.end()) atom_types.push_back(t);
-	}
-	return atom_types;
 }
 
 bool ligand::evaluate(const conformation& conf, const scoring_function& sf, const receptor& rec, const double e_upper_bound, double& e, double& f, change& g) const

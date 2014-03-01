@@ -233,10 +233,6 @@ int main(int argc, char* argv[])
 	ptr_vector<result> results;
 	results.reserve(max_results * num_mc_tasks);
 
-	// Initialize a vector of empty grid maps. Each grid map corresponds to an XScore atom type.
-	vector<size_t> xs;
-	xs.reserve(sf.n);
-
 	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
 	forest f(num_trees, seed);
 	cnt.init(num_trees);
@@ -265,19 +261,18 @@ int main(int argc, char* argv[])
 		// Parse the ligand.
 		ligand lig(input_ligand_path);
 
-		// Create grid maps on the fly if necessary.
-		assert(xs.empty());
-		const vector<size_t> ligand_atom_types = lig.get_atom_types();
-		const size_t num_ligand_atom_types = ligand_atom_types.size();
-		for (size_t i = 0; i < num_ligand_atom_types; ++i)
+		// Find atom types that are presented in the current ligand but not presented in the grid maps.
+		vector<size_t> xs;
+		for (size_t t = 0; t < sf.n; ++t)
 		{
-			const size_t t = ligand_atom_types[i];
-			assert(t < sf.n);
-			vector<double>& grid_map = rec.grid_maps[t];
-			if (grid_map.size()) continue; // The grid map of XScore atom type t has already been populated.
-			grid_map.resize(rec.num_probes_product); // An exception may be thrown in case memory is exhausted.
-			xs.push_back(t); // The grid map of XScore atom type t has not been populated and should be populated now.
+			if (lig.xs[t] && rec.grid_maps[t].empty())
+			{
+				rec.grid_maps[t].resize(rec.num_probes_product);
+				xs.push_back(t);
+			}
 		}
+
+		// Create grid maps on the fly if necessary.
 		if (xs.size())
 		{
 			// Populate the grid map task container.
@@ -291,7 +286,6 @@ int main(int argc, char* argv[])
 				});
 			}
 			cnt.wait();
-			xs.clear();
 		}
 
 		// Dump the ligand file stem.
