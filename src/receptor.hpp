@@ -36,6 +36,7 @@ public:
 	array<size_t, 3> num_partitions; //!< Number of partitions.
 	array<double, 3> partition_size; //!< 3D sizes of partitions.
 	array<double, 3> partition_size_inverse; //!< (1, 1, 1) / partition_size.
+	size_t num_probes_product; //!< Product of num_probes[0,1,2].
 
 	//! Returns true if a coordinate is within current half-open-half-close box, i.e. [corner0, corner1).
 	bool within(const array<double, 3>& coordinate) const;

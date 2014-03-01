@@ -9,7 +9,7 @@
 const double receptor::Default_Partition_Granularity = static_cast<double>(3);
 const double receptor::Default_Partition_Granularity_Inverse = 1 / Default_Partition_Granularity;
 
-receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& span_, const double grid_granularity) : center(center), grid_granularity(grid_granularity), grid_granularity_inverse(1 / grid_granularity), grid_size({ grid_granularity, grid_granularity, grid_granularity }), grid_size_inverse({ grid_granularity_inverse, grid_granularity_inverse, grid_granularity_inverse }), grid_maps(scoring_function::n)
+receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& span_, const double grid_granularity) : center(center), grid_granularity(grid_granularity), grid_granularity_inverse(1 / grid_granularity), grid_size({ grid_granularity, grid_granularity, grid_granularity }), grid_size_inverse({ grid_granularity_inverse, grid_granularity_inverse, grid_granularity_inverse }), grid_maps(scoring_function::n), num_probes_product(1)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
@@ -19,6 +19,7 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 		assert(num_grids[i] > 0);
 		span[i] = grid_size[i] * num_grids[i];
 		num_probes[i] = num_grids[i] + 1;
+		num_probes_product *= num_probes[i];
 
 		// Determine the two extreme corners.
 		corner0[i] = center[i] - span[i] * static_cast<double>(0.5);

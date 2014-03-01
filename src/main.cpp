@@ -275,7 +275,7 @@ int main(int argc, char* argv[])
 			assert(t < sf.n);
 			vector<double>& grid_map = rec.grid_maps[t];
 			if (grid_map.size()) continue; // The grid map of XScore atom type t has already been populated.
-			grid_map.resize(rec.num_probes[0] * rec.num_probes[1] * rec.num_probes[2]); // An exception may be thrown in case memory is exhausted.
+			grid_map.resize(rec.num_probes_product); // An exception may be thrown in case memory is exhausted.
 			atom_types_to_populate.push_back(t); // The grid map of XScore atom type t has not been populated and should be populated now.
 		}
 		if (atom_types_to_populate.size())
