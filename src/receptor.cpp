@@ -105,7 +105,26 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 					}
 				}
 			}
-			atoms.push_back(a);
+
+			// Save the atom if and only if its distance to its projection point on the box is within cutoff.
+			double r2 = 0;
+			for (size_t i = 0; i < 3; ++i)
+			{
+				if (a.coordinate[i] < corner0[i])
+				{
+					const double d = a.coordinate[i] - corner0[i];
+					r2 += d * d;
+				}
+				else if (a.coordinate[i] > corner1[i])
+				{
+					const double d = a.coordinate[i] - corner1[i];
+					r2 += d * d;
+				}
+			}
+			if (r2 < scoring_function::Cutoff_Sqr)
+			{
+				atoms.push_back(move(a));
+			}
 		}
 		else if (record == "TER   ")
 		{
