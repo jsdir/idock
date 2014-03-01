@@ -1,3 +1,4 @@
+#include <iostream>
 #include <cmath>
 #include <cassert>
 #include <boost/filesystem/fstream.hpp>
@@ -132,34 +133,19 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 		}
 	}
 
-	// Find all the heavy receptor atoms that are within 8A of the box.
-	vector<size_t> receptor_atoms_within_cutoff;
-	receptor_atoms_within_cutoff.reserve(atoms.size());
-	const size_t num_rec_atoms = atoms.size();
-	for (size_t i = 0; i < num_rec_atoms; ++i)
-	{
-		const atom& a = atoms[i];
-		if (project_distance_sqr(a.coordinate) < scoring_function::Cutoff_Sqr)
-		{
-			receptor_atoms_within_cutoff.push_back(i);
-		}
-	}
-	const size_t num_receptor_atoms_within_cutoff = receptor_atoms_within_cutoff.size();
-
 	// Allocate each nearby receptor atom to its corresponding partition.
 	for (size_t x = 0; x < num_partitions[0]; ++x)
 	for (size_t y = 0; y < num_partitions[1]; ++y)
 	for (size_t z = 0; z < num_partitions[2]; ++z)
 	{
 		vector<size_t>& par = partitions[partition_index(array<size_t, 3>{x, y, z})];
-		par.reserve(num_receptor_atoms_within_cutoff);
+		par.reserve(atoms.size());
 		const array<size_t, 3> index0 = {{ x,     y,     z     }};
 		const array<size_t, 3> index1 = {{ x + 1, y + 1, z + 1 }};
 		const array<double, 3> corner0 = partition_corner0(index0);
 		const array<double, 3> corner1 = partition_corner0(index1);
-		for (size_t l = 0; l < num_receptor_atoms_within_cutoff; ++l)
+		for (size_t i = 0; i < atoms.size(); ++i)
 		{
-			const size_t i = receptor_atoms_within_cutoff[l];
 			const atom& a = atoms[i];
 			const double proj_dist_sqr = project_distance_sqr(corner0, corner1, a.coordinate);
 			if (proj_dist_sqr < scoring_function::Cutoff_Sqr)
