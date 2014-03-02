@@ -4,7 +4,7 @@
 
 inline bool zero(const double a)
 {
-	return fabs(a) < 3e-5;
+	return fabs(a) < 1e-4;
 }
 
 //! Returns true if the absolute difference between two floating point values is within the constant tolerance.
