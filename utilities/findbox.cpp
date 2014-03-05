@@ -13,7 +13,7 @@ int main(int argc, char* argv[])
 	vector<float> mx(d, numeric_limits<float>::lowest());
 	for (string line; getline(cin, line);)
 	{
-		if (line[0] != 'A') continue;
+		if (line[0] != 'A' && line[0] != 'H') continue;
 		for (size_t i = 0; i < d; ++i)
 		{
 			const float v = stof(line.substr(p[i], 8));
