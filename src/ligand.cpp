@@ -412,9 +412,9 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const double r2 = norm_sqr(r);
 		if (r2 < scoring_function::cutoff_sqr)
 		{
-			const scoring_function_element element = sf.evaluate(p.type_pair_index, r2);
-			e += element.e;
-			const array<double, 3> derivative = element.dor * r;
+			const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
+			e += sf.e[p.type_pair_index][nsr2];
+			const array<double, 3> derivative = sf.d[p.type_pair_index][nsr2] * r;
 			derivatives[p.i0] -= derivative;
 			derivatives[p.i1] += derivative;
 		}

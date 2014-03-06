@@ -46,7 +46,7 @@ inline bool is_hbond(const size_t t0, const size_t t1)
 	return (is_hbdonor(t0) && is_hbacceptor(t1)) || (is_hbdonor(t1) && is_hbacceptor(t0));
 }
 
-scoring_function::scoring_function() : vector<vector<scoring_function_element>>(n * (n + 1) >> 1, vector<scoring_function_element>(nr, scoring_function_element())), rs(nr)
+scoring_function::scoring_function() : e(np, vector<double>(nr)), d(np, vector<double>(nr)), rs(nr)
 {
 	const double ns_inv = 1. / ns;
 	for (size_t i = 0; i < nr; ++i)
@@ -91,28 +91,25 @@ void scoring_function::score(double* const v, const size_t t0, const size_t t1, 
 
 void scoring_function::precalculate(const size_t t0, const size_t t1)
 {
-	vector<scoring_function_element>& p = (*this)[mr(t0, t1)];
-	assert(p.size() == nr);
+	const size_t p = mr(t0, t1);
+	vector<double>& ep = e[p];
+	vector<double>& dp = d[p];
+	assert(ep.size() == nr);
+	assert(dp.size() == nr);
 
 	// Calculate the value of scoring function evaluated at (t0, t1, d).
 	for (size_t i = 0; i < nr; ++i)
 	{
-		p[i].e = score(t0, t1, rs[i]);
+		ep[i] = score(t0, t1, rs[i]);
 	}
 
 	// Calculate the dor of scoring function evaluated at (t0, t1, d).
 	for (size_t i = 1; i < nr - 1; ++i)
 	{
-		p[i].dor = (p[i + 1].e - p[i].e) / ((rs[i + 1] - rs[i]) * rs[i]);
+		dp[i] = (ep[i + 1] - ep[i]) / ((rs[i + 1] - rs[i]) * rs[i]);
 	}
-	p.front().dor = 0;
-	p.back().dor = 0;
-}
-
-scoring_function_element scoring_function::evaluate(const size_t type_pair_index, const double r2) const
-{
-	assert(r2 <= cutoff_sqr);
-	return (*this)[type_pair_index][static_cast<size_t>(ns * r2)];
+	dp.front() = 0;
+	dp.back() = 0;
 }
 
 void scoring_function::clear()

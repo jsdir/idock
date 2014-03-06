@@ -261,11 +261,11 @@ void receptor::populate(const vector<size_t>& xs, const size_t x, const scoring_
 			if (r2 <= scoring_function::cutoff_sqr)
 			{
 				const size_t t1 = a.xs;
+				const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
 				for (size_t i = 0; i < num_xs; ++i)
 				{
 					const size_t t2 = xs[i];
-					const size_t type_pair_index = mp(t1, t2);
-					e[i] += sf.evaluate(type_pair_index, r2).e;
+					e[i] += sf.e[mp(t1, t2)][nsr2];
 				}
 			}
 		}

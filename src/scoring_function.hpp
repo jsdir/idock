@@ -6,16 +6,8 @@
 #include "atom.hpp"
 #include "matrix.hpp"
 
-//! Represents a pair of scoring function value and dor at a specific combination of (t0, t1, r).
-class scoring_function_element
-{
-public:
-	double e; //!< Scoring function value.
-	double dor; //!< Scoring function derivative over r.
-};
-
 //! Represents a scoring function.
-class scoring_function : public vector<vector<scoring_function_element>>
+class scoring_function
 {
 public:
 	static const size_t n = 15; //!< Number of XScore atom types.
@@ -37,12 +29,11 @@ public:
 	//! Precalculates the scoring function values of sample points for the type combination of t0 and t1.
 	void precalculate(const size_t t0, const size_t t1);
 
-	//! Evaluates the scoring function given (t0, t1, r2).
-	scoring_function_element evaluate(const size_t type_pair_index, const double r2) const;
-
 	//! Clears precalculated values.
 	void clear();
 
+	vector<vector<double>> e; //!< Scoring function values.
+	vector<vector<double>> d; //!< Scoring function derivatives divided by distance.
 private:
 	static const array<double, n> vdw; //!< Van der Waals distances for XScore atom types.
 	vector<double> rs; //!< Distance samples.
