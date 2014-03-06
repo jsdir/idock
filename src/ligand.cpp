@@ -266,7 +266,7 @@ ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue;
 					if (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) continue;
 					if (find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) continue;
-					const size_t type_pair_index = triangular_matrix_permissive_index(heavy_atoms[i].xs, heavy_atoms[j].xs);
+					const size_t type_pair_index = mp(heavy_atoms[i].xs, heavy_atoms[j].xs);
 					interacting_pairs.push_back(interacting_pair(i, j, type_pair_index));
 				}
 			}
@@ -617,7 +617,7 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 	// See N&R for a recipe to find this initializer.
 	triangular_matrix<double> identity_hessian(num_variables, 0); // Symmetric triangular matrix.
 	for (size_t i = 0; i < num_variables; ++i)
-		identity_hessian[triangular_matrix_restrictive_index(i, i)] = 1;
+		identity_hessian[mr(i, i)] = 1;
 
 	// Initialize necessary variables for updating the Hessian matrix h.
 	triangular_matrix<double> h(identity_hessian);
@@ -670,7 +670,7 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 			{
 				double sum = 0;
 				for (size_t j = 0; j < num_variables; ++j)
-					sum += h[triangular_matrix_permissive_index(i, j)] * g1[j];
+					sum += h[mp(i, j)] * g1[j];
 				p[i] = -sum;
 			}
 
@@ -721,7 +721,7 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 			{
 				double sum = 0;
 				for (size_t j = 0; j < num_variables; ++j)
-					sum += h[triangular_matrix_permissive_index(i, j)] * y[j];
+					sum += h[mp(i, j)] * y[j];
 				mhy[i] = -sum;
 			}
 			yhy = 0;
@@ -735,7 +735,7 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 			for (size_t i = 0; i < num_variables; ++i)
 				for (size_t j = i; j < num_variables; ++j) // includes i
 				{
-					h[triangular_matrix_restrictive_index(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
+					h[mr(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
 				}
 
 			// Move to the next iteration.

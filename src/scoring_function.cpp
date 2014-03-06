@@ -91,7 +91,7 @@ void scoring_function::score(double* const v, const size_t t0, const size_t t1, 
 
 void scoring_function::precalculate(const size_t t0, const size_t t1)
 {
-	vector<scoring_function_element>& p = (*this)[triangular_matrix_restrictive_index(t0, t1)];
+	vector<scoring_function_element>& p = (*this)[mr(t0, t1)];
 	assert(p.size() == nr);
 
 	// Calculate the value of scoring function evaluated at (t0, t1, d).

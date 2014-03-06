@@ -7,16 +7,16 @@
 using namespace std;
 
 //! Returns the flattened 1D index of a 2D index (i, j) where j is the lowest dimension.
-inline size_t triangular_matrix_restrictive_index(const size_t i, const size_t j)
+inline size_t mr(const size_t i, const size_t j)
 {
 	assert(i <= j);
 	return i + j * (j + 1) / 2;
 }
 
 //! Returns the flattened 1D index of a 2D index (i, j) where either i or j is the lowest dimension.
-inline size_t triangular_matrix_permissive_index(const size_t i, const size_t j)
+inline size_t mp(const size_t i, const size_t j)
 {
-	return (i <= j) ? triangular_matrix_restrictive_index(i, j) : triangular_matrix_restrictive_index(j, i);
+	return (i <= j) ? mr(i, j) : mr(j, i);
 }
 
 //	i j 0 1 2 3
