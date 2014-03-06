@@ -2,6 +2,7 @@
 #ifndef IDOCK_SCORING_FUNCTION_HPP
 #define IDOCK_SCORING_FUNCTION_HPP
 
+#include <vector>
 #include "atom.hpp"
 #include "matrix.hpp"
 
@@ -14,7 +15,7 @@ public:
 };
 
 //! Represents a scoring function.
-class scoring_function : public triangular_matrix<vector<scoring_function_element>>
+class scoring_function : public vector<vector<scoring_function_element>>
 {
 public:
 	static const size_t n = 15; //!< Number of XScore atom types.

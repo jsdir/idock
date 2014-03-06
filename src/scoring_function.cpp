@@ -46,7 +46,7 @@ inline bool is_hbond(const size_t t0, const size_t t1)
 	return (is_hbdonor(t0) && is_hbacceptor(t1)) || (is_hbdonor(t1) && is_hbacceptor(t0));
 }
 
-scoring_function::scoring_function() : triangular_matrix<vector<scoring_function_element>>(n, vector<scoring_function_element>(nr, scoring_function_element())), rs(nr)
+scoring_function::scoring_function() : vector<vector<scoring_function_element>>(n * (n + 1) >> 1, vector<scoring_function_element>(nr, scoring_function_element())), rs(nr)
 {
 	const double ns_inv = 1. / ns;
 	for (size_t i = 0; i < nr; ++i)

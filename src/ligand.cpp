@@ -615,12 +615,12 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 	// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
 	// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
 	// See N&R for a recipe to find this initializer.
-	triangular_matrix<double> identity_hessian(num_variables, 0); // Symmetric triangular matrix.
+	vector<double> identity_hessian(num_variables * (num_variables + 1) >> 1, 0); // Symmetric triangular matrix.
 	for (size_t i = 0; i < num_variables; ++i)
 		identity_hessian[mr(i, i)] = 1;
 
 	// Initialize necessary variables for updating the Hessian matrix h.
-	triangular_matrix<double> h(identity_hessian);
+	vector<double> h(identity_hessian);
 	change y(num_active_torsions); // y = g2 - g1.
 	change mhy(num_active_torsions); // mhy = -h * y.
 	double yhy, yp, ryp, pco;
