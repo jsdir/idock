@@ -2,6 +2,10 @@
 #include <algorithm>
 #include "random_forest.hpp"
 
+node::node() : children{}
+{
+}
+
 void tree::train(const size_t mtry, const function<double()> u01)
 {
 	// Create bootstrap samples with replacement.

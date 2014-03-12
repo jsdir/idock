@@ -20,7 +20,7 @@ public:
 	array<size_t, 2> children; //!< Two child nodes.
 
 	//! Constructs an empty node.
-	explicit node() : children{} {}
+	explicit node();
 };
 
 //! Represents a tree in a forest.
