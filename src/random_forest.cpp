@@ -5,7 +5,7 @@
 void tree::train(const size_t mtry, const function<double()> u01)
 {
 	// Create bootstrap samples with replacement.
-	reserve(ns);
+	reserve((ns << 1) - 1);
 	emplace_back();
 	node& root = front();
 	root.samples.resize(ns);
