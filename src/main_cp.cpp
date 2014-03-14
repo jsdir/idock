@@ -5,9 +5,9 @@
 #include <boost/program_options.hpp>
 #include <boost/filesystem/operations.hpp>
 #include "io_service_pool.hpp"
+#include "safe_class.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
-#include "utility.hpp"
 #include "random_forest.hpp"
 #include "log.hpp"
 #include "kernel.hpp"

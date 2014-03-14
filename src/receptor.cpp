@@ -1,7 +1,7 @@
 #include <cmath>
 #include <boost/filesystem/fstream.hpp>
 #include "scoring_function.hpp"
-#include "utility.hpp"
+#include "array.hpp"
 #include "receptor.hpp"
 
 receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity) : center(center), size(size), corner0(center - 0.5f * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes_product(1), p_offset(scoring_function::n), maps(scoring_function::n)

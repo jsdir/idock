@@ -1,6 +1,6 @@
 #include <cmath>
 #include <cassert>
-#include "utility.hpp"
+#include "array.hpp"
 
 //! Returns the flattened 1D index of a triangular 2D index (x, y) where x is the lowest dimension.
 size_t mr(const size_t x, const size_t y)
@@ -210,52 +210,3 @@ array<float, 3> operator*(const array<float, 9>& m, const array<float, 3>& v)
 		m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
 	};
 }
-
-void safe_function::operator()(function<void(void)>&& f)
-{
-	lock_guard<mutex> guard(m);
-	f();
-}
-
-template <typename T>
-void safe_counter<T>::init(const T z)
-{
-	n = z;
-	i = 0;
-}
-
-template <typename T>
-void safe_counter<T>::increment()
-{
-	lock_guard<mutex> guard(m);
-	if (++i == n) cv.notify_one();
-}
-
-template <typename T>
-void safe_counter<T>::wait()
-{
-	unique_lock<mutex> lock(m);
-	if (i < n) cv.wait(lock);
-}
-
-template class safe_counter<size_t>;
-
-template <typename T>
-void safe_vector<T>::safe_push_back(const T x)
-{
-	lock_guard<mutex> guard(m);
-	this->push_back(x);
-	cv.notify_one();
-}
-
-template <typename T>
-T safe_vector<T>::safe_pop_back()
-{
-	unique_lock<mutex> lock(m);
-	if (this->empty()) cv.wait(lock);
-	const T x = this->back();
-	this->pop_back();
-	return x;
-}
-
-template class safe_vector<int>;

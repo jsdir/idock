@@ -6,9 +6,9 @@
 #include <boost/filesystem/operations.hpp>
 #include "cu_helper.h"
 #include "io_service_pool.hpp"
+#include "safe_class.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
-#include "utility.hpp"
 #include "random_forest.hpp"
 #include "log.hpp"
 #include "source.hpp"

@@ -1,6 +1,6 @@
 #include <iomanip>
 #include <cassert>
-#include "utility.hpp"
+#include "array.hpp"
 #include "atom.hpp"
 
 //! AutoDock4 atom type strings, e.g. H, HD, C, A.

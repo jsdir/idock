@@ -23,7 +23,10 @@
     <ClCompile Include="src\atom.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\utility.cpp">
+    <ClCompile Include="src\array.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\safe_class.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\random_forest.cpp">
@@ -61,7 +64,10 @@
     <ClInclude Include="src\receptor.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\utility.hpp">
+    <ClInclude Include="src\array.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\safe_class.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\random_forest.hpp">

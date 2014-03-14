@@ -1,6 +1,6 @@
 #include <iomanip>
 #include <numeric>
-#include "utility.hpp"
+#include "array.hpp"
 #include "ligand.hpp"
 
 void frame::output(boost::filesystem::ofstream& ofs) const

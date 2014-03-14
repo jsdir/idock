@@ -14,17 +14,19 @@
     <ProjectGuid>{1788CA7B-A0E5-68A6-AC5B-6E5A5C099836}</ProjectGuid>
   </PropertyGroup>
   <ItemGroup>
+    <ClInclude Include="src\array.hpp" />
     <ClInclude Include="src\atom.hpp" />
     <ClInclude Include="src\io_service_pool.hpp" />
     <ClInclude Include="src\kernel.hpp" />
     <ClInclude Include="src\ligand.hpp" />
     <ClInclude Include="src\log.hpp" />
     <ClInclude Include="src\random_forest.hpp" />
-    <ClInclude Include="src\scoring_function.hpp" />
     <ClInclude Include="src\receptor.hpp" />
-    <ClInclude Include="src\utility.hpp" />
+    <ClInclude Include="src\safe_class.hpp" />
+    <ClInclude Include="src\scoring_function.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\array.cpp" />
     <ClCompile Include="src\atom.cpp" />
     <ClCompile Include="src\io_service_pool.cpp" />
     <ClCompile Include="src\kernel.cpp" />
@@ -34,9 +36,9 @@
     <ClCompile Include="src\random_forest.cpp" />
     <ClCompile Include="src\random_forest_x.cpp" />
     <ClCompile Include="src\random_forest_y.cpp" />
-    <ClCompile Include="src\scoring_function.cpp" />
     <ClCompile Include="src\receptor.cpp" />
-    <ClCompile Include="src\utility.cpp" />
+    <ClCompile Include="src\safe_class.cpp" />
+    <ClCompile Include="src\scoring_function.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
