@@ -284,26 +284,26 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		return false;
 
 	// Initialize frame-wide conformational variables.
-	vector<array<double, 3>> origins(num_frames); //!< Origin coordinate, which is rotorY.
+	vector<array<double, 3>> orig(num_frames); //!< Origin coordinate, which is rotorY.
 	vector<array<double, 3>> axes(num_frames); //!< Vector pointing from rotor Y to rotor X.
-	vector<array<double, 4>> orientations_q(num_frames); //!< Orientation in the form of quaternion.
-	vector<array<double, 9>> orientations_m(num_frames); //!< Orientation in the form of 3x3 matrix.
-	vector<array<double, 3>> forces(num_frames); //!< Aggregated derivatives of heavy atoms.
-	vector<array<double, 3>> torques(num_frames); //! Torque of the force.
+	vector<array<double, 4>> oriq(num_frames); //!< Orientation in the form of quaternion.
+	vector<array<double, 9>> orim(num_frames); //!< Orientation in the form of 3x3 matrix.
+	vector<array<double, 3>> forc(num_frames); //!< Aggregated deri of heavy atoms.
+	vector<array<double, 3>> torq(num_frames); //!< Torque of the force.
 
 	// Initialize atom-wide conformational variables.
-	vector<array<double, 3>> coordinates(num_heavy_atoms); //!< Heavy atom coordinates.
-	vector<array<double, 3>> derivatives(num_heavy_atoms); //!< Heavy atom derivatives.
+	vector<array<double, 3>> coor(num_heavy_atoms); //!< Heavy atom coor.
+	vector<array<double, 3>> deri(num_heavy_atoms); //!< Heavy atom deri.
 
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
-	origins.front() = conf.position;
-	orientations_q.front() = conf.orientation;
-	orientations_m.front() = qtn4_to_mat3(conf.orientation);
+	orig.front() = conf.position;
+	oriq.front() = conf.orientation;
+	orim.front() = qtn4_to_mat3(conf.orientation);
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		coordinates[i] = origins.front() + orientations_m.front() * heavy_atoms[i].coordinate;
-		if (!rec.within(coordinates[i]))
+		coor[i] = orig.front() + orim.front() * heavy_atoms[i].coordinate;
+		if (!rec.within(coor[i]))
 			return false;
 	}
 
@@ -313,8 +313,8 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const frame& f = frames[k];
 
 		// Update origin.
-		origins[k] = origins[f.parent] + orientations_m[f.parent] * f.parent_rotorY_to_current_rotorY;
-		if (!rec.within(origins[k]))
+		orig[k] = orig[f.parent] + orim[f.parent] * f.parent_rotorY_to_current_rotorY;
+		if (!rec.within(orig[k]))
 			return false;
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
@@ -322,23 +322,23 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		{
 			assert(f.habegin + 1 == f.haend);
 			assert(f.habegin == f.rotorYidx);
-			coordinates[f.rotorYidx] = origins[k];
+			coor[f.rotorYidx] = orig[k];
 			continue;
 		}
 
 		// Update orientation.
 		assert(normalized(f.parent_rotorX_to_current_rotorY));
-		axes[k] = orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY;
+		axes[k] = orim[f.parent] * f.parent_rotorX_to_current_rotorY;
 		assert(normalized(axes[k]));
-		orientations_q[k] = vec4_to_qtn4(axes[k], conf.torsions[t++]) * orientations_q[f.parent];
-		assert(normalized(orientations_q[k]));
-		orientations_m[k] = qtn4_to_mat3(orientations_q[k]);
+		oriq[k] = vec4_to_qtn4(axes[k], conf.torsions[t++]) * oriq[f.parent];
+		assert(normalized(oriq[k]));
+		orim[k] = qtn4_to_mat3(oriq[k]);
 
 		// Update coordinates.
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			coordinates[i] = origins[k] + orientations_m[k] * heavy_atoms[i].coordinate;
-			if (!rec.within(coordinates[i]))
+			coor[i] = orig[k] + orim[k] * heavy_atoms[i].coordinate;
+			if (!rec.within(coor[i]))
 				return false;
 		}
 	}
@@ -354,7 +354,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	//			const frame& f2 = frames[k2];
 	//			for (size_t i2 = f2.habegin; i2 < f2.haend; ++i2)
 	//			{
-	//				if ((distance_sqr(coordinates[i1], coordinates[i2]) < sqr(heavy_atoms[i1].covalent_radius() + heavy_atoms[i2].covalent_radius())) && (!((k2 == f1.parent) && (i1 == f1.rotorYidx) && (i2 == f1.rotorXidx))))
+	//				if ((distance_sqr(coor[i1], coor[i2]) < sqr(heavy_atoms[i1].covalent_radius() + heavy_atoms[i2].covalent_radius())) && (!((k2 == f1.parent) && (i1 == f1.rotorYidx) && (i2 == f1.rotorXidx))))
 	//					return false;
 	//			}
 	//		}
@@ -368,8 +368,8 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const vector<double>& grid_map = rec.grid_maps[heavy_atoms[i].xs];
 		assert(grid_map.size());
 
-		// Find the index and fraction of the current coordinates.
-		const array<size_t, 3> index = rec.grid_index(coordinates[i]);
+		// Find the index and fraction of the current coor.
+		const array<size_t, 3> index = rec.grid_index(coor[i]);
 
 		// Assert the validity of index.
 		assert(index[0] < rec.num_grids[0]);
@@ -383,12 +383,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const double e000 = grid_map[rec.grid_index(array<size_t, 3>{x0, y0, z0})];
 
 		// The derivative of probe atoms can be precalculated at the cost of massive memory storage.
-		const double e100 = grid_map[rec.grid_index(array<size_t, 3>{x0 + 1, y0, z0    })];
-		const double e010 = grid_map[rec.grid_index(array<size_t, 3>{x0, y0 + 1, z0    })];
-		const double e001 = grid_map[rec.grid_index(array<size_t, 3>{x0, y0, z0 + 1})];
-		derivatives[i][0] = (e100 - e000) * rec.grid_granularity_inverse;
-		derivatives[i][1] = (e010 - e000) * rec.grid_granularity_inverse;
-		derivatives[i][2] = (e001 - e000) * rec.grid_granularity_inverse;
+		const double e100 = grid_map[rec.grid_index(array<size_t, 3>{x0 + 1, y0    , z0    })];
+		const double e010 = grid_map[rec.grid_index(array<size_t, 3>{x0    , y0 + 1, z0    })];
+		const double e001 = grid_map[rec.grid_index(array<size_t, 3>{x0    , y0    , z0 + 1})];
+		deri[i][0] = (e100 - e000) * rec.grid_granularity_inverse;
+		deri[i][1] = (e010 - e000) * rec.grid_granularity_inverse;
+		deri[i][2] = (e001 - e000) * rec.grid_granularity_inverse;
 
 		e += e000; // Aggregate the energy.
 	}
@@ -401,15 +401,15 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	for (size_t i = 0; i < num_interacting_pairs; ++i)
 	{
 		const interacting_pair& p = interacting_pairs[i];
-		const array<double, 3> r = coordinates[p.i1] - coordinates[p.i0];
+		const array<double, 3> r = coor[p.i1] - coor[p.i0];
 		const double r2 = norm_sqr(r);
 		if (r2 < scoring_function::cutoff_sqr)
 		{
 			const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
 			e += sf.e[p.type_pair_index][nsr2];
-			const array<double, 3> derivative = sf.d[p.type_pair_index][nsr2] * r;
-			derivatives[p.i0] -= derivative;
-			derivatives[p.i1] += derivative;
+			const array<double, 3> d = sf.d[p.type_pair_index][nsr2] * r;
+			deri[p.i0] -= d;
+			deri[p.i1] += d;
 		}
 	}
 
@@ -419,91 +419,91 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
 	for (size_t k = num_frames - 1, t = num_active_torsions; k > 0; --k)
 	{
-		const frame&  f = frames[k];
+		const frame& f = frames[k];
 
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			// The derivatives with respect to the position, orientation, and torsions
+			// The deri with respect to the position, orientation, and torsions
 			// would be the negative total force acting on the ligand,
 			// the negative total torque, and the negative torque projections, respectively,
 			// where the projections refer to the torque applied to the branch moved by the torsion,
 			// projected on its rotation axis.
-			forces[k]  += derivatives[i];
-			torques[k] += cross_product(coordinates[i] - origins[k], derivatives[i]);
+			forc[k] += deri[i];
+			torq[k] += cross_product(coor[i] - orig[k], deri[i]);
 		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
-		forces[f.parent]  += forces[k];
-		torques[f.parent] += torques[k] + cross_product(origins[k] - origins[f.parent], forces[k]);
+		forc[f.parent] += forc[k];
+		torq[f.parent] += torq[k] + cross_product(orig[k] - orig[f.parent], forc[k]);
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
 
 		// Save the torsion.
-		g[6 + (--t)] = torques[k] * axes[k]; // dot product
+		g[6 + (--t)] = torq[k] * axes[k]; // dot product
 	}
 
 	// Calculate and aggregate the force and torque of ROOT frame.
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		forces.front()  += derivatives[i];
-		torques.front() += cross_product(coordinates[i] - origins.front(), derivatives[i]);
+		forc.front() += deri[i];
+		torq.front() += cross_product(coor[i] - orig.front(), deri[i]);
 	}
 
 	// Save the aggregated force and torque to g.
-	g[0] = forces.front()[0];
-	g[1] = forces.front()[1];
-	g[2] = forces.front()[2];
-	g[3] = torques.front()[0];
-	g[4] = torques.front()[1];
-	g[5] = torques.front()[2];
+	g[0] = forc.front()[0];
+	g[1] = forc.front()[1];
+	g[2] = forc.front()[2];
+	g[3] = torq.front()[0];
+	g[4] = torq.front()[1];
+	g[5] = torq.front()[2];
 
 	return true;
 }
 
 result ligand::compose_result(const double e, const double f, const conformation& conf) const
 {
-	vector<array<double, 3>> origins(num_frames);
-	vector<array<double, 4>> orientations_q(num_frames);
-	vector<array<double, 9>> orientations_m(num_frames);
+	vector<array<double, 3>> orig(num_frames);
+	vector<array<double, 4>> oriq(num_frames);
+	vector<array<double, 9>> orim(num_frames);
 	vector<array<double, 3>> heavy_atoms(num_heavy_atoms);
 	vector<array<double, 3>> hydrogens(num_hydrogens);
 
-	origins.front() = conf.position;
-	orientations_q.front() = conf.orientation;
-	orientations_m.front() = qtn4_to_mat3(conf.orientation);
+	orig.front() = conf.position;
+	oriq.front() = conf.orientation;
+	orim.front() = qtn4_to_mat3(conf.orientation);
 
-	// Calculate the coordinates of both heavy atoms and hydrogens of ROOT frame.
+	// Calculate the coor of both heavy atoms and hydrogens of ROOT frame.
 	const frame& root = frames.front();
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		heavy_atoms[i] = origins.front() + orientations_m.front() * this->heavy_atoms[i].coordinate;
+		heavy_atoms[i] = orig.front() + orim.front() * this->heavy_atoms[i].coordinate;
 	}
 	for (size_t i = root.hybegin; i < root.hyend; ++i)
 	{
-		hydrogens[i]   = origins.front() + orientations_m.front() * this->hydrogens[i].coordinate;
+		hydrogens[i]   = orig.front() + orim.front() * this->hydrogens[i].coordinate;
 	}
 
-	// Calculate the coordinates of both heavy atoms and hydrogens of BRANCH frames.
+	// Calculate the coor of both heavy atoms and hydrogens of BRANCH frames.
 	for (size_t k = 1, t = 0; k < num_frames; ++k)
 	{
 		const frame& f = frames[k];
 
 		// Update origin.
-		origins[k] = origins[f.parent] + orientations_m[f.parent] * f.parent_rotorY_to_current_rotorY;
+		orig[k] = orig[f.parent] + orim[f.parent] * f.parent_rotorY_to_current_rotorY;
 
 		// Update orientation.
-		orientations_q[k] = vec4_to_qtn4(orientations_m[f.parent] * f.parent_rotorX_to_current_rotorY, f.active ? conf.torsions[t++] : 0) * orientations_q[f.parent];
-		orientations_m[k] = qtn4_to_mat3(orientations_q[k]);
+		oriq[k] = vec4_to_qtn4(orim[f.parent] * f.parent_rotorX_to_current_rotorY, f.active ? conf.torsions[t++] : 0) * oriq[f.parent];
+		orim[k] = qtn4_to_mat3(oriq[k]);
 
-		// Update coordinates.
+		// Update coor.
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			heavy_atoms[i] = origins[k] + orientations_m[k] * this->heavy_atoms[i].coordinate;
+			heavy_atoms[i] = orig[k] + orim[k] * this->heavy_atoms[i].coordinate;
 		}
 		for (size_t i = f.hybegin; i < f.hyend; ++i)
 		{
-			hydrogens[i]   = origins[k] + orientations_m[k] * this->hydrogens[i].coordinate;
+			hydrogens[i]   = orig[k] + orim[k] * this->hydrogens[i].coordinate;
 		}
 	}
 
