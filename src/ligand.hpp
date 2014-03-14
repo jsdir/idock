@@ -5,7 +5,6 @@
 #include <boost/filesystem/path.hpp>
 #include <boost/optional.hpp>
 #include "atom.hpp"
-#include "matrix.hpp"
 #include "scoring_function.hpp"
 #include "result.hpp"
 #include "receptor.hpp"

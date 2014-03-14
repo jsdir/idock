@@ -1,6 +1,7 @@
 #include <random>
 #include <iomanip>
 #include <boost/filesystem/fstream.hpp>
+#include "matrix.hpp"
 #include "ligand.hpp"
 
 ligand::ligand(const path& p) : xs{}, num_active_torsions(0)

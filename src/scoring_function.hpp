@@ -4,7 +4,6 @@
 
 #include <vector>
 #include "atom.hpp"
-#include "matrix.hpp"
 
 //! Represents a scoring function.
 class scoring_function

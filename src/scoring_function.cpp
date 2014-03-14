@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cassert>
+#include "matrix.hpp"
 #include "scoring_function.hpp"
 
 const double scoring_function::cutoff_sqr = cutoff * cutoff;

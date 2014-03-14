@@ -2,6 +2,7 @@
 #include <cmath>
 #include <cassert>
 #include <boost/filesystem/fstream.hpp>
+#include "matrix.hpp"
 #include "scoring_function.hpp"
 #include "array.hpp"
 #include "receptor.hpp"

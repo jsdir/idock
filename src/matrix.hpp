@@ -2,17 +2,17 @@
 #ifndef IDOCK_MATRIX_HPP
 #define IDOCK_MATRIX_HPP
 
-//! Returns the flattened 1D index of a 2D index (i, j) where j is the lowest dimension.
-inline size_t mr(const size_t i, const size_t j)
+//! Returns the flattened 1D index of a triangular 2D index (x, y) where x is the lowest dimension.
+inline size_t mr(const size_t x, const size_t y)
 {
-	assert(i <= j);
-	return i + j * (j + 1) / 2;
+	assert(x <= y);
+	return (y * (y + 1) >> 1) + x;
 }
 
-//! Returns the flattened 1D index of a 2D index (i, j) where either i or j is the lowest dimension.
-inline size_t mp(const size_t i, const size_t j)
+//! Returns the flattened 1D index of a triangular 2D index (x, y) where either x or y is the lowest dimension.
+inline size_t mp(const size_t x, const size_t y)
 {
-	return (i <= j) ? mr(i, j) : mr(j, i);
+	return x <= y ? mr(x, y) : mr(y, x);
 }
 
 #endif
