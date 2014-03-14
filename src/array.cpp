@@ -22,11 +22,21 @@ bool zero(const array<double, 3>& a)
 //! Returns the square norm.
 double norm_sqr(const array<double, 3>& a)
 {
-	return a[0]*a[0] + a[1]*a[1] + a[2]*a[2];
+	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
+}
+
+double norm_sqr(const array<double, 4>& a)
+{
+	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
 }
 
 //! Returns the norm.
 double norm(const array<double, 3>& a)
+{
+	return sqrt(norm_sqr(a));
+}
+
+double norm(const array<double, 4>& a)
 {
 	return sqrt(norm_sqr(a));
 }
@@ -37,76 +47,33 @@ bool normalized(const array<double, 3>& a)
 	return equal(norm(a), 1);
 }
 
-//! Returns the dot product of the current vector and the given vector.
-double operator*(const array<double, 3>& t, const array<double, 3>& v)
+bool normalized(const array<double, 4>& a)
 {
-	return t[0] * v[0] + t[1] * v[1] + t[2] * v[2];
-}
-
-//! Returns the result of pairwise multiplication of the current vector and the given vector.
-array<double, 3> operator*(const array<double, 3>& t, const array<size_t, 3>& v)
-{
-	return
-	{
-		t[0] * v[0],
-		t[1] * v[1],
-		t[2] * v[2],
-	};
-}
-
-//! Returns the result of pairwise addition of the current vector and the given vector.
-array<double, 3> operator+(const array<double, 3>& t, const array<double, 3>& v)
-{
-	return
-	{
-		t[0] + v[0],
-		t[1] + v[1],
-		t[2] + v[2],
-	};
-}
-
-//! Returns the result of pairwise subtraction of the current vector and the given vector.
-array<double, 3> operator-(const array<double, 3>& t, const array<double, 3>& v)
-{
-	return
-	{
-		t[0] - v[0],
-		t[1] - v[1],
-		t[2] - v[2],
-	};
-}
-
-//! Pairwise add a given vector to the current vector.
-void operator+=(array<double, 3>& t, const array<double, 3>& v)
-{
-	t[0] += v[0];
-	t[1] += v[1];
-	t[2] += v[2];
-}
-
-//! Pairwise subtract a given vector from the current vector.
-void operator-=(array<double, 3>& t, const array<double, 3>& v)
-{
-	t[0] -= v[0];
-	t[1] -= v[1];
-	t[2] -= v[2];
-}
-
-//! Pairwise multiply a constant to the current vector.
-array<double, 3> operator*(const double s, const array<double, 3>& v)
-{
-	return
-	{
-		s * v[0],
-		s * v[1],
-		s * v[2],
-	};
+	return equal(norm(a), 1);
 }
 
 //! Returns the normalized vector of a vector.
-array<double, 3> normalize(const array<double, 3>& v)
+array<double, 3> normalize(const array<double, 3>& a)
 {
-	return (1 / norm(v)) * v;
+	return (1 / norm(a)) * a;
+}
+
+array<double, 4> normalize(const array<double, 4>& a)
+{
+	const auto norm_inv = 1 / norm(a);
+	return
+	{
+		norm_inv * a[0],
+		norm_inv * a[1],
+		norm_inv * a[2],
+		norm_inv * a[3],
+	};
+}
+
+//! Returns the dot product of the two vectors.
+double operator*(const array<double, 3>& a, const array<double, 3>& b)
+{
+	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
 //! Returns the cross product of two vectors.
@@ -114,19 +81,76 @@ array<double, 3> cross_product(const array<double, 3>& a, const array<double, 3>
 {
 	return
 	{
-		a[1]*b[2] - a[2]*b[1],
-		a[2]*b[0] - a[0]*b[2],
-		a[0]*b[1] - a[1]*b[0],
+		a[1] * b[2] - a[2] * b[1],
+		a[2] * b[0] - a[0] * b[2],
+		a[0] * b[1] - a[1] * b[0],
 	};
+}
+
+//! Pairwise multiply a constant to the current vector.
+array<double, 3> operator*(const double f, const array<double, 3>& a)
+{
+	return
+	{
+		f * a[0],
+		f * a[1],
+		f * a[2],
+	};
+}
+
+//! Returns the result of pairwise multiplication of two vectors.
+array<double, 3> operator*(const array<double, 3>& a, const array<size_t, 3>& b)
+{
+	return
+	{
+		a[0] * b[0],
+		a[1] * b[1],
+		a[2] * b[2],
+	};
+}
+
+//! Returns the result of pairwise addition of two vectors.
+array<double, 3> operator+(const array<double, 3>& a, const array<double, 3>& b)
+{
+	return
+	{
+		a[0] + b[0],
+		a[1] + b[1],
+		a[2] + b[2],
+	};
+}
+
+//! Returns the result of pairwise subtraction of two vectors.
+array<double, 3> operator-(const array<double, 3>& a, const array<double, 3>& b)
+{
+	return
+	{
+		a[0] - b[0],
+		a[1] - b[1],
+		a[2] - b[2],
+	};
+}
+
+//! Pairwise add a given vector to the current vector.
+void operator+=(array<double, 3>& a, const array<double, 3>& b)
+{
+	a[0] += b[0];
+	a[1] += b[1];
+	a[2] += b[2];
+}
+
+//! Pairwise subtract a given vector from the current vector.
+void operator-=(array<double, 3>& a, const array<double, 3>& b)
+{
+	a[0] -= b[0];
+	a[1] -= b[1];
+	a[2] -= b[2];
 }
 
 //! Returns the square distance between two vectors.
 double distance_sqr(const array<double, 3>& a, const array<double, 3>& b)
 {
-	const auto d0 = a[0] - b[0];
-	const auto d1 = a[1] - b[1];
-	const auto d2 = a[2] - b[2];
-	return d0*d0 + d1*d1 + d2*d2;
+	return norm_sqr(a - b);
 }
 
 //! Returns the accumulated square distance between two vectors of vectors.
@@ -141,17 +165,6 @@ double distance_sqr(const vector<array<double, 3>>& a, const vector<array<double
 		sum += distance_sqr(a[i], b[i]);
 	}
 	return sum;
-}
-
-//! Transforms a vector by a 3x3 matrix.
-array<double, 3> operator*(const array<double, 9>& m, const array<double, 3>& v)
-{
-	return
-	{
-		m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
-		m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
-		m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
-	};
 }
 
 array<double, 4> vec4_to_qtn4(const array<double, 3>& axis, const double angle)
@@ -183,33 +196,6 @@ array<double, 4> vec3_to_qtn4(const array<double, 3>& rotation)
 	}
 }
 
-double norm_sqr(const array<double, 4>& a)
-{
-	return a[0]*a[0] + a[1]*a[1] + a[2]*a[2] + a[3]*a[3];
-}
-
-double norm(const array<double, 4>& a)
-{
-	return sqrt(norm_sqr(a));
-}
-
-bool normalized(const array<double, 4>& a)
-{
-	return equal(norm(a), 1);
-}
-
-array<double, 4> normalize(const array<double, 4>& a)
-{
-	const auto norm_inv = 1 / norm(a);
-	return
-	{
-		norm_inv * a[0],
-		norm_inv * a[1],
-		norm_inv * a[2],
-		norm_inv * a[3],
-	};
-}
-
 array<double, 9> qtn4_to_mat3(const array<double, 4>& a)
 {
 	assert(normalized(a));
@@ -231,6 +217,17 @@ array<double, 9> qtn4_to_mat3(const array<double, 4>& a)
 		ww+xx-yy-zz, 2*(-wz+xy), 2*(wy+xz),
 		2*(wz+xy), ww-xx+yy-zz, 2*(-wx+yz),
 		2*(-wy+xz), 2*(wx+yz), ww-xx-yy+zz,
+	};
+}
+
+//! Transforms a vector by a 3x3 matrix.
+array<double, 3> operator*(const array<double, 9>& m, const array<double, 3>& v)
+{
+	return
+	{
+		m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
+		m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
+		m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
 	};
 }
 
