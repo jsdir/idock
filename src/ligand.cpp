@@ -429,12 +429,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 			// where the projections refer to the torque applied to the branch moved by the torsion,
 			// projected on its rotation axis.
 			forc[k] += deri[i];
-			torq[k] += cross_product(coor[i] - orig[k], deri[i]);
+			torq[k] += cross(coor[i] - orig[k], deri[i]);
 		}
 
 		// Aggregate the force and torque of current frame to its parent frame.
 		forc[f.parent] += forc[k];
-		torq[f.parent] += torq[k] + cross_product(orig[k] - orig[f.parent], forc[k]);
+		torq[f.parent] += torq[k] + cross(orig[k] - orig[f.parent], forc[k]);
 
 		// If the current BRANCH frame does not have an active torsion, skip it.
 		if (!f.active) continue;
@@ -447,7 +447,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
 		forc.front() += deri[i];
-		torq.front() += cross_product(coor[i] - orig.front(), deri[i]);
+		torq.front() += cross(coor[i] - orig.front(), deri[i]);
 	}
 
 	// Save the aggregated force and torque to g.

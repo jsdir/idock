@@ -77,7 +77,7 @@ double operator*(const array<double, 3>& a, const array<double, 3>& b)
 }
 
 //! Returns the cross product of two vectors.
-array<double, 3> cross_product(const array<double, 3>& a, const array<double, 3>& b)
+array<double, 3> cross(const array<double, 3>& a, const array<double, 3>& b)
 {
 	return
 	{

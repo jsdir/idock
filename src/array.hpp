@@ -18,7 +18,7 @@ array<double, 3> normalize(const array<double, 3>& v);
 array<double, 4> normalize(const array<double, 4>& a);
 
 double operator*(const array<double, 3>& a, const array<double, 3>& b);
-array<double, 3> cross_product(const array<double, 3>& a, const array<double, 3>& b);
+array<double, 3> cross(const array<double, 3>& a, const array<double, 3>& b);
 array<double, 3> operator*(const double f, const array<double, 3>& a);
 array<double, 3> operator*(const array<double, 3>& a, const array<size_t, 3>& b);
 array<double, 3> operator+(const array<double, 3>& a, const array<double, 3>& b);
