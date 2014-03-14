@@ -6,7 +6,6 @@
 #include <vector>
 using namespace std;
 
-const array<double, 3> zero3{0, 0, 0}; //!< Constant vector with all the 3 elements of zero.
 const array<double, 4> qtn4id{1, 0, 0, 0}; //!< Identity quaternion.
 
 double norm_sqr(const array<double, 3>& a);
@@ -36,6 +35,6 @@ array<double, 4> normalize(const array<double, 4>& a);
 array<double, 9> qtn4_to_mat3(const array<double, 4>& a);
 
 //! Returns the product of two quaternions.
-array<double, 4> operator*(const array<double, 4>& q1, const array<double, 4>& q2);
+array<double, 4> operator*(const array<double, 4>& a, const array<double, 4>& b);
 
 #endif

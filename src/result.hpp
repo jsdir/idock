@@ -15,7 +15,7 @@ public:
 	vector<double> torsions; //!< Ligand torsions.
 
 	//! Constructs an initial conformation.
-	explicit conformation(const size_t num_active_torsions) : position(zero3), orientation(qtn4id), torsions(num_active_torsions, 0) {}
+	explicit conformation(const size_t num_active_torsions) : position{}, orientation(qtn4id), torsions(num_active_torsions, 0) {}
 };
 
 //! Represents a transition from one conformation to another.

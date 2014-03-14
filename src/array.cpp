@@ -235,13 +235,13 @@ array<double, 9> qtn4_to_mat3(const array<double, 4>& a)
 }
 
 //! Returns the product of two quaternions.
-array<double, 4> operator*(const array<double, 4>& q1, const array<double, 4>& q2)
+array<double, 4> operator*(const array<double, 4>& a, const array<double, 4>& b)
 {
-    return
+	return
 	{
-		q1[0] * q2[0] - q1[1] * q2[1] - q1[2] * q2[2] - q1[3] * q2[3],
-		q1[0] * q2[1] + q1[1] * q2[0] + q1[2] * q2[3] - q1[3] * q2[2],
-		q1[0] * q2[2] - q1[1] * q2[3] + q1[2] * q2[0] + q1[3] * q2[1],
-		q1[0] * q2[3] + q1[1] * q2[2] - q1[2] * q2[1] + q1[3] * q2[0],
+		a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
+		a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
+		a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
+		a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0],
 	};
 }
