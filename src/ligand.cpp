@@ -417,7 +417,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	if (e >= e_upper_bound) return false;
 
 	// Calculate and aggregate the force and torque of BRANCH frames to their parent frame.
-	for (size_t k = num_frames - 1, t = num_active_torsions; k > 0; --k)
+	for (size_t k = num_frames - 1, t = 6 + num_active_torsions; k > 0; --k)
 	{
 		const frame& f = frames[k];
 
@@ -440,7 +440,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		if (!f.active) continue;
 
 		// Save the torsion.
-		g[6 + (--t)] = torq[k] * axes[k]; // dot product
+		g[--t] = torq[k] * axes[k]; // dot product
 	}
 
 	// Calculate and aggregate the force and torque of ROOT frame.
@@ -559,23 +559,23 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const
 {
 	// Define constants.
+	static const double pi = static_cast<double>(3.1415926535897932); //!< Pi.
+	static const size_t num_alphas = 5; //!< Number of alpha values for determining step size in BFGS
 	const size_t num_mc_iterations = 100 * num_heavy_atoms; //!< The number of iterations correlates to the complexity of ligand.
 	const size_t num_entities = 2 + num_active_torsions; // Number of entities to mutate.
 	const size_t num_variables = 6 + num_active_torsions; // Number of variables to optimize.
 	const double e_upper_bound = static_cast<double>(4 * num_heavy_atoms); // A conformation will be droped if its free energy is not better than e_upper_bound.
 	const double required_square_error = static_cast<double>(1 * num_heavy_atoms); // Ligands with RMSD < 1.0 will be clustered into the same cluster.
-	const double pi = static_cast<double>(3.1415926535897932); //!< Pi.
-	const size_t num_alphas = 5; //!< Number of alpha values for determining step size in BFGS
 
 	mt19937_64 rng(seed);
-	uniform_real_distribution<double> uniform_01_gen(0, 1);
-	uniform_real_distribution<double> uniform_11_gen(-1, 1);
-	uniform_real_distribution<double> uniform_pi_gen(-pi, pi);
-	uniform_real_distribution<double> uniform_box0_gen(rec.corner0[0], rec.corner1[0]);
-	uniform_real_distribution<double> uniform_box1_gen(rec.corner0[1], rec.corner1[1]);
-	uniform_real_distribution<double> uniform_box2_gen(rec.corner0[2], rec.corner1[2]);
-	uniform_int_distribution<size_t> uniform_entity_gen(0, num_entities - 1);
-	normal_distribution<double> normal_01_gen(0, 1);
+	uniform_real_distribution<double> u01(0, 1);
+	uniform_real_distribution<double> u11(-1, 1);
+	uniform_real_distribution<double> upi(-pi, pi);
+	uniform_real_distribution<double> ub0(rec.corner0[0], rec.corner1[0]);
+	uniform_real_distribution<double> ub1(rec.corner0[1], rec.corner1[1]);
+	uniform_real_distribution<double> ub2(rec.corner0[2], rec.corner1[2]);
+	uniform_int_distribution<size_t> uen(0, num_entities - 1);
+	normal_distribution<double> n01(0, 1);
 
 	// Generate an initial random conformation c0, and evaluate it.
 	conformation c0(num_active_torsions);
@@ -585,11 +585,11 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 	for (size_t i = 0; (i < 1000) && (!valid_conformation); ++i)
 	{
 		// Randomize conformation c0.
-		c0.position = array<double, 3>{uniform_box0_gen(rng), uniform_box1_gen(rng), uniform_box2_gen(rng)};
-		c0.orientation = normalize(array<double, 4>{normal_01_gen(rng), normal_01_gen(rng), normal_01_gen(rng), normal_01_gen(rng)});
+		c0.position = array<double, 3>{ub0(rng), ub1(rng), ub2(rng)};
+		c0.orientation = normalize(array<double, 4>{n01(rng), n01(rng), n01(rng), n01(rng)});
 		for (size_t i = 0; i < num_active_torsions; ++i)
 		{
-			c0.torsions[i] = uniform_pi_gen(rng);
+			c0.torsions[i] = upi(rng);
 		}
 		valid_conformation = evaluate(c0, sf, rec, e_upper_bound, e0, f0, g0);
 	}
@@ -608,12 +608,12 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 	// An easier option that works fine in practice is to use a scalar multiple of the identity matrix,
 	// where the scaling factor is chosen to be in the range of the eigenvalues of the true Hessian.
 	// See N&R for a recipe to find this initializer.
-	vector<double> identity_hessian(num_variables * (num_variables + 1) >> 1, 0); // Symmetric triangular matrix.
+	vector<double> h1(num_variables * (num_variables + 1) >> 1, 0); // Symmetric triangular matrix.
 	for (size_t i = 0; i < num_variables; ++i)
-		identity_hessian[mr(i, i)] = 1;
+		h1[mr(i, i)] = 1;
 
 	// Initialize necessary variables for updating the Hessian matrix h.
-	vector<double> h(identity_hessian);
+	vector<double> h(h1);
 	change y(num_active_torsions); // y = g2 - g1.
 	change mhy(num_active_torsions); // mhy = -h * y.
 	double yhy, yp, ryp, pco;
@@ -630,26 +630,26 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 			c1 = c0;
 
 			// Determine an entity to mutate.
-			mutation_entity = uniform_entity_gen(rng);
+			mutation_entity = uen(rng);
 			assert(mutation_entity < num_entities);
 			if (mutation_entity < num_active_torsions) // Mutate an active torsion.
 			{
-				c1.torsions[mutation_entity] = uniform_pi_gen(rng);
+				c1.torsions[mutation_entity] = upi(rng);
 			}
 			else if (mutation_entity == num_active_torsions) // Mutate position.
 			{
-				c1.position += array<double, 3>{uniform_11_gen(rng), uniform_11_gen(rng), uniform_11_gen(rng)};
+				c1.position += array<double, 3>{u11(rng), u11(rng), u11(rng)};
 			}
 			else // Mutate orientation.
 			{
-				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * array<double, 3>{uniform_11_gen(rng), uniform_11_gen(rng), uniform_11_gen(rng)}) * c1.orientation;
+				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * array<double, 3>{u11(rng), u11(rng), u11(rng)}) * c1.orientation;
 				assert(normalized(c1.orientation));
 			}
 			++num_mutations;
 		} while (!evaluate(c1, sf, rec, e_upper_bound, e1, f1, g1));
 
 		// Initialize the Hessian matrix to identity.
-		h = identity_hessian;
+		h = h1;
 
 		// Given the mutated conformation c1, use BFGS to find a local minimum.
 		// The conformation of the local minimum is saved to c2, and its derivative is saved to g2.
@@ -726,10 +726,10 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 			ryp = 1 / yp;
 			pco = ryp * (ryp * yhy + alpha);
 			for (size_t i = 0; i < num_variables; ++i)
-				for (size_t j = i; j < num_variables; ++j) // includes i
-				{
-					h[mr(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
-				}
+			for (size_t j = i; j < num_variables; ++j) // includes i
+			{
+				h[mr(i, j)] += ryp * (mhy[i] * p[j] + mhy[j] * p[i]) + pco * p[i] * p[j];
+			}
 
 			// Move to the next iteration.
 			c1 = c2;
@@ -740,7 +740,7 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 
 		// Accept c1 according to Metropolis criteria.
 		const double delta = e0 - e1;
-		if ((delta > 0) || (uniform_01_gen(rng) < exp(delta)))
+		if (delta > 0 || u01(rng) < exp(delta))
 		{
 			// best_e is the best energy of all the conformations in the container.
 			// e1 will be saved if and only if it is even better than the best one.
