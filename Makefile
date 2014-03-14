@@ -3,13 +3,13 @@ NVCC=nvcc -use_fast_math
 
 all: bin/idock_cp bin/idock_cu bin/idock_cl src/kernel.fatbin
 
-bin/idock_cp: obj/utility.o obj/io_service_pool.o obj/scoring_function.o obj/atom.o obj/receptor.o obj/ligand.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/log.o obj/main_cp.o obj/kernel.o
+bin/idock_cp: obj/io_service_pool.o obj/safe_class.o obj/array.o obj/scoring_function.o obj/atom.o obj/receptor.o obj/ligand.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/log.o obj/main_cp.o obj/kernel.o
 	$(CC) -o $@ $^ -pthread -L${BOOST_ROOT}/lib -lboost_system -lboost_program_options -lboost_filesystem
 
-bin/idock_cu: obj/utility.o obj/io_service_pool.o obj/scoring_function.o obj/atom.o obj/receptor.o obj/ligand.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/log.o obj/main_cu.o obj/source_cu.o
+bin/idock_cu: obj/io_service_pool.o obj/safe_class.o obj/array.o obj/scoring_function.o obj/atom.o obj/receptor.o obj/ligand.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/log.o obj/main_cu.o obj/source_cu.o
 	$(CC) -o $@ $^ -pthread -L${BOOST_ROOT}/lib -lboost_system -lboost_program_options -lboost_filesystem -L${CUDA_ROOT}/lib64 -lcuda -lcurand
 
-bin/idock_cl: obj/utility.o obj/io_service_pool.o obj/scoring_function.o obj/atom.o obj/receptor.o obj/ligand.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/log.o obj/main_cl.o obj/source_cl.o
+bin/idock_cl: obj/io_service_pool.o obj/safe_class.o obj/array.o obj/scoring_function.o obj/atom.o obj/receptor.o obj/ligand.o obj/random_forest.o obj/random_forest_x.o obj/random_forest_y.o obj/log.o obj/main_cl.o obj/source_cl.o
 	$(CC) -o $@ $^ -pthread -L${BOOST_ROOT}/lib -lboost_system -lboost_program_options -lboost_filesystem -L${ICD_ROOT}/bin -L${AMDAPPSDKROOT}/lib/x86_64 -L${INTELOCLSDKROOT}/lib64 -lOpenCL
 
 obj/main_cu.o: src/main_cu.cpp
