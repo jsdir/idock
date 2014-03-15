@@ -104,7 +104,7 @@ void tree::clear()
 	}
 }
 
-forest::forest(const size_t nt, const size_t seed) : vector<tree>(nt), rng(seed), uniform_01(0, 1), u01_s([&]()
+forest::forest(const size_t nt, const size_t seed) : vector<tree>(nt), nt_inv(1.0 / nt), rng(seed), uniform_01(0, 1), u01_s([&]()
 {
 	lock_guard<mutex> guard(m);
 	return uniform_01(rng);
@@ -119,7 +119,7 @@ double forest::operator()(const array<double, tree::nv>& x) const
 	{
 		y += t(x);
 	}
-	return y /= size();
+	return y *= nt_inv;
 }
 
 void forest::clear()

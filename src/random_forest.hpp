@@ -59,6 +59,7 @@ public:
 	//! Returns a random value from uniform distribution in [0, 1] in a thread safe manner.
 	const function<double()> u01_s;
 private:
+	double nt_inv; //!< Inverse of the number of trees.
 	mt19937_64 rng;
 	uniform_real_distribution<double> uniform_01;
 	mutable mutex m;
