@@ -2,6 +2,8 @@
 #ifndef IDOCK_MATRIX_HPP
 #define IDOCK_MATRIX_HPP
 
+using namespace std;
+
 //! Returns the flattened 1D index of a triangular 2D index (x, y) where x is the lowest dimension.
 inline size_t mr(const size_t x, const size_t y)
 {
