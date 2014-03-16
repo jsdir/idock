@@ -111,13 +111,50 @@ const array<size_t, atom::n> atom::ad_to_xs =
 	14, // 30 = Cs -> Met_D = 14, Metal, hydrogen bond donor.
 };
 
+//! Mapping from AutoDock4 atom types to RF-Score atom types.
+const array<size_t, atom::n> atom::ad_to_rf =
+{
+	n, //  0 = H  -> dummy
+	n, //  1 = HD -> dummy
+	0, //  2 = C  -> C  = 0
+	0, //  3 = A  -> C  = 0
+	1, //  4 = N  -> N  = 1
+	1, //  5 = NA -> N  = 1
+	2, //  6 = OA -> O  = 2
+	3, //  7 = S  -> S  = 3
+	3, //  8 = SA -> S  = 3
+	n, //  9 = Se -> dummy
+	4, // 10 = P  -> P  = 4
+	5, // 11 = F  -> F  = 5
+	6, // 12 = Cl -> Cl = 6
+	7, // 13 = Br -> Br = 7
+	8, // 14 = I  -> I  = 8
+	n, // 15 = Zn -> dummy
+	n, // 16 = Fe -> dummy
+	n, // 17 = Mg -> dummy
+	n, // 18 = Ca -> dummy
+	n, // 19 = Mn -> dummy
+	n, // 20 = Cu -> dummy
+	n, // 21 = Na -> dummy
+	n, // 22 = K  -> dummy
+	n, // 23 = Hg -> dummy
+	n, // 24 = Ni -> dummy
+	n, // 25 = Co -> dummy
+	n, // 26 = Cd -> dummy
+	n, // 27 = As -> dummy
+	n, // 28 = Sr -> dummy
+	n, // 29 = U  -> dummy
+	n, // 30 = Cs -> dummy
+};
+
 //! Constructs an atom from an ATOM/HETATM line in PDBQT format.
 atom::atom(const string& line) :
 	serial(stoul(line.substr(6, 5))),
 	name(line.substr(12, 4)),
 	coordinate({stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))}),
 	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
-	xs(ad_to_xs[ad])
+	xs(ad_to_xs[ad]),
+	rf(ad_to_rf[ad])
 {
 }
 
@@ -125,6 +162,18 @@ atom::atom(const string& line) :
 bool atom::ad_unsupported() const
 {
 	return ad == n;
+}
+
+//! Returns true if the XScore atom type is not supported.
+bool atom::xs_unsupported() const
+{
+	return xs == n;
+}
+
+//! Returns true if the RF-Score atom type is not supported.
+bool atom::rf_unsupported() const
+{
+	return rf == n;
 }
 
 //! Returns true if the atom is a nonpolar hydrogen atom.

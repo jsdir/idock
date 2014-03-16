@@ -14,18 +14,26 @@ private:
 	static const array<string, n> ad_strings; //!< AutoDock4 atom type strings, e.g. H, HD, C, A.
 	static const array<double, n> ad_covalent_radii; //!< Covalent radii of AutoDock4 atom types.
 	static const array<size_t, n> ad_to_xs; //!< AutoDock4 to XScore atom type conversion.
+	static const array<size_t, n> ad_to_rf; //!< AutoDock4 to RF-Score atom type conversion.
 public:
 	size_t serial; //!< Serial number.
 	string name; //!< Atom name;
 	array<double, 3> coordinate; //!< 3D coordinate.
 	size_t ad; //!< AutoDock4 atom type.
 	size_t xs; //!< XScore atom type.
+	size_t rf; //!< RF-Score atom type.
 
 	//! Constructs an atom from an ATOM/HETATM line in PDBQT format.
 	explicit atom(const string& line);
 
 	//! Returns true if the AutoDock4 atom type is not supported.
 	bool ad_unsupported() const;
+
+	//! Returns true if the XScore atom type is not supported.
+	bool xs_unsupported() const;
+
+	//! Returns true if the RF-Score atom type is not supported.
+	bool rf_unsupported() const;
 
 	//! Returns true if the atom is nonpolar hydrogen.
 	bool is_nonpolar_hydrogen() const;
