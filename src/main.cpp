@@ -229,7 +229,7 @@ int main(int argc, char* argv[])
 	{
 		io.post([&, i]()
 		{
-			f[i].train(5, f.u01_s);
+			f[i].train(4, f.u01_s);
 			cnt.increment();
 		});
 	}
