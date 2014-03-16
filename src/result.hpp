@@ -46,10 +46,9 @@ public:
 	}
 };
 
-// TODO: Do not inline large functions.
 // TODO: Consider using double linked list std::list<> to store results because of frequent insertions and deletions.
 //! Clusters a result into an existing result set with a minimum RMSD requirement.
-inline void add_to_result_container(ptr_vector<result>& results, result&& r, const double required_square_error)
+static void add_to_result_container(ptr_vector<result>& results, result&& r, const double required_square_error)
 {
 	// If this is the first result, simply save it.
 	if (results.empty())
