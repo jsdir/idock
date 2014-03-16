@@ -518,7 +518,6 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 	const size_t num_lines = lines.size();
 
 	// Dump binding conformations to the output ligand file.
-	using namespace std;
 	boost::filesystem::ofstream ofs(output_ligand_path); // Dumping starts. Open the file stream as late as possible.
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
