@@ -238,7 +238,7 @@ int main(int argc, char* argv[])
 
 	// Perform docking for each file in the ligand folder.
 	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand" << endl
-	     << "   Index        Ligand    pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
+	     << "   Index        Ligand Energy 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
 	log_engine log;
 	for (directory_iterator dir_iter(input_folder_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
