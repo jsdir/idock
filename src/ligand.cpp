@@ -520,9 +520,9 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 	boost::filesystem::ofstream ofs(output_ligand_path); // Dumping starts. Open the file stream as late as possible.
 	ofs.setf(ios::fixed, ios::floatfield);
 	ofs << setprecision(3);
-	for (size_t i = 0; i < num_conformations; ++i)
+	for (size_t k = 0; k < num_conformations; ++k)
 	{
-		const result& r = results[i];
+		const result& r = results[k];
 
 		// Rescore conformations with random forest.
 		array<double, tree::nv> x{};
@@ -547,7 +547,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 		x.back() = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
 		const double rf = f(x);
 
-		ofs << "MODEL     " << setw(4) << (i + 1) << '\n'
+		ofs << "MODEL     " << setw(4) << (k + 1) << '\n'
 			<< "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " kcal/mol\n"
 			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " kcal/mol\n"
 			<< "REMARK     INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " kcal/mol\n"
