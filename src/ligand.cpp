@@ -532,19 +532,19 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			for (const atom& ra : rec.atoms)
 			{
 				const auto ds = distance_sqr(r.heavy_atoms[i], ra.coordinate);
-/*				if (ds >= 144) continue; // RF-Score cutoff 12A
+				if (ds >= 144) continue; // RF-Score cutoff 12A
 				if (!la.rf_unsupported() && !ra.rf_unsupported())
 				{
 					++x[(la.rf << 2) + ra.rf];
-				}*/
+				}
 				if (ds >= 64) continue; // Vina score cutoff 8A
 				if (!la.xs_unsupported() && !ra.xs_unsupported())
 				{
-					sf.score(x.data() + 0, la.xs, ra.xs, ds);
+					sf.score(x.data() + 36, la.xs, ra.xs, ds);
 				}
 			}
 		}
-//		x.back() = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
+		x.back() = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
 		const double rf = f(x);
 
 		ofs << "MODEL     " << setw(4) << (i + 1) << '\n'

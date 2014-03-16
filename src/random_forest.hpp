@@ -27,7 +27,7 @@ public:
 class tree : public vector<node>
 {
 public:
-	static const size_t nv = 5; //!< Number of variables.
+	static const size_t nv = 42; //!< Number of variables.
 
 	//! Trains an empty tree from bootstrap samples.
 	void train(const size_t mtry, const function<double()> u01);
