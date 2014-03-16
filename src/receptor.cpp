@@ -235,16 +235,16 @@ size_t receptor::partition_index(const array<size_t, 3>& a) const
 	return num_partitions[2] * (num_partitions[1] * a[0] + a[1]) + a[2];
 }
 
-void receptor::populate(const vector<size_t>& xs, const size_t x, const scoring_function& sf)
+void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_function& sf)
 {
 	const size_t num_xs = xs.size();
 	vector<double> e(num_xs);
 
 	// For each probe atom of the given X dimension value.
 	const size_t num_y_probes = num_probes[1];
-	const size_t num_z_probes = num_probes[2];
+	const size_t num_x_probes = num_probes[0];
 	for (size_t y = 0; y < num_y_probes; ++y)
-	for (size_t z = 0; z < num_z_probes; ++z)
+	for (size_t x = 0; x < num_x_probes; ++x)
 	{
 		// Find the possibly interacting receptor atoms via partitions.
 		const array<size_t, 3> grid_idx = { { x, y, z } };

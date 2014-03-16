@@ -209,7 +209,7 @@ int main(int argc, char* argv[])
 	// Parse the receptor.
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, grid_granularity);
-	const size_t num_gm_tasks = rec.num_probes[0];
+	const size_t num_gm_tasks = rec.num_probes[2];
 
 	// Reserve storage for result containers. ptr_vector<T> is used for fast sorting.
 	const size_t max_results = 20; // Maximum number of results obtained from a single Monte Carlo task.
@@ -266,11 +266,11 @@ int main(int argc, char* argv[])
 		{
 			// Populate the grid map task container.
 			cnt.init(num_gm_tasks);
-			for (size_t x = 0; x < num_gm_tasks; ++x)
+			for (size_t z = 0; z < num_gm_tasks; ++z)
 			{
-				io.post([&, x]()
+				io.post([&, z]()
 				{
-					rec.populate(xs, x, sf);
+					rec.populate(xs, z, sf);
 					cnt.increment();
 				});
 			}
