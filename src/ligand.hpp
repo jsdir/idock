@@ -63,8 +63,6 @@ public:
 	void monte_carlo(ptr_vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const;
 
 private:
-	double num_heavy_atoms_inverse; //!< 1 / num_heavy_atoms.
-
 	//! Represents a pair of interacting atoms that are separated by 3 consecutive covalent bonds.
 	class interacting_pair
 	{
