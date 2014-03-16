@@ -327,7 +327,7 @@ int main(int argc, char* argv[])
 
 		// Write models to file.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		lig.write_models(output_ligand_path, results, num_results, rec);
+		lig.write_models(output_ligand_path, results, num_results, rec, f, sf);
 
 		// Display the free energies of the top 9 conformations.
 		const size_t num_energies = min<size_t>(num_results, 9);

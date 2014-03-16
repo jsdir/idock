@@ -509,7 +509,7 @@ result ligand::compose_result(const double e, const double f, const conformation
 	return result(e, f, static_cast<vector<array<double, 3>>&&>(heavy_atoms), static_cast<vector<array<double, 3>>&&>(hydrogens));
 }
 
-void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const receptor& rec)
+void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const receptor& rec, const forest& f, const scoring_function& sf)
 {
 	assert(num_conformations > 0);
 	assert(num_conformations <= results.size());
@@ -523,11 +523,37 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 	for (size_t i = 0; i < num_conformations; ++i)
 	{
 		const result& r = results[i];
+
+		// Rescore conformations with random forest.
+		array<double, tree::nv> x{};
+		for (size_t i = 0; i < num_heavy_atoms; ++i)
+		{
+			const atom& la = heavy_atoms[i];
+			for (const atom& ra : rec.atoms)
+			{
+				const auto ds = distance_sqr(r.heavy_atoms[i], ra.coordinate);
+/*				if (ds >= 144) continue; // RF-Score cutoff 12A
+				if (!la.rf_unsupported() && !ra.rf_unsupported())
+				{
+					++x[(la.rf << 2) + ra.rf];
+				}*/
+				if (ds >= 64) continue; // Vina score cutoff 8A
+				if (!la.xs_unsupported() && !ra.xs_unsupported())
+				{
+					sf.score(x.data() + 0, la.xs, ra.xs, ds);
+				}
+			}
+		}
+//		x.back() = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
+		const double rf = f(x);
+
 		ofs << "MODEL     " << setw(4) << (i + 1) << '\n'
-			<< "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
-			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
-			<< "REMARK     INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
-			<< "REMARK     INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL\n";
+			<< "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " kcal/mol\n"
+			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " kcal/mol\n"
+			<< "REMARK     INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " kcal/mol\n"
+			<< "REMARK     INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " kcal/mol\n"
+			<< "REMARK    RF-SCORE BINDING AFFINITY PREDICTED BY IDOCK:" << setw(8) << rf        << " pKd\n";
+
 		for (size_t j = 0, heavy_atom = 0, hydrogen = 0; j < num_lines; ++j)
 		{
 			const string& line = lines[j];
