@@ -22,7 +22,6 @@ public:
 	array<double, 3> corner1; //!< Box boundary corner with largest values of all the 3 dimensions.
 	const double granularity; //!< 1D size of grids.
 	const double granularity_inverse; //!< 1 / granularity.
-	const array<double, 3> grid_size_inverse; //!< (1, 1, 1) / grid_size.
 	array<size_t, 3> num_probes; //!< Number of probes.
 	size_t num_probes_product; //!< Product of num_probes[0,1,2].
 	vector<vector<size_t>> p_offset; //!< Auxiliary precalculated constants to accelerate grid map creation.

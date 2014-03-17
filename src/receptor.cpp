@@ -6,7 +6,7 @@
 #include "array.hpp"
 #include "receptor.hpp"
 
-receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity) : center(center), size(size), corner0(center - 0.5 * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1 / granularity), grid_size_inverse({ granularity_inverse, granularity_inverse, granularity_inverse }), p_offset(scoring_function::n), maps(scoring_function::n), num_probes_product(1)
+receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity) : center(center), size(size), corner0(center - 0.5 * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1 / granularity), p_offset(scoring_function::n), maps(scoring_function::n), num_probes_product(1)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
@@ -133,7 +133,7 @@ array<size_t, 3> receptor::grid_index(const array<double, 3>& coordinate) const
 	array<size_t, 3> index;
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
-		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * grid_size_inverse[i]);
+		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * granularity_inverse);
 	}
 	return index;
 }
