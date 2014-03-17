@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	array<float, 3> center, size;
-	size_t seed, num_threads, num_trees, num_mc_tasks, num_bfgs_iterations, max_conformations;
+	size_t seed, num_threads, num_trees, num_tasks, num_bfgs_iterations, max_conformations;
 	float granularity;
 
 	// Parse program options in a try/catch block.
@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 128;
-		const size_t default_num_mc_tasks = 256;
+		const size_t default_num_tasks = 256;
 		const size_t default_num_bfgs_iterations = 300;
 		const size_t default_max_conformations = 9;
 		const  float default_granularity = 0.15625f;
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
 			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
 			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
-			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
+			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
 			("generations", value<size_t>(&num_bfgs_iterations)->default_value(default_num_bfgs_iterations), "number of generations in BFGS")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
 			("granularity", value<float>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
 	receptor rec(receptor_path, center, size, granularity);
 
 	vector<int>   ligh(2601);
-	vector<float> slnd(3438 * num_mc_tasks);
+	vector<float> slnd(3438 * num_tasks);
 
 	cout << "Training a random forest of " << num_trees << " trees with seed " << seed << " in parallel" << endl;
 	forest f(num_trees, seed);
@@ -176,7 +176,7 @@ int main(int argc, char* argv[])
 	// Perform docking for each ligand in the input folder.
 	log_engine log;
 	cout.setf(ios::fixed, ios::floatfield);
-	cout << "Executing " << num_mc_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl
+	cout << "Executing " << num_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl
 	     << "   Index        Ligand    pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
@@ -228,7 +228,7 @@ int main(int argc, char* argv[])
 		lig.encode(ligh.data());
 
 		// Reallocate slnd should the current solution elements exceed the default size.
-		const size_t this_sln_elems = lig.get_sln_elems() * num_mc_tasks;
+		const size_t this_sln_elems = lig.get_sln_elems() * num_tasks;
 		if (this_sln_elems > slnd.size())
 		{
 			slnd.resize(this_sln_elems);
@@ -238,24 +238,24 @@ int main(int argc, char* argv[])
 		slnd.assign(slnd.size(), 0);
 
 		// Launch kernel.
-		cnt.init(num_mc_tasks);
-		for (int gid = 0; gid < num_mc_tasks; ++gid)
+		cnt.init(num_tasks);
+		for (int gid = 0; gid < num_tasks; ++gid)
 		{
 			io.post([&,gid]()
 			{
-				monte_carlo(slnd.data(), ligh.data(), lig.nv, lig.nf, lig.na, lig.np, num_bfgs_iterations, sf.e.data(), sf.d.data(), sf.ns, rec.corner0, rec.corner1, rec.num_probes, rec.granularity_inverse, rec.maps, gid, num_mc_tasks);
+				monte_carlo(slnd.data(), ligh.data(), lig.nv, lig.nf, lig.na, lig.np, num_bfgs_iterations, sf.e.data(), sf.d.data(), sf.ns, rec.corner0, rec.corner1, rec.num_probes, rec.granularity_inverse, rec.maps, gid, num_tasks);
 				cnt.increment();
 			});
 		}
 		cnt.wait();
 
 		// Reallocate cnfh should the current conformation elements exceed the default size.
-		const size_t this_cnf_elems = lig.get_cnf_elems() * num_mc_tasks;
+		const size_t this_cnf_elems = lig.get_cnf_elems() * num_tasks;
 
 		io.post(bind([&](ligand lig, vector<float> cnfh)
 		{
 			// Write conformations.
-			lig.write(cnfh.data(), output_folder_path, max_conformations, num_mc_tasks, rec, f, sf);
+			lig.write(cnfh.data(), output_folder_path, max_conformations, num_tasks, rec, f, sf);
 
 			// Output and save ligand stem and predicted affinities.
 			safe_print([&]()

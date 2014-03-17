@@ -339,10 +339,10 @@ public:
 	vector<array<float, 3>> c; //!< Heavy atom coordinates.
 };
 
-void ligand::write(const float* const ex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf)
+void ligand::write(const float* const ex, const path& output_folder_path, const size_t max_conformations, const size_t num_tasks, const receptor& rec, const forest& f, const scoring_function& sf)
 {
 	// Sort solutions in ascending order of e.
-	vector<size_t> rank(num_mc_tasks);
+	vector<size_t> rank(num_tasks);
 	iota(rank.begin(), rank.end(), 0);
 	sort(rank.begin(), rank.end(), [&ex](const size_t v0, const size_t v1)
 	{
@@ -364,13 +364,13 @@ void ligand::write(const float* const ex, const path& output_folder_path, const 
 		size_t o;
 		s.q.resize(nf);
 		s.c.resize(na);
-		s.c[0][0] = ex[o  = num_mc_tasks + r];
-		s.c[0][1] = ex[o += num_mc_tasks];
-		s.c[0][2] = ex[o += num_mc_tasks];
-		s.q[0][0] = ex[o += num_mc_tasks];
-		s.q[0][1] = ex[o += num_mc_tasks];
-		s.q[0][2] = ex[o += num_mc_tasks];
-		s.q[0][3] = ex[o += num_mc_tasks];
+		s.c[0][0] = ex[o  = num_tasks + r];
+		s.c[0][1] = ex[o += num_tasks];
+		s.c[0][2] = ex[o += num_tasks];
+		s.q[0][0] = ex[o += num_tasks];
+		s.q[0][1] = ex[o += num_tasks];
+		s.q[0][2] = ex[o += num_tasks];
+		s.q[0][3] = ex[o += num_tasks];
 		for (size_t k = 0; k < nf; ++k)
 		{
 			const frame& f = frames[k];
@@ -387,7 +387,7 @@ void ligand::write(const float* const ex, const path& output_folder_path, const 
 				if (!b.active) continue;
 				const array<float, 3> a = m * b.xy;
 				assert(normalized(a));
-				s.q[i] = vec4_to_qtn4(a, ex[o += num_mc_tasks]) * s.q[k];
+				s.q[i] = vec4_to_qtn4(a, ex[o += num_tasks]) * s.q[k];
 				assert(normalized(s.q[i]));
 			}
 		}

@@ -18,11 +18,11 @@ template <typename T>
 class callback_data
 {
 public:
-	callback_data(io_service_pool& io, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, const float* const cnfh, ligand&& lig_, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), safe_print(safe_print), log(log), idle(idle) {}
+	callback_data(io_service_pool& io, const path& output_folder_path, const size_t max_conformations, const size_t num_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, const float* const cnfh, ligand&& lig_, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), output_folder_path(output_folder_path), max_conformations(max_conformations), num_tasks(num_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), safe_print(safe_print), log(log), idle(idle) {}
 	io_service_pool& io;
 	const path& output_folder_path;
 	const size_t max_conformations;
-	const size_t num_mc_tasks;
+	const size_t num_tasks;
 	const receptor& rec;
 	const forest& f;
 	const scoring_function& sf;
@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	array<float, 3> center, size;
-	size_t seed, num_threads, num_trees, num_mc_tasks, num_bfgs_iterations, max_conformations;
+	size_t seed, num_threads, num_trees, num_tasks, num_bfgs_iterations, max_conformations;
 	float granularity;
 
 	// Parse program options in a try/catch block.
@@ -50,7 +50,7 @@ int main(int argc, char* argv[])
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 128;
-		const size_t default_num_mc_tasks = 256;
+		const size_t default_num_tasks = 256;
 		const size_t default_num_bfgs_iterations = 300;
 		const size_t default_max_conformations = 9;
 		const  float default_granularity = 0.15625f;
@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
 			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
 			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
-			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
+			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
 			("generations", value<size_t>(&num_bfgs_iterations)->default_value(default_num_bfgs_iterations), "number of generations in BFGS")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
 			("granularity", value<float>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
@@ -347,8 +347,8 @@ int main(int argc, char* argv[])
 		// Allocate ligh, ligd, slnd and cnfh.
 		checkCudaErrors(cuMemHostAlloc((void**)&ligh[dev], sizeof(int) * lig_elems[dev], CU_MEMHOSTALLOC_DEVICEMAP));
 		checkCudaErrors(cuMemHostGetDevicePointer(&ligd[dev], ligh[dev], 0));
-		checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems[dev] * num_mc_tasks));
-		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, 0));
+		checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems[dev] * num_tasks));
+		checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_tasks, 0));
 
 		// Initialize symbols for sln and lig.
 		assert(slns == sizeof(slnd[dev]));
@@ -385,7 +385,7 @@ int main(int argc, char* argv[])
 	// Perform docking for each ligand in the input folder.
 	log_engine log;
 	cout.setf(ios::fixed, ios::floatfield);
-	cout << "Executing " << num_mc_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl
+	cout << "Executing " << num_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl
 	     << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
@@ -466,16 +466,16 @@ int main(int argc, char* argv[])
 		{
 			checkCudaErrors(cuMemFree(slnd[dev]));
 			sln_elems[dev] = this_sln_elems;
-			checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems[dev] * num_mc_tasks));
+			checkCudaErrors(cuMemAlloc(&slnd[dev], sizeof(float) * sln_elems[dev] * num_tasks));
 			checkCudaErrors(cuMemcpyHtoD(slnv[dev], &slnd[dev], sizeof(slnv[dev])));
 		}
 
 		// Clear the solution buffer.
-		checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems[dev] * num_mc_tasks, NULL));
+		checkCudaErrors(cuMemsetD32Async(slnd[dev], 0, sln_elems[dev] * num_tasks, NULL));
 
 		// Launch kernel.
 		void* params[] = { &lig.nv, &lig.nf, &lig.na, &lig.np };
-		checkCudaErrors(cuLaunchKernel(functions[dev], (num_mc_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, NULL, params, NULL));
+		checkCudaErrors(cuLaunchKernel(functions[dev], (num_tasks - 1) / 32 + 1, 1, 1, 32, 1, 1, lig_bytes, NULL, params, NULL));
 
 		// Reallocate cnfh should the current conformation elements exceed the default size.
 		const size_t this_cnf_elems = lig.get_cnf_elems();
@@ -483,11 +483,11 @@ int main(int argc, char* argv[])
 		{
 			checkCudaErrors(cuMemFreeHost(cnfh[dev]));
 			cnf_elems[dev] = this_cnf_elems;
-			checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, 0));
+			checkCudaErrors(cuMemHostAlloc((void**)&cnfh[dev], sizeof(float) * cnf_elems[dev] * num_tasks, 0));
 		}
 
 		// Copy conformations from device memory to host memory.
-		checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems[dev] * num_mc_tasks, NULL));
+		checkCudaErrors(cuMemcpyDtoHAsync(cnfh[dev], slnd[dev], sizeof(float) * cnf_elems[dev] * num_tasks, NULL));
 
 		// Add a callback to the compute stream.
 		checkCudaErrors(cuStreamAddCallback(NULL, [](CUstream stream, CUresult error, void* data)
@@ -498,7 +498,7 @@ int main(int argc, char* argv[])
 			{
 				const auto& output_folder_path = cbd->output_folder_path;
 				const auto  max_conformations = cbd->max_conformations;
-				const auto  num_mc_tasks = cbd->num_mc_tasks;
+				const auto  num_tasks = cbd->num_tasks;
 				const auto& rec = cbd->rec;
 				const auto& f = cbd->f;
 				const auto& sf = cbd->sf;
@@ -510,7 +510,7 @@ int main(int argc, char* argv[])
 				auto& idle = cbd->idle;
 
 				// Write conformations.
-				lig.write(cnfh, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf);
+				lig.write(cnfh, output_folder_path, max_conformations, num_tasks, rec, f, sf);
 
 				// Output and save ligand stem and predicted affinities.
 				safe_print([&]()
@@ -528,7 +528,7 @@ int main(int argc, char* argv[])
 				// Signal the main thread to post another task.
 				idle.safe_push_back(dev);
 			});
-		}, new callback_data<int>(io, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh[dev], move(lig), safe_print, log, idle), 0));
+		}, new callback_data<int>(io, output_folder_path, max_conformations, num_tasks, rec, f, sf, dev, cnfh[dev], move(lig), safe_print, log, idle), 0));
 
 		// Pop the context after use.
 		checkCudaErrors(cuCtxPopCurrent(NULL));

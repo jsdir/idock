@@ -19,12 +19,12 @@ template <typename T>
 class callback_data
 {
 public:
-	callback_data(io_service_pool& io, cl_event cbex, const path& output_folder_path, const size_t max_conformations, const size_t num_mc_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, float* const cnfh, ligand&& lig_, cl_mem slnd, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), cbex(cbex), output_folder_path(output_folder_path), max_conformations(max_conformations), num_mc_tasks(num_mc_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), slnd(slnd), safe_print(safe_print), log(log), idle(idle) {}
+	callback_data(io_service_pool& io, cl_event cbex, const path& output_folder_path, const size_t max_conformations, const size_t num_tasks, const receptor& rec, const forest& f, const scoring_function& sf, const T dev, float* const cnfh, ligand&& lig_, cl_mem slnd, safe_function& safe_print, log_engine& log, safe_vector<T>& idle) : io(io), cbex(cbex), output_folder_path(output_folder_path), max_conformations(max_conformations), num_tasks(num_tasks), rec(rec), f(f), sf(sf), dev(dev), cnfh(cnfh), lig(move(lig_)), slnd(slnd), safe_print(safe_print), log(log), idle(idle) {}
 	io_service_pool& io;
 	cl_event cbex;
 	const path& output_folder_path;
 	const size_t max_conformations;
-	const size_t num_mc_tasks;
+	const size_t num_tasks;
 	const receptor& rec;
 	const forest& f;
 	const scoring_function& sf;
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	array<float, 3> center, size;
-	size_t seed, num_threads, num_trees, num_mc_tasks, num_bfgs_iterations, max_conformations;
+	size_t seed, num_threads, num_trees, num_tasks, num_bfgs_iterations, max_conformations;
 	float granularity;
 
 	// Parse program options in a try/catch block.
@@ -53,7 +53,7 @@ int main(int argc, char* argv[])
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 128;
-		const size_t default_num_mc_tasks = 256;
+		const size_t default_num_tasks = 256;
 		const size_t default_num_bfgs_iterations = 300;
 		const size_t default_max_conformations = 9;
 		const  float default_granularity = 0.15625f;
@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
 			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
 			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
-			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
+			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
 			("generations", value<size_t>(&num_bfgs_iterations)->default_value(default_num_bfgs_iterations), "number of generations in BFGS")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
 			("granularity", value<float>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
@@ -299,7 +299,7 @@ int main(int argc, char* argv[])
 		// Create buffers for ligh, ligd, slnd and cnfh.
 		ligd[dev] = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(int) * lig_elems[dev], NULL, &error);
 		checkOclErrors(error);
-		slnd[dev] = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * sln_elems[dev] * num_mc_tasks, NULL, &error);
+		slnd[dev] = clCreateBuffer(context, CL_MEM_READ_WRITE, sizeof(float) * sln_elems[dev] * num_tasks, NULL, &error);
 		checkOclErrors(error);
 
 		// Set kernel arguments.
@@ -343,7 +343,7 @@ int main(int argc, char* argv[])
 	log_engine log;
 	vector<cl_event> cbex(num_devices);
 	cout.setf(ios::fixed, ios::floatfield);
-	cout << "Executing " << num_mc_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl
+	cout << "Executing " << num_tasks << " optimization runs of " << num_bfgs_iterations << " BFGS iterations in parallel" << endl
 	     << "   Index        Ligand D  pKd 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
@@ -426,7 +426,7 @@ int main(int argc, char* argv[])
 		{
 			checkOclErrors(clReleaseMemObject(slnd[dev]));
 			sln_elems[dev] = this_sln_elems;
-			slnd[dev] = clCreateBuffer(contexts[dev], CL_MEM_READ_WRITE, sizeof(float) * sln_elems[dev] * num_mc_tasks, NULL, &error);
+			slnd[dev] = clCreateBuffer(contexts[dev], CL_MEM_READ_WRITE, sizeof(float) * sln_elems[dev] * num_tasks, NULL, &error);
 			checkOclErrors(error);
 			checkOclErrors(clSetKernelArg(kernels[dev], 0, sizeof(cl_mem), &slnd[dev]));
 		}
@@ -435,13 +435,13 @@ int main(int argc, char* argv[])
 		if (cl12[dev])
 		{
 			const float pattern = 0.0f;
-			checkOclErrors(clEnqueueFillBuffer(queues[dev], slnd[dev], &pattern, sizeof(pattern), 0, sizeof(float) * sln_elems[dev] * num_mc_tasks, 0, NULL, &input_events[1]));
+			checkOclErrors(clEnqueueFillBuffer(queues[dev], slnd[dev], &pattern, sizeof(pattern), 0, sizeof(float) * sln_elems[dev] * num_tasks, 0, NULL, &input_events[1]));
 		}
 		else
 		{
-			float* slnh = (float*)clEnqueueMapBuffer(queues[dev], slnd[dev], CL_TRUE, CL_MAP_WRITE, 0, sizeof(float) * sln_elems[dev] * num_mc_tasks, 0, NULL, NULL, &error);
+			float* slnh = (float*)clEnqueueMapBuffer(queues[dev], slnd[dev], CL_TRUE, CL_MAP_WRITE, 0, sizeof(float) * sln_elems[dev] * num_tasks, 0, NULL, NULL, &error);
 			checkOclErrors(error);
-			memset(slnh, 0, sizeof(float) * sln_elems[dev] * num_mc_tasks);
+			memset(slnh, 0, sizeof(float) * sln_elems[dev] * num_tasks);
 			checkOclErrors(clEnqueueUnmapMemObject(queues[dev], slnd[dev], slnh, 0, NULL, &input_events[1]));
 		}
 
@@ -451,7 +451,7 @@ int main(int argc, char* argv[])
 		checkOclErrors(clSetKernelArg(kernels[dev],  4, sizeof(int), &lig.na));
 		checkOclErrors(clSetKernelArg(kernels[dev],  5, sizeof(int), &lig.np));
 		checkOclErrors(clSetKernelArg(kernels[dev],  6, lig_bytes, NULL));
-		const size_t gws = num_mc_tasks;
+		const size_t gws = num_tasks;
 		const size_t lws = 32;
 		cl_event kernel_event;
 		checkOclErrors(clEnqueueNDRangeKernel(queues[dev], kernels[dev], 1, NULL, &gws, &lws, 2, input_events, &kernel_event));
@@ -462,13 +462,13 @@ int main(int argc, char* argv[])
 		{
 //			checkOclErrors(clReleaseMemObject(cnfh[dev]));
 			cnf_elems[dev] = this_cnf_elems;
-//			cnfh[dev] = clCreateBuffer(contexts[dev], CL_MEM_ALLOC_HOST_PTR, sizeof(float) * cnf_elems[dev] * num_mc_tasks, NULL, &error);
+//			cnfh[dev] = clCreateBuffer(contexts[dev], CL_MEM_ALLOC_HOST_PTR, sizeof(float) * cnf_elems[dev] * num_tasks, NULL, &error);
 //			checkOclErrors(error);
 		}
 
 		// Copy conformations from device memory to host memory.
 		cl_event output_event;
-		float* cnfh = (float*)clEnqueueMapBuffer(queues[dev], slnd[dev], CL_FALSE, CL_MAP_READ, 0, sizeof(float) * cnf_elems[dev] * num_mc_tasks, 1, &kernel_event, &output_event, &error);
+		float* cnfh = (float*)clEnqueueMapBuffer(queues[dev], slnd[dev], CL_FALSE, CL_MAP_READ, 0, sizeof(float) * cnf_elems[dev] * num_tasks, 1, &kernel_event, &output_event, &error);
 		checkOclErrors(error);
 
 		// Create callback events.
@@ -487,7 +487,7 @@ int main(int argc, char* argv[])
 			{
 				const auto& output_folder_path = cbd->output_folder_path;
 				const auto  max_conformations = cbd->max_conformations;
-				const auto  num_mc_tasks = cbd->num_mc_tasks;
+				const auto  num_tasks = cbd->num_tasks;
 				const auto& rec = cbd->rec;
 				const auto& f = cbd->f;
 				const auto& sf = cbd->sf;
@@ -500,7 +500,7 @@ int main(int argc, char* argv[])
 				auto& idle = cbd->idle;
 
 				// Write conformations.
-				lig.write(cnfh, output_folder_path, max_conformations, num_mc_tasks, rec, f, sf);
+				lig.write(cnfh, output_folder_path, max_conformations, num_tasks, rec, f, sf);
 
 				// Unmap cnfh.
 				checkOclErrors(clEnqueueUnmapMemObject(queue, slnd, cnfh, 0, NULL, NULL));
@@ -522,7 +522,7 @@ int main(int argc, char* argv[])
 				idle.safe_push_back(dev);
 			});
 			checkOclErrors(clSetUserEventStatus(cbd->cbex, CL_COMPLETE));
-		}, new callback_data<int>(io, cbex[dev], output_folder_path, max_conformations, num_mc_tasks, rec, f, sf, dev, cnfh, move(lig), slnd[dev], safe_print, log, idle)));
+		}, new callback_data<int>(io, cbex[dev], output_folder_path, max_conformations, num_tasks, rec, f, sf, dev, cnfh, move(lig), slnd[dev], safe_print, log, idle)));
 	}
 
 	// Synchronize queues and callback events.
