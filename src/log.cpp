@@ -10,7 +10,7 @@ void log_engine::write(const path& log_path) const
 	log << "Ligand";
 	for (size_t i = 1; i <= max_conformations; ++i)
 	{
-		log << ",pKd" << i;
+		log << ",Energy" << i;
 	}
 	log << '\n' << setprecision(2);
 	for (const auto& r : *this)
