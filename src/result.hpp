@@ -23,9 +23,9 @@ public:
 	{
 		return e < r.e;
 	}
-};
 
-//! Clusters a result into an existing result set with a minimum RMSD requirement.
-void add_to_result_container(ptr_vector<result>& results, result&& r, const double required_square_error);
+	//! Clusters a result into an existing result set with a minimum RMSD requirement.
+	static void push(ptr_vector<result>& results, result&& r, const double required_square_error);
+};
 
 #endif

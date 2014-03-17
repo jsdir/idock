@@ -293,7 +293,7 @@ int main(int argc, char* argv[])
 		{
 			for (auto& result : result_container)
 			{
-				add_to_result_container(results, move(result), required_square_error);
+				result::push(results, move(result), required_square_error);
 			}
 			result_container.clear();
 		}
