@@ -548,11 +548,11 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 		const double rf = f(x);
 
 		ofs << "MODEL     " << setw(4) << (k + 1) << '\n'
-			<< "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " kcal/mol\n"
-			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " kcal/mol\n"
-			<< "REMARK     INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " kcal/mol\n"
-			<< "REMARK     INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " kcal/mol\n"
-			<< "REMARK    RF-SCORE BINDING AFFINITY PREDICTED BY IDOCK:" << setw(8) << rf        << " pKd\n";
+			<< "REMARK       NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
+			<< "REMARK            TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
+			<< "REMARK     INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
+			<< "REMARK     INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL\n"
+			<< "REMARK    RF-SCORE BINDING AFFINITY PREDICTED BY IDOCK:" << setw(8) << rf        << " PKD\n";
 
 		for (size_t j = 0, heavy_atom = 0, hydrogen = 0; j < num_lines; ++j)
 		{
