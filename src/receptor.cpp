@@ -117,30 +117,30 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 	}
 }
 
-bool receptor::within(const array<double, 3>& coordinate) const
+bool receptor::within(const array<double, 3>& coord) const
 {
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
 		// Half-open-half-close box, i.e. [corner0, corner1)
-		if (coordinate[i] < corner0[i] || corner1[i] <= coordinate[i])
+		if (coord[i] < corner0[i] || corner1[i] <= coord[i])
 			return false;
 	}
 	return true;
 }
 
-array<size_t, 3> receptor::grid_index(const array<double, 3>& coordinate) const
+array<size_t, 3> receptor::index(const array<double, 3>& coord) const
 {
 	array<size_t, 3> index;
 	for (size_t i = 0; i < 3; ++i) // The loop may be unrolled by enabling compiler optimization.
 	{
-		index[i] = static_cast<size_t>((coordinate[i] - corner0[i]) * granularity_inverse);
+		index[i] = static_cast<size_t>((coord[i] - corner0[i]) * granularity_inverse);
 	}
 	return index;
 }
 
-size_t receptor::grid_index(const array<size_t, 3>& a) const
+size_t receptor::index(const array<size_t, 3>& idx) const
 {
-	return num_probes[0] * (num_probes[1] * a[2] + a[1]) + a[0];
+	return num_probes[0] * (num_probes[1] * idx[2] + idx[1]) + idx[0];
 }
 
 void receptor::precalculate(const scoring_function& sf, const vector<size_t>& xs)
