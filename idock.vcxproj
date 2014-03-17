@@ -16,6 +16,7 @@
   <ItemGroup>
     <ClInclude Include="src\array.hpp" />
     <ClInclude Include="src\atom.hpp" />
+    <ClInclude Include="src\conformation.hpp" />
     <ClInclude Include="src\io_service_pool.hpp" />
     <ClInclude Include="src\ligand.hpp" />
     <ClInclude Include="src\log.hpp" />
@@ -36,6 +37,7 @@
     <ClCompile Include="src\random_forest.cpp" />
     <ClCompile Include="src\random_forest_x.cpp" />
     <ClCompile Include="src\random_forest_y.cpp" />
+    <ClCompile Include="src\result.cpp" />
     <ClCompile Include="src\safe_counter.cpp" />
     <ClCompile Include="src\scoring_function.cpp" />
     <ClCompile Include="src\receptor.cpp" />
