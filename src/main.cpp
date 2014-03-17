@@ -6,16 +6,16 @@
 #include <boost/filesystem/fstream.hpp>
 #include "io_service_pool.hpp"
 #include "safe_counter.hpp"
+#include "random_forest.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
-#include "random_forest.hpp"
 #include "log.hpp"
 
 int main(int argc, char* argv[])
 {
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	array<double, 3> center, size;
-	size_t seed, num_threads, num_trees, num_mc_tasks, max_conformations;
+	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
 	double granularity;
 
 	// Process program options.
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
-		const size_t default_num_mc_tasks = 32;
+		const size_t default_num_tasks = 32;
 		const size_t default_max_conformations = 9;
 		const double default_granularity = 0.15625;
 
@@ -54,7 +54,7 @@ int main(int argc, char* argv[])
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
 			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
 			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
-			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
+			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
 			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
 			("help", "help information")
@@ -147,7 +147,7 @@ int main(int argc, char* argv[])
 			cerr << "Option threads must be 1 or greater" << endl;
 			return 1;
 		}
-		if (!num_mc_tasks)
+		if (!num_tasks)
 		{
 			cerr << "Option tasks must be 1 or greater" << endl;
 			return 1;
@@ -197,18 +197,17 @@ int main(int argc, char* argv[])
 	// Parse the receptor.
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
-	const size_t num_gm_tasks = rec.num_probes[2];
 
 	// Reserve storage for result containers. ptr_vector<T> is used for fast sorting.
 	const size_t max_results = 20; // Maximum number of results obtained from a single Monte Carlo task.
 	ptr_vector<ptr_vector<result>> result_containers;
-	result_containers.resize(num_mc_tasks);
-	for (size_t i = 0; i < num_mc_tasks; ++i)
+	result_containers.resize(num_tasks);
+	for (size_t i = 0; i < num_tasks; ++i)
 	{
 		result_containers[i].reserve(max_results);
 	}
 	ptr_vector<result> results;
-	results.reserve(max_results * num_mc_tasks);
+	results.reserve(max_results * num_tasks);
 
 	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
 	forest f(num_trees, seed);
@@ -225,7 +224,7 @@ int main(int argc, char* argv[])
 	f.clear();
 
 	// Perform docking for each file in the ligand folder.
-	cout << "Running " << num_mc_tasks << " Monte Carlo task" << (num_mc_tasks == 1 ? "" : "s") << " per ligand" << endl
+	cout << "Running " << num_tasks << " Monte Carlo task" << (num_tasks == 1 ? "" : "s") << " per ligand" << endl
 	     << "   Index        Ligand Energy 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
 	log_engine log;
@@ -256,8 +255,8 @@ int main(int argc, char* argv[])
 			rec.precalculate(sf, xs);
 
 			// Populate the grid map task container.
-			cnt.init(num_gm_tasks);
-			for (size_t z = 0; z < num_gm_tasks; ++z)
+			cnt.init(rec.num_probes[2]);
+			for (size_t z = 0; z < rec.num_probes[2]; ++z)
 			{
 				io.post([&, z]()
 				{
@@ -273,8 +272,8 @@ int main(int argc, char* argv[])
 		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
 
 		// Populate the Monte Carlo task container.
-		cnt.init(num_mc_tasks);
-		for (size_t i = 0; i < num_mc_tasks; ++i)
+		cnt.init(num_tasks);
+		for (size_t i = 0; i < num_tasks; ++i)
 		{
 			assert(result_containers[i].empty());
 			const size_t s = rng();
@@ -289,7 +288,7 @@ int main(int argc, char* argv[])
 		// Merge results from all the tasks into one single result container.
 		assert(results.empty());
 		const double required_square_error = 4.0 * lig.num_heavy_atoms; // Ligands with RMSD < 2.0 will be clustered into the same cluster.
-		for (size_t i = 0; i < num_mc_tasks; ++i)
+		for (size_t i = 0; i < num_tasks; ++i)
 		{
 			ptr_vector<result>& task_results = result_containers[i];
 			const size_t num_task_results = task_results.size();
