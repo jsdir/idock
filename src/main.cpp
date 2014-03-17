@@ -16,7 +16,7 @@ int main(int argc, char* argv[])
 	path receptor_path, input_folder_path, output_folder_path, log_path;
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_mc_tasks, max_conformations;
-	double grid_granularity;
+	double granularity;
 
 	// Process program options.
 	try
@@ -29,7 +29,7 @@ int main(int argc, char* argv[])
 		const size_t default_num_trees = 500;
 		const size_t default_num_mc_tasks = 32;
 		const size_t default_max_conformations = 9;
-		const double default_grid_granularity = 0.15625;
+		const double default_granularity = 0.15625;
 
 		// Set up options description.
 		using namespace boost::program_options;
@@ -56,7 +56,7 @@ int main(int argc, char* argv[])
 			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
 			("tasks", value<size_t>(&num_mc_tasks)->default_value(default_num_mc_tasks), "number of Monte Carlo tasks for global search")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
-			("granularity", value<double>(&grid_granularity)->default_value(default_grid_granularity), "density of probe atoms of grid maps")
+			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
 			("help", "help information")
 			("version", "version information")
 			("config", value<path>(), "options can be loaded from a configuration file")
@@ -116,18 +116,6 @@ int main(int argc, char* argv[])
 			return 1;
 		}
 
-		// Validate size.
-		if (size[0] < receptor::Default_Partition_Granularity ||
-			size[1] < receptor::Default_Partition_Granularity ||
-			size[2] < receptor::Default_Partition_Granularity)
-		{
-			cerr << "Search space must be "
-				 << receptor::Default_Partition_Granularity << "A x "
-				 << receptor::Default_Partition_Granularity << "A x "
-				 << receptor::Default_Partition_Granularity << "A or larger" << endl;
-			return 1;
-		}
-
 		// Validate output_folder.
 		if (exists(output_folder_path))
 		{
@@ -169,7 +157,7 @@ int main(int argc, char* argv[])
 			cerr << "Option max_conformations must be 1 or greater" << endl;
 			return 1;
 		}
-		if (grid_granularity <= 0)
+		if (granularity <= 0)
 		{
 			cerr << "Option granularity must be positive" << endl;
 			return 1;
@@ -208,7 +196,7 @@ int main(int argc, char* argv[])
 
 	// Parse the receptor.
 	cout << "Parsing receptor " << receptor_path << endl;
-	receptor rec(receptor_path, center, size, grid_granularity);
+	receptor rec(receptor_path, center, size, granularity);
 	const size_t num_gm_tasks = rec.num_probes[2];
 
 	// Reserve storage for result containers. ptr_vector<T> is used for fast sorting.
@@ -254,9 +242,9 @@ int main(int argc, char* argv[])
 		vector<size_t> xs;
 		for (size_t t = 0; t < sf.n; ++t)
 		{
-			if (lig.xs[t] && rec.grid_maps[t].empty())
+			if (lig.xs[t] && rec.maps[t].empty())
 			{
-				rec.grid_maps[t].resize(rec.num_probes_product);
+				rec.maps[t].resize(rec.num_probes_product);
 				xs.push_back(t);
 			}
 		}
@@ -264,6 +252,9 @@ int main(int argc, char* argv[])
 		// Create grid maps on the fly if necessary.
 		if (xs.size())
 		{
+			// Precalculate p_offset.
+			rec.precalculate(sf, xs);
+
 			// Populate the grid map task container.
 			cnt.init(num_gm_tasks);
 			for (size_t z = 0; z < num_gm_tasks; ++z)

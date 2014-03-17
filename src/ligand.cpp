@@ -364,30 +364,30 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	for (size_t i = 0; i < num_heavy_atoms; ++i)
 	{
 		// Retrieve the grid map in need.
-		const vector<double>& grid_map = rec.grid_maps[heavy_atoms[i].xs];
-		assert(grid_map.size());
+		const vector<double>& map = rec.maps[heavy_atoms[i].xs];
+		assert(map.size());
 
 		// Find the index and fraction of the current coor.
 		const array<size_t, 3> index = rec.grid_index(coor[i]);
 
 		// Assert the validity of index.
-		assert(index[0] < rec.num_grids[0]);
-		assert(index[1] < rec.num_grids[1]);
-		assert(index[2] < rec.num_grids[2]);
+		assert(index[0] + 1 < rec.num_probes[0]);
+		assert(index[1] + 1 < rec.num_probes[1]);
+		assert(index[2] + 1 < rec.num_probes[2]);
 
 		// (x0, y0, z0) is the beginning corner of the partition.
 		const size_t x0 = index[0];
 		const size_t y0 = index[1];
 		const size_t z0 = index[2];
-		const double e000 = grid_map[rec.grid_index(array<size_t, 3>{x0, y0, z0})];
+		const double e000 = map[rec.grid_index(array<size_t, 3>{x0, y0, z0})];
 
 		// The derivative of probe atoms can be precalculated at the cost of massive memory storage.
-		const double e100 = grid_map[rec.grid_index(array<size_t, 3>{x0 + 1, y0    , z0    })];
-		const double e010 = grid_map[rec.grid_index(array<size_t, 3>{x0    , y0 + 1, z0    })];
-		const double e001 = grid_map[rec.grid_index(array<size_t, 3>{x0    , y0    , z0 + 1})];
-		deri[i][0] = (e100 - e000) * rec.grid_granularity_inverse;
-		deri[i][1] = (e010 - e000) * rec.grid_granularity_inverse;
-		deri[i][2] = (e001 - e000) * rec.grid_granularity_inverse;
+		const double e100 = map[rec.grid_index(array<size_t, 3>{x0 + 1, y0    , z0    })];
+		const double e010 = map[rec.grid_index(array<size_t, 3>{x0    , y0 + 1, z0    })];
+		const double e001 = map[rec.grid_index(array<size_t, 3>{x0    , y0    , z0 + 1})];
+		deri[i][0] = (e100 - e000) * rec.granularity_inverse;
+		deri[i][1] = (e010 - e000) * rec.granularity_inverse;
+		deri[i][2] = (e001 - e000) * rec.granularity_inverse;
 
 		e += e000; // Aggregate the energy.
 	}
@@ -559,7 +559,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			const string& line = lines[j];
 			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
 			{
-				const double free_energy = line[77] == 'H' ? 0 : rec.grid_maps[heavy_atoms[heavy_atom].xs][rec.grid_index(rec.grid_index(r.heavy_atoms[heavy_atom]))];
+				const double free_energy = line[77] == 'H' ? 0 : rec.maps[heavy_atoms[heavy_atom].xs][rec.grid_index(rec.grid_index(r.heavy_atoms[heavy_atom]))];
 				const array<double, 3>& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
 				ofs << line.substr(0, 30)
 					<< setw(8) << coordinate[0]
