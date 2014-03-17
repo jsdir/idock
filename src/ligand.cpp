@@ -266,8 +266,7 @@ ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 					if (k1 > 0 && f1.parent == f2.parent && i == f1.rotorYidx && j == f2.rotorYidx) continue;
 					if (f2.parent > 0 && k1 == f3.parent && i == f3.rotorXidx && j == f2.rotorYidx) continue;
 					if (find(neighbors.cbegin(), neighbors.cend(), j) != neighbors.cend()) continue;
-					const size_t type_pair_index = mp(heavy_atoms[i].xs, heavy_atoms[j].xs);
-					interacting_pairs.push_back(interacting_pair(i, j, type_pair_index));
+					interacting_pairs.push_back(interacting_pair(i, j, mp(heavy_atoms[i].xs, heavy_atoms[j].xs)));
 				}
 			}
 
@@ -405,8 +404,8 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		if (r2 < scoring_function::cutoff_sqr)
 		{
 			const size_t nsr2 = static_cast<size_t>(sf.ns * r2);
-			e += sf.e[p.type_pair_index][nsr2];
-			const array<double, 3> d = sf.d[p.type_pair_index][nsr2] * r;
+			e += sf.e[p.p_offset][nsr2];
+			const array<double, 3> d = sf.d[p.p_offset][nsr2] * r;
 			deri[p.i0] -= d;
 			deri[p.i1] += d;
 		}
