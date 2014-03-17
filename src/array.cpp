@@ -2,51 +2,55 @@
 #include <cassert>
 #include "array.hpp"
 
+//! Returns true if the absolute difference between a scalar and zero is within the constant tolerance.
 inline bool zero(const double a)
 {
 	return fabs(a) < 1e-4;
 }
 
-//! Returns true if the absolute difference between two floating point values is within the constant tolerance.
+//! Returns true if the absolute difference between two scalars is within the constant tolerance.
 inline bool equal(const double a, const double b)
 {
 	return zero(a - b);
 }
 
-//! Returns true is the vector is (0, 0, 0).
+//! Returns true is a vector is approximately (0, 0, 0).
 bool zero(const array<double, 3>& a)
 {
 	return zero(a[0]) && zero(a[1]) && zero(a[2]);
 }
 
-//! Returns the square norm.
+//! Returns the square norm of a vector.
 double norm_sqr(const array<double, 3>& a)
 {
 	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
 }
 
+//! Returns the square norm of a vector.
 double norm_sqr(const array<double, 4>& a)
 {
 	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
 }
 
-//! Returns the norm.
+//! Returns the norm of a vector.
 double norm(const array<double, 3>& a)
 {
 	return sqrt(norm_sqr(a));
 }
 
+//! Returns the norm of a vector.
 double norm(const array<double, 4>& a)
 {
 	return sqrt(norm_sqr(a));
 }
 
-//! Returns true if the norm equals 1.
+//! Returns true if the norm of a vector is approximately 1.
 bool normalized(const array<double, 3>& a)
 {
 	return equal(norm(a), 1);
 }
 
+//! Returns true if the norm of a vector is approximately 1.
 bool normalized(const array<double, 4>& a)
 {
 	return equal(norm(a), 1);
@@ -58,6 +62,7 @@ array<double, 3> normalize(const array<double, 3>& a)
 	return (1 / norm(a)) * a;
 }
 
+//! Returns the normalized vector of a vector.
 array<double, 4> normalize(const array<double, 4>& a)
 {
 	const auto norm_inv = 1 / norm(a);
@@ -70,7 +75,7 @@ array<double, 4> normalize(const array<double, 4>& a)
 	};
 }
 
-//! Returns the dot product of the two vectors.
+//! Returns the dot product of two vectors.
 double operator*(const array<double, 3>& a, const array<double, 3>& b)
 {
 	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -87,7 +92,7 @@ array<double, 3> cross(const array<double, 3>& a, const array<double, 3>& b)
 	};
 }
 
-//! Pairwise multiply a constant to the current vector.
+//! Returns the resulting vector of elementwise multiplication of a scalar and a vector.
 array<double, 3> operator*(const double f, const array<double, 3>& a)
 {
 	return
@@ -98,7 +103,7 @@ array<double, 3> operator*(const double f, const array<double, 3>& a)
 	};
 }
 
-//! Returns the result of pairwise multiplication of two vectors.
+//! Returns the resulting vector of elementwise multiplication of two vectors.
 array<double, 3> operator*(const array<double, 3>& a, const array<size_t, 3>& b)
 {
 	return
@@ -109,7 +114,7 @@ array<double, 3> operator*(const array<double, 3>& a, const array<size_t, 3>& b)
 	};
 }
 
-//! Returns the result of pairwise addition of two vectors.
+//! Returns the resulting vector of elementwise addition of two vectors.
 array<double, 3> operator+(const array<double, 3>& a, const array<double, 3>& b)
 {
 	return
@@ -120,7 +125,7 @@ array<double, 3> operator+(const array<double, 3>& a, const array<double, 3>& b)
 	};
 }
 
-//! Returns the result of pairwise subtraction of two vectors.
+//! Returns the resulting vector of elementwise subtraction of two vectors.
 array<double, 3> operator-(const array<double, 3>& a, const array<double, 3>& b)
 {
 	return
@@ -131,7 +136,7 @@ array<double, 3> operator-(const array<double, 3>& a, const array<double, 3>& b)
 	};
 }
 
-//! Pairwise add a given vector to the current vector.
+//! Adds the second vector to the first vector.
 void operator+=(array<double, 3>& a, const array<double, 3>& b)
 {
 	a[0] += b[0];
@@ -139,7 +144,7 @@ void operator+=(array<double, 3>& a, const array<double, 3>& b)
 	a[2] += b[2];
 }
 
-//! Pairwise subtract a given vector from the current vector.
+//! Subtracts the second vector from the first vector.
 void operator-=(array<double, 3>& a, const array<double, 3>& b)
 {
 	a[0] -= b[0];
@@ -147,13 +152,13 @@ void operator-=(array<double, 3>& a, const array<double, 3>& b)
 	a[2] -= b[2];
 }
 
-//! Returns the square distance between two vectors.
+//! Returns the square Euclidean distance between two vectors.
 double distance_sqr(const array<double, 3>& a, const array<double, 3>& b)
 {
 	return norm_sqr(a - b);
 }
 
-//! Returns the accumulated square distance between two vectors of vectors.
+//! Returns the accumulated square Euclidean distance between two vectors of vectors.
 double distance_sqr(const vector<array<double, 3>>& a, const vector<array<double, 3>>& b)
 {
 	const size_t n = a.size();
@@ -167,6 +172,7 @@ double distance_sqr(const vector<array<double, 3>>& a, const vector<array<double
 	return sum;
 }
 
+//! Converts a vector of size 4 to a quaternion.
 array<double, 4> vec4_to_qtn4(const array<double, 3>& axis, const double angle)
 {
 	assert(normalized(axis));
@@ -182,6 +188,7 @@ array<double, 4> vec4_to_qtn4(const array<double, 3>& axis, const double angle)
 	};
 }
 
+//! Converts a vector of size 3 to a quaternion.
 array<double, 4> vec3_to_qtn4(const array<double, 3>& rotation)
 {
 	if (zero(rotation))
@@ -196,6 +203,9 @@ array<double, 4> vec3_to_qtn4(const array<double, 3>& rotation)
 	}
 }
 
+//! Converts a quaternion to a 3x3 matrix.
+//! http://www.boost.org/doc/libs/1_55_0/libs/math/quaternion/TQE.pdf
+//! http://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
 array<double, 9> qtn4_to_mat3(const array<double, 4>& a)
 {
 	assert(normalized(a));
@@ -209,9 +219,6 @@ array<double, 9> qtn4_to_mat3(const array<double, 4>& a)
 	const auto yy = a[2]*a[2];
 	const auto yz = a[2]*a[3];
 	const auto zz = a[3]*a[3];
-
-	// http://www.boost.org/doc/libs/1_46_1/libs/math/quaternion/TQE.pdf
-	// http://en.wikipedia.org/wiki/Quaternions_and_spatial_rotation
 	return
 	{
 		ww+xx-yy-zz, 2*(-wz+xy), 2*(wy+xz),
