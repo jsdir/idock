@@ -174,7 +174,7 @@ int main(int argc, char* argv[])
 	mt19937_64 rng(seed);
 
 	// Initialize an io service pool and create worker threads for later use.
-	cout << "Creating an io service pool of " << num_threads << " worker thread" << (num_threads == 1 ? "" : "s") << endl;
+	cout << "Creating an io service pool of " << num_threads << " worker threads" << endl;
 	io_service_pool io(num_threads);
 	safe_counter<size_t> cnt;
 
@@ -209,6 +209,7 @@ int main(int argc, char* argv[])
 	ptr_vector<result> results;
 	results.reserve(max_results * num_tasks);
 
+	// Train RF-Score on the fly.
 	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
 	forest f(num_trees, seed);
 	cnt.init(num_trees);
@@ -223,8 +224,8 @@ int main(int argc, char* argv[])
 	cnt.wait();
 	f.clear();
 
-	// Perform docking for each file in the ligand folder.
-	cout << "Running " << num_tasks << " Monte Carlo task" << (num_tasks == 1 ? "" : "s") << " per ligand" << endl
+	// Perform docking for each file in the input folder.
+	cout << "Running " << num_tasks << " Monte Carlo tasks per ligand" << endl
 	     << "   Index        Ligand Energy 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
 	log_engine log;
@@ -267,11 +268,11 @@ int main(int argc, char* argv[])
 			cnt.wait();
 		}
 
-		// Dump the ligand file stem.
+		// Output the ligand file stem.
 		string stem = input_ligand_path.stem().string();
 		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
 
-		// Populate the Monte Carlo task container.
+		// Run the Monte Carlo tasks.
 		cnt.init(num_tasks);
 		for (size_t i = 0; i < num_tasks; ++i)
 		{
@@ -285,18 +286,16 @@ int main(int argc, char* argv[])
 		}
 		cnt.wait();
 
-		// Merge results from all the tasks into one single result container.
+		// Merge results from all tasks into one single result container.
 		assert(results.empty());
-		const double required_square_error = 4.0 * lig.num_heavy_atoms; // Ligands with RMSD < 2.0 will be clustered into the same cluster.
-		for (size_t i = 0; i < num_tasks; ++i)
+		const double required_square_error = 4 * lig.num_heavy_atoms; // Ligands with RMSD < 2.0 will be clustered into the same cluster.
+		for (auto& result_container : result_containers)
 		{
-			ptr_vector<result>& task_results = result_containers[i];
-			const size_t num_task_results = task_results.size();
-			for (size_t j = 0; j < num_task_results; ++j)
+			for (auto& result : result_container)
 			{
-				add_to_result_container(results, move(task_results[j]), required_square_error);
+				add_to_result_container(results, move(result), required_square_error);
 			}
-			task_results.clear();
+			result_container.clear();
 		}
 
 		// If no conformation can be found, skip the current ligand and proceed with the next one.
@@ -308,7 +307,7 @@ int main(int argc, char* argv[])
 
 		// Adjust free energy relative to the best conformation and flexibility.
 		const size_t num_results = min<size_t>(results.size(), max_conformations);
-		const result& best_result = results.front();
+		const auto& best_result = results.front();
 		const double best_result_intra_e = best_result.e - best_result.f;
 		for (size_t i = 0; i < num_results; ++i)
 		{
@@ -320,11 +319,10 @@ int main(int argc, char* argv[])
 		lig.write_models(output_ligand_path, results, num_results, rec, f, sf);
 
 		// Display the free energies of the top 9 conformations.
-		const size_t num_energies = min<size_t>(num_results, 9);
-		for (size_t i = 0; i < num_energies; ++i)
+		for_each(results.cbegin(), results.cbegin() + min<size_t>(num_results, 9), [](const result& r)
 		{
-			cout << setw(6) << results[i].e_nd;
-		}
+			cout << setw(6) << r.e_nd;
+		});
 		cout << endl;
 
 		// Add a log record.
