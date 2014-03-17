@@ -146,14 +146,14 @@ size_t receptor::grid_index(const array<size_t, 3>& a) const
 void receptor::precalculate(const scoring_function& sf, const vector<size_t>& xs)
 {
 	const size_t nxs = xs.size();
-	for (size_t t1 = 0; t1 < sf.n; ++t1)
+	for (size_t t0 = 0; t0 < sf.n; ++t0)
 	{
-		vector<size_t>& p = p_offset[t1];
+		vector<size_t>& p = p_offset[t0];
 		p.resize(nxs);
 		for (size_t i = 0; i < nxs; ++i)
 		{
-			const size_t t2 = xs[i];
-			p[i] = /*sf.nr * */mp(t1, t2);
+			const size_t t1 = xs[i];
+			p[i] = mp(t0, t1);
 		}
 	}
 }
