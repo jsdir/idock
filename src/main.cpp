@@ -181,9 +181,9 @@ int main(int argc, char* argv[])
 	// Precalculate the scoring function in parallel.
 	cout << "Precalculating scoring function in parallel" << endl;
 	scoring_function sf;
-	cnt.init(((sf.n + 1) * sf.n) >> 1);
-	for (size_t t0 =  0; t0 < sf.n; ++t0)
-	for (size_t t1 = t0; t1 < sf.n; ++t1)
+	cnt.init((sf.n + 1) * sf.n >> 1);
+	for (size_t t1 = 0; t1 < sf.n; ++t1)
+	for (size_t t0 = 0; t0 <=  t1; ++t0)
 	{
 		io.post([&, t0, t1]()
 		{
@@ -198,13 +198,13 @@ int main(int argc, char* argv[])
 	cout << "Parsing receptor " << receptor_path << endl;
 	receptor rec(receptor_path, center, size, granularity);
 
-	// Reserve storage for result containers. ptr_vector<T> is used for fast sorting.
+	// Reserve storage for result containers.
 	const size_t max_results = 20; // Maximum number of results obtained from a single Monte Carlo task.
-	ptr_vector<ptr_vector<result>> result_containers;
+	ptr_vector<ptr_vector<result>> result_containers; // ptr_vector<T> is used for fast sorting.
 	result_containers.resize(num_tasks);
-	for (size_t i = 0; i < num_tasks; ++i)
+	for (auto& rc : result_containers)
 	{
-		result_containers[i].reserve(max_results);
+		rc.reserve(max_results);
 	}
 	ptr_vector<result> results;
 	results.reserve(max_results * num_tasks);
