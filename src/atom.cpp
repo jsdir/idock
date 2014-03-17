@@ -39,7 +39,8 @@ const array<string, atom::n> atom::ad_strings =
 	"Cs", // 30
 };
 
-//! Covalent radii of AutoDock4 atom types, factorized by 1.1 for extra allowance. http://en.wikipedia.org/wiki/Atomic_radii_of_the_elements_(data_page)
+//! Covalent radii of AutoDock4 atom types, factorized by 1.1 for extra allowance.
+//! http://en.wikipedia.org/wiki/Atomic_radii_of_the_elements_(data_page)
 const array<double, atom::n> atom::ad_covalent_radii =
 {
 	0.407, //  0 = H , 0.407 = 1.1 * 0.37
