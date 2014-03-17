@@ -1,4 +1,3 @@
-#include <iostream>
 #include <cmath>
 #include <cassert>
 #include <boost/filesystem/fstream.hpp>
@@ -7,7 +6,7 @@
 #include "array.hpp"
 #include "receptor.hpp"
 
-receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity) : center(center), size(size), corner0(center - 0.5f * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1 / granularity), grid_size_inverse({ granularity_inverse, granularity_inverse, granularity_inverse }), p_offset(scoring_function::n), maps(scoring_function::n), num_probes_product(1)
+receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity) : center(center), size(size), corner0(center - 0.5 * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1 / granularity), grid_size_inverse({ granularity_inverse, granularity_inverse, granularity_inverse }), p_offset(scoring_function::n), maps(scoring_function::n), num_probes_product(1)
 {
 	// The loop may be unrolled by enabling compiler optimization.
 	for (size_t i = 0; i < 3; ++i)
