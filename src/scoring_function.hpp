@@ -3,7 +3,8 @@
 #define IDOCK_SCORING_FUNCTION_HPP
 
 #include <vector>
-#include "atom.hpp"
+#include <array>
+using namespace std;
 
 //! Represents a scoring function.
 class scoring_function
@@ -20,9 +21,10 @@ public:
 	//! Constructs an empty scoring function.
 	explicit scoring_function();
 
-	//! Returns the score between two atoms of XScore atom types t0 and t1 and distance r.
+	//! Returns the score between two atoms of XScore atom types t0 and t1 with distance r.
 	static double score(const size_t t0, const size_t t1, const double r);
 
+	//! Accumulates the unweighted score between two atoms of XScore atom types t0 and t1 with square distance r2.
 	static void score(double* const v, const size_t t0, const size_t t1, const double r2);
 
 	//! Precalculates the scoring function values of sample points for the type combination of t0 and t1.
