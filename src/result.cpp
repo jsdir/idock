@@ -1,18 +1,17 @@
 #include "array.hpp"
 #include "result.hpp"
 
-//! Clusters a result into an existing result set with a minimum RMSD requirement.
-// TODO: Consider using double linked list std::list<> to store results because of frequent insertions and deletions.
+//! Clusters a result into a result container with a minimum RMSD requirement.
 void result::push(ptr_vector<result>& results, result&& r, const double required_square_error)
 {
 	// If this is the first result, simply save it.
 	if (results.empty())
 	{
-		results.push_back(new result(static_cast<result&&>(r)));
+		results.push_back(new result(move(r)));
 		return;
 	}
 
-	// If the container is not empty, find in a coordinate that is closest to the given newly found r.coordinate.
+	// If the container is not empty, find a result to which r is the closest.
 	size_t index = 0;
 	double best_square_error = distance_sqr(r.heavy_atoms, results.front().heavy_atoms);
 	for (size_t i = 1; i < results.size(); ++i)
@@ -25,24 +24,28 @@ void result::push(ptr_vector<result>& results, result&& r, const double required
 		}
 	}
 
-	if (best_square_error < required_square_error) // The result r is very close to results[index].
+	// Now r is the closest to results[index]. Check if they are in the same cluster.
+	if (best_square_error < required_square_error)
 	{
-		if (r.e < results[index].e) // r is better than results[index], so substitute r for results[index].
+		// They are in the same cluster and r is better than results[index], so substitute r for results[index].
+		if (r.e < results[index].e)
 		{
-			results.replace(index, new result(static_cast<result&&>(r)));
+			results.replace(index, new result(move(r)));
 		}
 	}
-	else // Cannot find in results a result that is similar to r.
+	else // They are not in the same cluster, i.e. r itself forms a new cluster.
 	{
+		// Save this new cluster if the result container is not full yet.
 		if (results.size() < results.capacity())
 		{
-			results.push_back(new result(static_cast<result&&>(r)));
+			results.push_back(new result(move(r)));
 		}
 		else // Now the container is full.
 		{
-			if (r.e < results.back().e) // If r is better than the worst one, then replace it.
+			// If r is better than the worst result, then substitute r for it.
+			if (r.e < results.back().e)
 			{
-				results.replace(results.size() - 1, new result(static_cast<result&&>(r)));
+				results.replace(results.size() - 1, new result(move(r)));
 			}
 		}
 	}
