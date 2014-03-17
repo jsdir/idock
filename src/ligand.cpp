@@ -287,12 +287,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	vector<array<double, 3>> axes(num_frames); //!< Vector pointing from rotor Y to rotor X.
 	vector<array<double, 4>> oriq(num_frames); //!< Orientation in the form of quaternion.
 	vector<array<double, 9>> orim(num_frames); //!< Orientation in the form of 3x3 matrix.
-	vector<array<double, 3>> forc(num_frames); //!< Aggregated deri of heavy atoms.
+	vector<array<double, 3>> forc(num_frames); //!< Aggregated derivatives of heavy atoms.
 	vector<array<double, 3>> torq(num_frames); //!< Torque of the force.
 
 	// Initialize atom-wide conformational variables.
-	vector<array<double, 3>> coor(num_heavy_atoms); //!< Heavy atom coor.
-	vector<array<double, 3>> deri(num_heavy_atoms); //!< Heavy atom deri.
+	vector<array<double, 3>> coor(num_heavy_atoms); //!< Heavy atom coordinates.
+	vector<array<double, 3>> deri(num_heavy_atoms); //!< Heavy atom derivatives.
 
 	// Apply position and orientation to ROOT frame.
 	const frame& root = frames.front();
