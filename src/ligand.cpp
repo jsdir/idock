@@ -159,8 +159,8 @@ ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 
 			// Calculate parent_rotorY_to_current_rotorY and parent_rotorX_to_current_rotorY.
 			const frame& p = frames[f->parent];
-			f->parent_rotorY_to_current_rotorY = rotorY.coordinate - heavy_atoms[p.rotorYidx].coordinate;
-			f->parent_rotorX_to_current_rotorY = normalize(rotorY.coordinate - rotorX.coordinate);
+			f->parent_rotorY_to_current_rotorY = rotorY.coord - heavy_atoms[p.rotorYidx].coord;
+			f->parent_rotorX_to_current_rotorY = normalize(rotorY.coord - rotorX.coord);
 
 			// Now the parent of the following frame is the parent of current frame.
 			current = f->parent;
@@ -199,18 +199,18 @@ ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 		xs[a.xs] = true;
 	}
 
-	// Update heavy_atoms[].coordinate and hydrogens[].coordinate relative to frame origin.
+	// Update heavy_atoms[].coord and hydrogens[].coord relative to frame origin.
 	for (size_t k = 0; k < num_frames; ++k)
 	{
 		const frame& f = frames[k];
-		const array<double, 3> origin = heavy_atoms[f.rotorYidx].coordinate;
+		const array<double, 3> origin = heavy_atoms[f.rotorYidx].coord;
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			heavy_atoms[i].coordinate -= origin;
+			heavy_atoms[i].coord -= origin;
 		}
 		for (size_t i = f.hybegin; i < f.hyend; ++i)
 		{
-			hydrogens[i].coordinate -= origin;
+			hydrogens[i].coord -= origin;
 		}
 	}
 
@@ -301,7 +301,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 	orim.front() = qtn4_to_mat3(conf.orientation);
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		coor[i] = orig.front() + orim.front() * heavy_atoms[i].coordinate;
+		coor[i] = orig.front() + orim.front() * heavy_atoms[i].coord;
 		if (!rec.within(coor[i]))
 			return false;
 	}
@@ -336,7 +336,7 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		// Update coordinates.
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			coor[i] = orig[k] + orim[k] * heavy_atoms[i].coordinate;
+			coor[i] = orig[k] + orim[k] * heavy_atoms[i].coord;
 			if (!rec.within(coor[i]))
 				return false;
 		}
@@ -476,11 +476,11 @@ result ligand::compose_result(const double e, const double f, const conformation
 	const frame& root = frames.front();
 	for (size_t i = root.habegin; i < root.haend; ++i)
 	{
-		heavy_atoms[i] = orig.front() + orim.front() * this->heavy_atoms[i].coordinate;
+		heavy_atoms[i] = orig.front() + orim.front() * this->heavy_atoms[i].coord;
 	}
 	for (size_t i = root.hybegin; i < root.hyend; ++i)
 	{
-		hydrogens[i]   = orig.front() + orim.front() * this->hydrogens[i].coordinate;
+		hydrogens[i]   = orig.front() + orim.front() * this->hydrogens[i].coord;
 	}
 
 	// Calculate the coor of both heavy atoms and hydrogens of BRANCH frames.
@@ -498,11 +498,11 @@ result ligand::compose_result(const double e, const double f, const conformation
 		// Update coor.
 		for (size_t i = f.habegin; i < f.haend; ++i)
 		{
-			heavy_atoms[i] = orig[k] + orim[k] * this->heavy_atoms[i].coordinate;
+			heavy_atoms[i] = orig[k] + orim[k] * this->heavy_atoms[i].coord;
 		}
 		for (size_t i = f.hybegin; i < f.hyend; ++i)
 		{
-			hydrogens[i]   = orig[k] + orim[k] * this->hydrogens[i].coordinate;
+			hydrogens[i]   = orig[k] + orim[k] * this->hydrogens[i].coord;
 		}
 	}
 
@@ -531,7 +531,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			const atom& la = heavy_atoms[i];
 			for (const atom& ra : rec.atoms)
 			{
-				const auto ds = distance_sqr(r.heavy_atoms[i], ra.coordinate);
+				const auto ds = distance_sqr(r.heavy_atoms[i], ra.coord);
 				if (ds >= 144) continue; // RF-Score cutoff 12A
 				if (!la.rf_unsupported() && !ra.rf_unsupported())
 				{

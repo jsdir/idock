@@ -95,14 +95,14 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 			double r2 = 0;
 			for (size_t i = 0; i < 3; ++i)
 			{
-				if (a.coordinate[i] < corner0[i])
+				if (a.coord[i] < corner0[i])
 				{
-					const double d = a.coordinate[i] - corner0[i];
+					const double d = a.coord[i] - corner0[i];
 					r2 += d * d;
 				}
-				else if (a.coordinate[i] > corner1[i])
+				else if (a.coord[i] > corner1[i])
 				{
-					const double d = a.coordinate[i] - corner1[i];
+					const double d = a.coord[i] - corner1[i];
 					r2 += d * d;
 				}
 			}
@@ -168,31 +168,31 @@ void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_
 	for (const auto& a : atoms)
 	{
 		assert(!a.is_hydrogen());
-		const double dz = z_coord - a.coordinate[2];
+		const double dz = z_coord - a.coord[2];
 		const double dz_sqr = dz * dz;
 		const double dydx_sqr_ub = scoring_function::cutoff_sqr - dz_sqr;
 		if (dydx_sqr_ub <= 0) continue;
 		const double dydx_ub = sqrt(dydx_sqr_ub);
-		const double y_lb = a.coordinate[1] - dydx_ub;
-		const double y_ub = a.coordinate[1] + dydx_ub;
+		const double y_lb = a.coord[1] - dydx_ub;
+		const double y_ub = a.coord[1] + dydx_ub;
 		const size_t y_beg = y_lb > corner0[1] ? (y_lb < corner1[1] ? static_cast<size_t>((y_lb - corner0[1]) * granularity_inverse)     : num_probes[1]) : 0;
 		const size_t y_end = y_ub > corner0[1] ? (y_ub < corner1[1] ? static_cast<size_t>((y_ub - corner0[1]) * granularity_inverse) + 1 : num_probes[1]) : 0;
 		const vector<size_t>& p = p_offset[a.xs];
 		size_t zy_offset = z_offset + num_probes[0] * y_beg;
-		double dy = corner0[1] + granularity * y_beg - a.coordinate[1];
+		double dy = corner0[1] + granularity * y_beg - a.coord[1];
 		for (size_t y = y_beg; y < y_end; ++y, zy_offset += num_probes[0], dy += granularity)
 		{
 			const double dy_sqr = dy * dy;
 			const double dx_sqr_ub = dydx_sqr_ub - dy_sqr;
 			if (dx_sqr_ub <= 0) continue;
 			const double dx_ub = sqrt(dx_sqr_ub);
-			const double x_lb = a.coordinate[0] - dx_ub;
-			const double x_ub = a.coordinate[0] + dx_ub;
+			const double x_lb = a.coord[0] - dx_ub;
+			const double x_ub = a.coord[0] + dx_ub;
 			const size_t x_beg = x_lb > corner0[0] ? (x_lb < corner1[0] ? static_cast<size_t>((x_lb - corner0[0]) * granularity_inverse)     : num_probes[0]) : 0;
 			const size_t x_end = x_ub > corner0[0] ? (x_ub < corner1[0] ? static_cast<size_t>((x_ub - corner0[0]) * granularity_inverse) + 1 : num_probes[0]) : 0;
 			const double dzdy_sqr = dz_sqr + dy_sqr;
 			size_t zyx_offset = zy_offset + x_beg;
-			double dx = corner0[0] + granularity * x_beg - a.coordinate[0];
+			double dx = corner0[0] + granularity * x_beg - a.coord[0];
 			for (size_t x = x_beg; x < x_end; ++x, ++zyx_offset, dx += granularity)
 			{
 				const double dx_sqr = dx * dx;

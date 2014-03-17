@@ -151,7 +151,7 @@ const array<size_t, atom::n> atom::ad_to_rf =
 atom::atom(const string& line) :
 	serial(stoul(line.substr(6, 5))),
 	name(line.substr(12, 4)),
-	coordinate({stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))}),
+	coord({stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))}),
 	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
 	xs(ad_to_xs[ad]),
 	rf(ad_to_rf[ad])
@@ -211,7 +211,7 @@ bool atom::is_neighbor(const atom& a) const
 {
 	assert(this != &a);
 	const double r = covalent_radius() + a.covalent_radius();
-	return distance_sqr(coordinate, a.coordinate) < r * r;
+	return distance_sqr(coord, a.coord) < r * r;
 }
 
 //! For nitrogen and oxygen, revises the XScore atom type to make it a hydrogen bond donor.

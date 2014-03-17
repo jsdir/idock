@@ -18,7 +18,7 @@ private:
 public:
 	size_t serial; //!< Serial number.
 	string name; //!< Atom name;
-	array<double, 3> coordinate; //!< 3D coordinate.
+	array<double, 3> coord; //!< 3D coordinate.
 	size_t ad; //!< AutoDock4 atom type.
 	size_t xs; //!< XScore atom type.
 	size_t rf; //!< RF-Score atom type.
