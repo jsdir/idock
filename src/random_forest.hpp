@@ -14,7 +14,7 @@ class node
 public:
 	vector<size_t> samples; //!< Node samples.
 	double y; //!< Average of y values of node samples.
-	double p; //!< Node purity, measured as either y * y * nSamples or sum * sum / nSamples.
+	double p; //!< Node purity.
 	size_t var; //!< Variable used for node split.
 	double val; //!< Value used for node split.
 	array<size_t, 2> children; //!< Two child nodes.
@@ -39,8 +39,8 @@ public:
 	void clear();
 private:
 	static const size_t ns = 2959; //!< Number of training samples.
-	static const array<array<double, nv>, ns> x; //!< Training samples.
-	static const array<double, ns> y; //!< y values of training samples.
+	static const array<array<double, nv>, ns> x; //!< Variables of training samples.
+	static const array<double, ns> y; //!< Measured binding affinities of training samples.
 };
 
 //! Represents a random forest.
