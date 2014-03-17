@@ -14,15 +14,15 @@ public:
 	//! Constructs a receptor by parsing a receptor file in pdbqt format.
 	explicit receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity);
 
-	vector<atom> atoms; //!< Receptor atoms.
 	const array<double, 3> center; //!< Box center.
 	const array<double, 3> size; //!< 3D sizes of box.
 	const array<double, 3> corner0; //!< Box boundary corner with smallest values of all the 3 dimensions.
 	const array<double, 3> corner1; //!< Box boundary corner with largest values of all the 3 dimensions.
 	const double granularity; //!< 1D size of grids.
 	const double granularity_inverse; //!< 1 / granularity.
-	array<size_t, 3> num_probes; //!< Number of probes.
-	size_t num_probes_product; //!< Product of num_probes[0,1,2].
+	const array<size_t, 3> num_probes; //!< Number of probes.
+	const size_t num_probes_product; //!< Product of num_probes[0,1,2].
+	vector<atom> atoms; //!< Receptor atoms.
 	vector<vector<size_t>> p_offset; //!< Auxiliary precalculated constants to accelerate grid map creation.
 	vector<vector<double>> maps; //!< Grid maps.
 
