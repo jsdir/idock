@@ -139,7 +139,7 @@ ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 
 			// If the current frame consists of rotor Y and a few hydrogens only, e.g. -OH and -NH2,
 			// the torsion of this frame will have no effect on scoring and is thus redundant.
-			if ((current == frames.size() - 1) && (f->habegin + 1 == heavy_atoms.size()))
+			if (current + 1 == frames.size() && f->habegin + 1 == heavy_atoms.size())
 			{
 				f->active = false;
 			}
@@ -155,8 +155,8 @@ ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 			// Dehydrophobicize rotorX and rotorY if necessary.
 			atom& rotorY = heavy_atoms[f->rotorYidx];
 			atom& rotorX = heavy_atoms[f->rotorXidx];
-			if ((rotorY.is_hetero()) && (!rotorX.is_hetero())) rotorX.dehydrophobicize();
-			if ((rotorX.is_hetero()) && (!rotorY.is_hetero())) rotorY.dehydrophobicize();
+			if (rotorY.is_hetero() && !rotorX.is_hetero()) rotorX.dehydrophobicize();
+			if (rotorX.is_hetero() && !rotorY.is_hetero()) rotorY.dehydrophobicize();
 
 			// Calculate parent_rotorY_to_current_rotorY and parent_rotorX_to_current_rotorY.
 			const frame& p = frames[f->parent];
