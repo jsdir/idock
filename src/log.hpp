@@ -6,6 +6,7 @@
 #include <boost/filesystem/path.hpp>
 using namespace std;
 using namespace boost::filesystem;
+using boost::ptr_vector;
 
 //! Represents a log record of docking result of a ligand.
 class log_record
@@ -25,7 +26,7 @@ inline bool operator<(const log_record& r0, const log_record& r1)
 }
 
 //! Represents a vector of log records.
-class log_engine : public boost::ptr_vector<log_record>
+class log_engine : public ptr_vector<log_record>
 {
 public:
 	//! Write ligand log records to the log file.
