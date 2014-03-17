@@ -544,7 +544,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 				}
 			}
 		}
-		x.back() = 1 / (1 + 0.05846 * (num_active_torsions + 0.5 * (num_torsions - num_active_torsions)));
+		x.back() = flexibility_penalty_factor;
 		const double rf = f(x);
 
 		ofs << "MODEL     " << setw(4) << (k + 1) << '\n'
