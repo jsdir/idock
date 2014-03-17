@@ -105,6 +105,5 @@ void scoring_function::precalculate(const size_t t0, const size_t t1)
 
 void scoring_function::clear()
 {
-	d.clear();
 	rs.clear();
 }
