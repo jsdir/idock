@@ -49,13 +49,13 @@ inline bool is_hbond(const size_t t0, const size_t t1)
 
 scoring_function::scoring_function() : e(np, vector<double>(nr)), d(np, vector<double>(nr)), rs(nr)
 {
-	const double ns_inv = 1. / ns;
+	const double ns_inv = 1.0 / ns;
 	for (size_t i = 0; i < nr; ++i)
 	{
 		rs[i] = sqrt(i * ns_inv);
 	}
 	assert(rs.front() == 0);
-	assert(fabs(rs.back() - cutoff) < 1e-7);
+	assert(rs.back() == cutoff);
 }
 
 double scoring_function::score(const size_t t0, const size_t t1, const double r)
