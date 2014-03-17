@@ -186,7 +186,7 @@ array<double, 4> vec3_to_qtn4(const array<double, 3>& rotation)
 {
 	if (zero(rotation))
 	{
-		return qtn4id;
+		return {1, 0, 0, 0};
 	}
 	else
 	{

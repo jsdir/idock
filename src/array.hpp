@@ -6,8 +6,6 @@
 #include <vector>
 using namespace std;
 
-const array<double, 4> qtn4id{1, 0, 0, 0}; //!< Identity quaternion.
-
 double norm_sqr(const array<double, 3>& a);
 double norm_sqr(const array<double, 4>& a);
 double norm(const array<double, 3>& a);
