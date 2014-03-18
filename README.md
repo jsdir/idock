@@ -95,12 +95,14 @@ Change Log
 * Updated the option `ligand_folder` to `input_folder`.
 * Updated the output format.
 * Updated the VC project files to Visual Studio 2013.
-* Updated doxygen to idock.dox.
+* Updated doxygen to idock.dox with version 1.8.6.
 * Updated the extension name of configuration files in all examples from .cfg to .conf.
 * Fixed a data race bug in the original thread pool by substituting the brandnew io service pool.
 * Fixed an assertion bug caused by ligands with zero rotatable bond.
 * Fixed a bug in the generation of random numbers being the exclusive upper bound value.
-* Removed gzip and bzip2 support.
+* Removed support for Mac, FreeBSD and Solaris.
+* Removed precompiled 32bit executables for Linux and Windows.
+* Removed support for gzip and bzip2.
 * Removed the output of ligand efficiency and putative hydrogen bonds.
 * Removed vina.cfg and vina.sh in all examples.
 
