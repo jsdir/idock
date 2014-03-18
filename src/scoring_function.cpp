@@ -61,14 +61,14 @@ scoring_function::scoring_function() : e(ne), d(ne), rs(nr)
 	}
 }
 
-void scoring_function::score(float* const x, const size_t t0, const size_t t1, const float r2) const
+void scoring_function::score(float* const v, const size_t t0, const size_t t1, const float r2)
 {
 	const float d = sqrt(r2) - (vdw[t0] + vdw[t1]);
-	x[0] += exp(-4.0f * d * d);
-	x[1] += exp(-0.25f * (d - 3.0f) * (d - 3.0f));
-	x[2] += d < 0.0f ? d * d : 0.0f;
-	x[3] += is_hydrophobic(t0, t1) ? (d >= 1.5f ? 0.0f : (d <= 0.5f ? 1.0f : 1.5f - d)) : 0.0f;
-	x[4] += is_hbond(t0, t1) ? (d >= 0.0f ? 0.0f : (d <= -0.7f ? 1.0f : d * -1.4285714285714286f)) : 0.0f;
+	v[0] += exp(-4.0f * d * d);
+	v[1] += exp(-0.25f * (d - 3.0f) * (d - 3.0f));
+	v[2] += d < 0.0f ? d * d : 0.0f;
+	v[3] += is_hydrophobic(t0, t1) ? (d >= 1.5f ? 0.0f : (d <= 0.5f ? 1.0f : 1.5f - d)) : 0.0f;
+	v[4] += is_hbond(t0, t1) ? (d >= 0.0f ? 0.0f : (d <= -0.7f ? 1.0f : d * -1.4285714285714286f)) : 0.0f;
 }
 
 void scoring_function::precalculate(const size_t t0, const size_t t1)

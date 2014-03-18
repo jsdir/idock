@@ -22,7 +22,7 @@ public:
 	explicit scoring_function();
 
 	//! Aggregates the five term values evaluated at (t0, t1, r2).
-	void score(float* const x, const size_t t0, const size_t t1, const float r2) const;
+	static void score(float* const v, const size_t t0, const size_t t1, const float r2);
 
 	//! Precalculates the scoring function values of sample points for the type combination of t0 and t1.
 	void precalculate(const size_t t0, const size_t t1);
