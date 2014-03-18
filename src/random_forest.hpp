@@ -39,8 +39,8 @@ public:
 	void clear();
 private:
 	static const size_t ns = 2959; //!< Number of training samples.
-	static const array<array<float, nv>, ns> x; //!< Training samples.
-	static const array<float, ns> y; //!< y values of training samples.
+	static const array<array<float, nv>, ns> x; //!< Features of training samples.
+	static const array<float, ns> y; //!< Measured binding affinities of training samples.
 };
 
 //! Represents a random forest.
