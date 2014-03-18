@@ -71,7 +71,7 @@ static const char* errorString[] = {
 	"CL_INVALID_GLOBAL_WORK_SIZE",
 };
 #define checkOclErrors(err) __checkOclErrors((err), #err, __FILE__, __LINE__)
-inline void __checkOclErrors(const int err, const char* const func, const char* const file, const int line)
+static void __checkOclErrors(const int err, const char* const func, const char* const file, const int line)
 {
 	if (err != 0)
 	{
