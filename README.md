@@ -1,67 +1,36 @@
 idock
 =====
 
-idock is a multithreaded [virtual screening] tool for flexible ligand [docking] for computational drug discovery. It is inspired by [AutoDock Vina], and is hosted by GitHub at https://GitHub.com/HongjianLi/idock under [Apache License 2.0].
+idock is a multithreaded [virtual screening] tool for flexible ligand [docking] for computational drug discovery. It is inspired by [AutoDock Vina], and is hosted by GitHub at https://GitHub.com/HongjianLi/idock under [Apache License 2.0]. idock is now available as a service at [istar].
 
 
 Features
 --------
 
-* idock invents its own thread pool in order to reuse threads and maintain a high CPU utilization throughout the entire screening procedure. The thread pool parallelizes the precalculation of scoring function, the creation of grid maps, and the execution of Monte Carlo tasks.
-* idock estimates the capacity of every vector structure and intensively utilizes right-value reference, a new feature in the [C++11] standard, to avoid frequent memory reallocation.
-* idock flattens Vina's tree-like recursive data structure of ligand into simple linear array structure to ensure a high data cache hit rate and easy coding.
-* idock accelerates the assignment of atom types by making use of residue information for receptor and branch information for ligand.
-* idock supports as many as 29 chemical elements including rare ones like Zn, Fe, Mg, Ca, Mn, Cu, Na, K, Hg, Ni, Co, Cd, As and Sr.
-* idock supports reading and writing compressed ligand files with gzip and bzip2.
-* idock enables automatic recovery and restarts docking from the previous stopping point.
-* idock reports progress every 10% Monte Carlo tasks per ligand in a neat manner.
-* idock outputs putative inter-molecular hydrogen bonds for each predicted conformation.
+* idock develops its own io service pool to reuse threads and maintain a high CPU utilization throughout the entire docking procedure. The io service pool parallelizes the precalculation of scoring function, the creation of grid maps, and the execution of Monte Carlo tasks.
+* idock supports as many as 27 chemical elements, i.e. H, C, N, O, S, Se, P, F, Cl, Br, I, Zn, Fe, Mg, Ca, Mn, Cu, Na, K, Hg, Ni, Co, Cd, As, Sr, U and Cs.
 * idock outputs per-atom free energy for protein-ligand interaction hotspot detection.
 * idock outputs summary for each predicted conformation into a CSV file for subsequent analysis.
-* idock provides precompiled executables for 32-bit and 64-bit Linux, Windows, Mac OS X, FreeBSD and Solaris.
-* idock can be used as a backend docking engine for [igrow], a multithreaded ligand growing tool for structure-based molecule design.
-* idock is now available as a service at [istar].
+* idock provides precompiled 64bit executables for Linux and Windows.
 
 
 Supported operating systems and compilers
 -----------------------------------------
 
-* Ubuntu 11.10 x86_64 and GCC 4.6.1
-* Ubuntu 11.10 x86_64 and CLANG 3.0
-* Ubuntu 11.10 x86_64 and Intel C++ Compiler 12.1.2
-* Fedora 16 x86_64 and GCC 4.6.2
-* Fedora 16 x86_64 and Intel C++ Compiler 12.1.2
-* Arch Linux 3.5.2 x86_64 and GCC 4.7.1
-* Arch Linux 3.4.2 x86_64 and CLANG 3.1
-* Arch Linux 3.4.2 x86_64 and Intel C++ Compiler 12.1.2
-* CentOS 6.3 x86_64 and GCC 4.4.6
-* FreeBSD 9.0 x86_64 and CLANG 3.1
-* Solaris 11 11/11 and GCC 4.5.2
-* Mac OS X 10.7.4 x86_64 and CLANG 3.1
-* Windows 7 SP1 x64 and Windows SDK 7.1
-* Windows 7 SP1 x64 and Visual Studio 2010 SP1
-* Windows 7 SP1 x64 and Intel C++ Compiler 12.1.2
-* Windows 8 x64 and Visual Studio 2012 Ultimate
+* Arch Linux x86_64 and CLANG 3.4
+* Windows 7 SP1 x64 and Visual Studio 2013
 
 
 Compilation
 -----------
 
-idock depends on [Boost C++ Libraries]. Boost 1.46.0, 1.46.1, 1.47.0, 1.48.0, 1.49.0, 1.50.0, 1.51.0 and 1.52.0 are tested. The Boost libraries required by idock are `Chrono`, `System`, `Thread`, `Filesystem`, `Program Options` and `Iostreams`.
+idock depends on [Boost C++ Libraries]. Boost 1.55.0 is tested. The Boost libraries required by idock are `System`, `Filesystem` and `Program Options`.
 
-### Compilation on Linux, Mac OS X, Solaris and FreeBSD
+### Compilation on Linux
 
-The Makefile uses GCC as the default compiler. To compile, simply run
+The Makefile uses CLANG as the default compiler. To compile, simply run
 
     make
-
-CLANG is also supported.
-
-    make TOOLSET=clang
-
-Intel C++ Compiler is also supported.
-
-    make TOOLSET=intel
 
 One may modify the Makefile to use a different compiler or different compilation options.
 
@@ -69,11 +38,11 @@ The generated objects will be placed in the `obj` folder, and the generated exec
 
 ### Compilation on Windows
 
-Visual Studio 2012 solution and project files are provided. To compile, simply run
+Visual Studio 2013 solution and project files are provided. To compile, simply run
 
     msbuild /t:Build /p:Configuration=Release
 
-Or one may open `idock.sln` in Visual Studio 2012 and do a full rebuild.
+Or one may open `idock.sln` in Visual Studio 2013 and do a full rebuild.
 
 The generated objects will be placed in the `obj` folder, and the generated executable will be placed in the `bin` folder.
 
@@ -81,7 +50,7 @@ The generated objects will be placed in the `obj` folder, and the generated exec
 Usage
 -----
 
-First add idock to your PATH environment variable.
+First add idock to the PATH environment variable.
 
 To display a full list of available options, simply run the program without arguments
 
@@ -93,19 +62,15 @@ The `examples` folder contains several use cases. For example, to dock the ligan
 
 One can supply the options from command line arguments
 
-    idock --receptor ../../../receptors/2ZD1.pdbqt --ligand_folder ../../../ligands/T27 --output_folder output --center_x 49.712 --center_y -28.923 --center_z 36.824 --size_x 18 --size_y 18 --size_z 20
+    idock --receptor ../../../receptors/2ZD1.pdbqt --input_folder ../../../ligands/T27 --output_folder output --center_x 49.712 --center_y -28.923 --center_z 36.824 --size_x 18 --size_y 18 --size_z 20
 
 Or one can instruct idock to load the options from a configuration file
 
-    idock --config idock.cfg
-
-For comparison against [AutoDock Vina]
-
-    vina --config vina.cfg
+    idock --config idock.conf
 
 
-Documentation Creation
-----------------------
+Documentation
+-------------
 
 Documentations in both HTML and LaTeX formats can be esaily created by running [doxygen]
 
@@ -113,13 +78,33 @@ Documentations in both HTML and LaTeX formats can be esaily created by running [
 
 The created documents will be placed in `doc` folder. To compile LaTeX files into PDF, one must have `pdflatex` installed.
 
-    make -C doc/latex
+    cd doc/latex
+    make
 
 The generated PDF will be `refman.pdf`.
 
 
 Change Log
 ----------
+
+### 2.1.0 (2014-03-18)
+
+* Conformed to [semantic versioning] using major.minor.patch.
+* Added support for new chemical elements U and Cs.
+* Added RF-Score trained on PDBbind v2013 refined set using 42 features for prospective rescoring.
+* Updated the option `ligand_folder` to `input_folder`.
+* Updated the output format.
+* Updated the VC project files to Visual Studio 2013.
+* Updated doxygen to idock.dox with version 1.8.6.
+* Updated the extension name of configuration files in all examples from .cfg to .conf.
+* Fixed a data race bug in the original thread pool by substituting the brandnew io service pool.
+* Fixed an assertion bug caused by ligands with zero rotatable bond.
+* Fixed a bug in the generation of random numbers being the exclusive upper bound value.
+* Removed support for Mac, FreeBSD and Solaris.
+* Removed precompiled 32bit executables for Linux and Windows.
+* Removed support for gzip and bzip2.
+* Removed the output of ligand efficiency and putative hydrogen bonds.
+* Removed vina.cfg and vina.sh in all examples.
 
 ### 2.0 (2012-11-02)
 
@@ -223,12 +208,10 @@ Logo
 [docking]: http://en.wikipedia.org/wiki/Docking_(molecular)
 [AutoDock Vina]: http://vina.scripps.edu
 [Apache License 2.0]: http://www.apache.org/licenses/LICENSE-2.0
-[SaaS]: http://en.wikipedia.org/wiki/Software_as_a_service
-[istar]: https://github.com/HongjianLi/istar
-[C++11]: http://en.wikipedia.org/wiki/C++11
-[igrow]: https://github.com/HongjianLi/igrow
+[istar]: http://istar.cse.cuhk.edu.hk/idock
 [Boost C++ Libraries]: http://www.boost.org
 [doxygen]: http://www.doxygen.org
+[semantic versioning]: http://semver.org
 [CodePlex]: http://idock.codeplex.com
 [DOI: 10.1109/CIBCB.2012.6217214]: http://dx.doi.org/10.1109/CIBCB.2012.6217214
 [Jacky Lee]: http://www.cse.cuhk.edu.hk/~hjli
