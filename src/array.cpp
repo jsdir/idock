@@ -2,38 +2,48 @@
 #include <cassert>
 #include "array.hpp"
 
-//! Returns the flattened 1D index of a triangular 2D index (x, y) where x is the lowest dimension.
 size_t mr(const size_t x, const size_t y)
 {
 	assert(x <= y);
 	return (y*(y+1)>>1) + x;
 }
 
-//! Returns the flattened 1D index of a triangular 2D index (x, y) where either x or y is the lowest dimension.
 size_t mp(const size_t x, const size_t y)
 {
 	return x <= y ? mr(x, y) : mr(y, x);
 }
 
-//! Returns the square norm.
 float norm_sqr(const array<float, 3>& a)
 {
 	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2];
 }
 
-//! Returns the norm.
+float norm_sqr(const array<float, 4>& a)
+{
+	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
+}
+
 float norm(const array<float, 3>& a)
 {
 	return sqrt(norm_sqr(a));
 }
 
-//! Returns true if the norm equals 1.
+float norm(const array<float, 4>& a)
+{
+	return sqrt(norm_sqr(a));
+}
+
 bool normalized(const array<float, 3>& a)
 {
 	return fabs(norm_sqr(a) - 1.0f) < 3e-3f;
 }
 
-//! Normalize the vector.
+//! Returns true if the current quaternion is normalized.
+bool normalized(const array<float, 4>& a)
+{
+	return fabs(norm_sqr(a) - 1.0f) < 3e-3f;
+}
+
 array<float, 3> normalize(const array<float, 3>& a)
 {
 	const float norm_inv = 1.0f / norm(a);
@@ -45,94 +55,6 @@ array<float, 3> normalize(const array<float, 3>& a)
 	};
 }
 
-//! Returns pairwise addition of 2 given arrays.
-array<float, 3> operator+(const array<float, 3>& a, const array<float, 3>& b)
-{
-	return
-	{
-		a[0] + b[0],
-		a[1] + b[1],
-		a[2] + b[2],
-	};
-}
-
-//! Returns pairwise subtraction of 2 given arrays.
-array<float, 3> operator-(const array<float, 3>& a, const array<float, 3>& b)
-{
-	return
-	{
-		a[0] - b[0],
-		a[1] - b[1],
-		a[2] - b[2],
-	};
-}
-
-//! Pairwise add a given vector to the current vector.
-void operator+=(array<float, 3>& a, const array<float, 3>& b)
-{
-	a[0] += b[0];
-	a[1] += b[1];
-	a[2] += b[2];
-}
-
-//! Pairwise subtract a given vector from the current vector.
-void operator-=(array<float, 3>& a, const array<float, 3>& b)
-{
-	a[0] -= b[0];
-	a[1] -= b[1];
-	a[2] -= b[2];
-}
-
-//! Pairwise multiply a constant to an array.
-array<float, 3> operator*(const float s, const array<float, 3>& a)
-{
-	return
-	{
-		s * a[0],
-		s * a[1],
-		s * a[2],
-	};
-}
-
-//! Returns the cross product of two vectors.
-array<float, 3> operator*(const array<float, 3>& a, const array<float, 3>& b)
-{
-	return
-	{
-		a[1]*b[2] - a[2]*b[1],
-		a[2]*b[0] - a[0]*b[2],
-		a[0]*b[1] - a[1]*b[0],
-	};
-}
-
-//! Returns the square distance between two arrays.
-float distance_sqr(const array<float, 3>& a, const array<float, 3>& b)
-{
-	const float d0 = a[0] - b[0];
-	const float d1 = a[1] - b[1];
-	const float d2 = a[2] - b[2];
-	return d0 * d0 + d1 * d1 + d2 * d2;
-}
-
-//! Returns the square norm of current quaternion.
-float norm_sqr(const array<float, 4>& a)
-{
-	return a[0] * a[0] + a[1] * a[1] + a[2] * a[2] + a[3] * a[3];
-}
-
-//! Returns the norm of current quaternion.
-float norm(const array<float, 4>& a)
-{
-	return sqrt(norm_sqr(a));
-}
-
-//! Returns true if the current quaternion is normalized.
-bool normalized(const array<float, 4>& a)
-{
-	return fabs(norm_sqr(a) - 1.0f) < 3e-3f;
-}
-
-//! Returns a normalized quaternion of current quaternion.
 array<float, 4> normalize(const array<float, 4>& a)
 {
 	const float norm_inv = 1.0f / norm(a);
@@ -145,7 +67,68 @@ array<float, 4> normalize(const array<float, 4>& a)
 	};
 }
 
-//! Constructs a quaternion by a normalized axis and a rotation angle.
+array<float, 3> operator+(const array<float, 3>& a, const array<float, 3>& b)
+{
+	return
+	{
+		a[0] + b[0],
+		a[1] + b[1],
+		a[2] + b[2],
+	};
+}
+
+array<float, 3> operator-(const array<float, 3>& a, const array<float, 3>& b)
+{
+	return
+	{
+		a[0] - b[0],
+		a[1] - b[1],
+		a[2] - b[2],
+	};
+}
+
+void operator+=(array<float, 3>& a, const array<float, 3>& b)
+{
+	a[0] += b[0];
+	a[1] += b[1];
+	a[2] += b[2];
+}
+
+void operator-=(array<float, 3>& a, const array<float, 3>& b)
+{
+	a[0] -= b[0];
+	a[1] -= b[1];
+	a[2] -= b[2];
+}
+
+array<float, 3> operator*(const float s, const array<float, 3>& a)
+{
+	return
+	{
+		s * a[0],
+		s * a[1],
+		s * a[2],
+	};
+}
+
+array<float, 3> operator*(const array<float, 3>& a, const array<float, 3>& b)
+{
+	return
+	{
+		a[1]*b[2] - a[2]*b[1],
+		a[2]*b[0] - a[0]*b[2],
+		a[0]*b[1] - a[1]*b[0],
+	};
+}
+
+float distance_sqr(const array<float, 3>& a, const array<float, 3>& b)
+{
+	const float d0 = a[0] - b[0];
+	const float d1 = a[1] - b[1];
+	const float d2 = a[2] - b[2];
+	return d0 * d0 + d1 * d1 + d2 * d2;
+}
+
 array<float, 4> vec4_to_qtn4(const array<float, 3>& axis, const float angle)
 {
 	assert(normalized(axis));
@@ -161,7 +144,6 @@ array<float, 4> vec4_to_qtn4(const array<float, 3>& axis, const float angle)
 	};
 }
 
-//! Returns the product of two quaternions.
 array<float, 4> operator*(const array<float, 4>& a, const array<float, 4>& b)
 {
 	assert(normalized(a));
@@ -175,7 +157,6 @@ array<float, 4> operator*(const array<float, 4>& a, const array<float, 4>& b)
 	};
 }
 
-//! Transforms the current quaternion into a 3x3 transformation matrix, e.g. quaternion(1, 0, 0, 0) => identity matrix.
 array<float, 9> qtn4_to_mat3(const array<float, 4>& a)
 {
 	assert(normalized(a));
@@ -200,7 +181,6 @@ array<float, 9> qtn4_to_mat3(const array<float, 4>& a)
 	};
 }
 
-//! Transforms a vector by a 3x3 matrix.
 array<float, 3> operator*(const array<float, 9>& m, const array<float, 3>& v)
 {
 	return
