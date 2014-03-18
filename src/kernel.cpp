@@ -310,7 +310,7 @@ bool evaluate(float* e, float* g, float* a, float* q, float* c, float* d, float*
 	return true;
 }
 
-void monte_carlo(float* const s0e, const int* const lig, const int nv, const int nf, const int na, const int np, const int nbi, const float* const sfe, const float* const sfd, const int sfs, const array<float, 3> cr0, const array<float, 3> cr1, const array<int, 3> npr, const float gri, const vector<vector<float>>& mps, const int gid, const int gds)
+void monte_carlo(float* const s0e, const int* const lig, const int nv, const int nf, const int na, const int np, const int seed, const int nbi, const float* const sfe, const float* const sfd, const int sfs, const array<float, 3> cr0, const array<float, 3> cr1, const array<int, 3> npr, const float gri, const vector<vector<float>>& mps, const int gid, const int gds)
 {
 	const int nls = 5; // Number of line search trials for determining step size in BFGS
 	const float eub = 40.0f * na; // A conformation will be droped if its free energy is not better than e_upper_bound.
@@ -348,7 +348,7 @@ void monte_carlo(float* const s0e, const int* const lig, const int nv, const int
 	float sum, pg1, pga, pgc, alp, pg2, pr0, pr1, pr2, nrm, ang, sng, pq0, pq1, pq2, pq3, s1xq0, s1xq1, s1xq2, s1xq3, s2xq0, s2xq1, s2xq2, s2xq3, bpi;
 	float yhy, yps, ryp, pco, bpj, bmj, ppj;
 	int g, i, j, o0, o1, o2;
-	mt19937_64 rng(gid);
+	mt19937_64 rng(seed);
 	uniform_real_distribution<double> uniform_01(0, 1);
 
 	// Randomize s0x.
