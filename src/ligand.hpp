@@ -3,10 +3,10 @@
 #define IDOCK_LIGAND_HPP
 
 #include <boost/filesystem/fstream.hpp>
-#include "atom.hpp"
 #include "scoring_function.hpp"
-#include "receptor.hpp"
 #include "random_forest.hpp"
+#include "atom.hpp"
+#include "receptor.hpp"
 using namespace boost::filesystem;
 
 //! Represents a ROOT or a BRANCH in PDBQT structure.
