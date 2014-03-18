@@ -24,7 +24,7 @@ void tree::train(const size_t mtry, const function<double()> u01)
 		node& n = (*this)[k];
 
 		// Evaluate node y and purity.
-		float sum = 0.0f;
+		float sum = 0;
 		for (const size_t s : n.samples) sum += y[s];
 		n.y = sum / n.samples.size();
 		n.p = sum * n.y; // = n.y * n.y * n.samples.size() = sum * sum / n.samples.size().
@@ -52,7 +52,7 @@ void tree::train(const size_t mtry, const function<double()> u01)
 			});
 
 			// Search through the gaps in the selected variable.
-			float suml = 0.0f;
+			float suml = 0;
 			float sumr = sum;
 			size_t popl = 0;
 			size_t popr = n.samples.size();
@@ -114,7 +114,7 @@ forest::forest(const size_t nt, const size_t seed) : vector<tree>(nt), nt_inv(1.
 
 float forest::operator()(const array<float, tree::nv>& x) const
 {
-	float y = 0.0f;
+	float y = 0;
 	for (const tree& t : *this)
 	{
 		y += t(x);
