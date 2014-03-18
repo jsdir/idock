@@ -18,9 +18,9 @@ public:
 	const array<float, 3> corner1; //!< Box boundary corner with largest values of all the 3 dimensions.
 	const float granularity; //!< 1D size of grids.
 	const float granularity_inverse; //!< 1 / granularity.
-	array<int, 3> num_probes; //!< Number of probes.
-	size_t num_probes_product; //!< Product of num_probes[0,1,2].
-	size_t map_bytes; //!< Number of bytes in a map.
+	const array<int, 3> num_probes; //!< Number of probes.
+	const size_t num_probes_product; //!< Product of num_probes[0,1,2].
+	const size_t map_bytes; //!< Number of bytes in a map.
 	vector<vector<size_t>> p_offset; //!< Auxiliary precalculated constants to accelerate grid map creation.
 	vector<vector<float>> maps; //!< Grid maps.
 
@@ -31,7 +31,7 @@ public:
 	void precalculate(const scoring_function& sf, const vector<size_t>& xs);
 
 	//! Populates grid maps for certain atom types along X and Y dimensions for a given Z dimension value.
-	void populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z);
+	void populate(const vector<size_t>& xs, const size_t z, const scoring_function& sf);
 };
 
 #endif

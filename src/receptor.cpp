@@ -1,20 +1,11 @@
 #include <cmath>
 #include <boost/filesystem/fstream.hpp>
-#include "scoring_function.hpp"
 #include "array.hpp"
+#include "scoring_function.hpp"
 #include "receptor.hpp"
 
-receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity) : center(center), size(size), corner0(center - 0.5f * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes_product(1), p_offset(scoring_function::n), maps(scoring_function::n)
+receptor::receptor(const path& p, const array<float, 3>& center, const array<float, 3>& size, const float granularity) : center(center), size(size), corner0(center - 0.5f * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1.0f / granularity), num_probes({static_cast<int>(size[0] * granularity_inverse) + 2, static_cast<int>(size[1] * granularity_inverse) + 2, static_cast<int>(size[2] * granularity_inverse) + 2}), num_probes_product(num_probes[0] * num_probes[1] * num_probes[2]), map_bytes(sizeof(float) * num_probes_product), p_offset(scoring_function::n), maps(scoring_function::n)
 {
-	// The loop may be unrolled by enabling compiler optimization.
-	for (size_t i = 0; i < 3; ++i)
-	{
-		// Reserve one more probe to calculate the derivative.
-		num_probes[i] = static_cast<size_t>(size[i] * granularity_inverse) + 2;
-		num_probes_product *= num_probes[i];
-	}
-	map_bytes = sizeof(float) * num_probes_product;
-
 	// Parse the receptor line by line.
 	atoms.reserve(2000); // A receptor typically consists of <= 2,000 atoms within bound.
 	string residue = "XXXX"; // Current residue sequence located at 1-based [23, 26], used to track residue change, initialized to a dummy value.
@@ -86,7 +77,7 @@ receptor::receptor(const path& p, const array<float, 3>& center, const array<flo
 			}
 
 			// Save the atom if and only if its distance to its projection point on the box is within cutoff.
-			float r2 = 0.0f;
+			float r2 = 0;
 			for (size_t i = 0; i < 3; ++i)
 			{
 				if (a.coord[i] < corner0[i])
@@ -127,7 +118,7 @@ void receptor::precalculate(const scoring_function& sf, const vector<size_t>& xs
 	}
 }
 
-void receptor::populate(const scoring_function& sf, const vector<size_t>& xs, const size_t z)
+void receptor::populate(const vector<size_t>& xs, const size_t z, const scoring_function& sf)
 {
 	const size_t n = xs.size();
 	const float z_coord = corner0[2] + granularity * z;
