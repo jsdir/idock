@@ -8,9 +8,9 @@
 #include "cl_helper.h"
 #include "io_service_pool.hpp"
 #include "safe_class.hpp"
+#include "random_forest.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
-#include "random_forest.hpp"
 #include "log.hpp"
 #include "source.hpp"
 
@@ -377,7 +377,7 @@ int main(int argc, char* argv[])
 			{
 				io.post([&,z]()
 				{
-					rec.populate(sf, xs, z);
+					rec.populate(xs, z, sf);
 					cnt.increment();
 				});
 			}
