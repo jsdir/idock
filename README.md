@@ -87,6 +87,10 @@ The generated PDF will be `refman.pdf`.
 Change Log
 ----------
 
+### 3.0.0 (in progress)
+
+* Supported multithreading in idock_cp, CUDA implementation in idock_cu, and OpenCL implementation in idock_cl.
+
 ### 2.1.0 (2014-03-18)
 
 * Conformed to [semantic versioning] using major.minor.patch.
