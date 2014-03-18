@@ -155,6 +155,9 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	// Initialize a Mersenne Twister random number generator.
+	cout << "Using random seed " << seed << endl;
+
 	cout << "Creating an io service pool of " << num_threads << " worker threads" << endl;
 	io_service_pool io(num_threads);
 	safe_counter<size_t> cnt;
@@ -368,7 +371,7 @@ int main(int argc, char* argv[])
 	safe_vector<int> idle(num_devices);
 	iota(idle.begin(), idle.end(), 0);
 
-	cout << "Training a random forest of " << num_trees << " trees with seed " << seed << " in parallel" << endl;
+	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
 	forest f(num_trees, seed);
 	cnt.init(num_trees);
 	for (size_t i = 0; i < num_trees; ++i)
