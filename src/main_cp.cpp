@@ -133,6 +133,10 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	// Initialize a Mersenne Twister random number generator.
+	cout << "Using random seed " << seed << endl;
+	mt19937_64 rng(seed);
+
 	cout << "Creating an io service pool of " << num_threads << " worker threads" << endl;
 	io_service_pool io(num_threads);
 	safe_counter<size_t> cnt;
@@ -159,7 +163,7 @@ int main(int argc, char* argv[])
 	vector<int>   ligh(2601);
 	vector<float> slnd(3438 * num_tasks);
 
-	cout << "Training a random forest of " << num_trees << " trees with seed " << seed << " in parallel" << endl;
+	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
 	forest f(num_trees, seed);
 	cnt.init(num_trees);
 	for (size_t i = 0; i < num_trees; ++i)
@@ -241,9 +245,10 @@ int main(int argc, char* argv[])
 		cnt.init(num_tasks);
 		for (int gid = 0; gid < num_tasks; ++gid)
 		{
-			io.post([&,gid]()
+			const size_t s = rng();
+			io.post([&, s, gid]()
 			{
-				monte_carlo(slnd.data(), ligh.data(), lig.nv, lig.nf, lig.na, lig.np, num_bfgs_iterations, sf.e.data(), sf.d.data(), sf.ns, rec.corner0, rec.corner1, rec.num_probes, rec.granularity_inverse, rec.maps, gid, num_tasks);
+				monte_carlo(slnd.data(), ligh.data(), lig.nv, lig.nf, lig.na, lig.np, s, num_bfgs_iterations, sf.e.data(), sf.d.data(), sf.ns, rec.corner0, rec.corner1, rec.num_probes, rec.granularity_inverse, rec.maps, gid, num_tasks);
 				cnt.increment();
 			});
 		}
