@@ -96,6 +96,7 @@ Change Log
 * Conformed to [semantic versioning] using major.minor.patch.
 * Added support for new chemical elements U and Cs.
 * Added RF-Score trained on PDBbind v2013 refined set using 42 features for prospective rescoring.
+* Updated the grid map creation algorithm.
 * Updated the option `ligand_folder` to `input_folder`.
 * Updated the output format.
 * Updated the VC project files to Visual Studio 2013.
@@ -103,7 +104,6 @@ Change Log
 * Updated the extension name of configuration files in all examples from .cfg to .conf.
 * Fixed a data race bug in the original thread pool by substituting the brandnew io service pool.
 * Fixed an assertion bug caused by ligands with zero rotatable bond.
-* Fixed a bug in the generation of random numbers being the exclusive upper bound value.
 * Removed support for Mac, FreeBSD and Solaris.
 * Removed precompiled 32bit executables for Linux and Windows.
 * Removed support for gzip and bzip2.
