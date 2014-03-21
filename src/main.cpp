@@ -27,9 +27,9 @@ int main(int argc, char* argv[])
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
 		const size_t default_num_threads = thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
-		const size_t default_num_tasks = 32;
+		const size_t default_num_tasks = 64;
 		const size_t default_max_conformations = 9;
-		const double default_granularity = 0.15625;
+		const double default_granularity = 0.1;
 
 		// Set up options description.
 		using namespace boost::program_options;
