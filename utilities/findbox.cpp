@@ -29,6 +29,6 @@ int main(int argc, char* argv[])
 	}
 	for (size_t i = 0; i < d; ++i)
 	{
-		cout << "size_"   << c[i] << '=' << (mx[i] - mn[i]) * 1.5 << endl;
+		cout << "size_"   << c[i] << '=' << (mx[i] - mn[i]) + 10 << endl;
 	}
 }
