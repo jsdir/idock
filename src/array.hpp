@@ -12,7 +12,7 @@ double norm(const array<double, 3>& a);
 double norm(const array<double, 4>& a);
 bool normalized(const array<double, 3>& a);
 bool normalized(const array<double, 4>& a);
-array<double, 3> normalize(const array<double, 3>& v);
+array<double, 3> normalize(const array<double, 3>& a);
 array<double, 4> normalize(const array<double, 4>& a);
 
 double operator*(const array<double, 3>& a, const array<double, 3>& b);
