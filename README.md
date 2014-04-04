@@ -87,6 +87,13 @@ The generated PDF will be `refman.pdf`.
 Change Log
 ----------
 
+### 2.1.1 (2014-04-04)
+
+* Fixed a segmentation fault in the precompiled executable for Linux.
+* Enlarged the default number of Monte Carlo tasks from 32 to 64.
+* Refined the default grid map granularity from 0.15625 to 0.1.
+* Added 3 new examples: 1AQ1, 1PKD and 4MBS.
+
 ### 2.1.0 (2014-03-18)
 
 * Conformed to [semantic versioning] using major.minor.patch.
