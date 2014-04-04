@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 		const path default_output_folder_path = "output";
 		const path default_log_path = "log.csv";
 		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
-		const size_t default_num_threads = thread::hardware_concurrency();
+		const size_t default_num_threads = boost::thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
 		const size_t default_num_tasks = 64;
 		const size_t default_max_conformations = 9;
