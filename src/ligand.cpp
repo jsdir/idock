@@ -643,7 +643,6 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 
 	for (size_t mc_i = 0; mc_i < num_mc_iterations; ++mc_i)
 	{
-		size_t num_mutations = 0;
 		size_t mutation_entity;
 
 		// Mutate c0 into c1, and evaluate c1.
@@ -668,7 +667,6 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * array<double, 3>{u11(rng), u11(rng), u11(rng)}) * c1.orientation;
 				assert(normalized(c1.orientation));
 			}
-			++num_mutations;
 		} while (!evaluate(c1, sf, rec, e_upper_bound, e1, f1, g1));
 
 		// Initialize the Hessian matrix to identity.
