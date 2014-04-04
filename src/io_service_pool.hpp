@@ -17,7 +17,7 @@ public:
 	//! Waits for all the posted work and created threads to complete, and propagates thrown exceptions if any.
 	void wait();
 private:
-	unique_ptr<work> w; //!< An io service work object, resetting which to nullptr signals the io service to stop receiving additional work. 
+	unique_ptr<work> w; //!< An io service work object, resetting which to nullptr signals the io service to stop receiving additional work.
 };
 
 #endif
