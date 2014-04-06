@@ -87,6 +87,10 @@ The generated PDF will be `refman.pdf`.
 Change Log
 ----------
 
+### 2.1.2 (2014-04-06)
+
+* Fixed a data race bug.
+
 ### 2.1.1 (2014-04-04)
 
 * Fixed a segmentation fault in the precompiled executable for Linux.
