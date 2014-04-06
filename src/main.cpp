@@ -336,6 +336,7 @@ int main(int argc, char* argv[])
 		// Clear the results of the current ligand.
 		results.clear();
 	}
+	io.wait();
 
 	// Sort and write ligand log records to the log file.
 	if (log.empty()) return 0;
