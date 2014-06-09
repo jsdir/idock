@@ -238,103 +238,118 @@ int main(int argc, char* argv[])
 		// Output the ligand file stem.
 		string stem = input_ligand_path.stem().string();
 		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
-
-		// Parse the ligand.
-		ligand lig(input_ligand_path);
-
-		// Find atom types that are presented in the current ligand but not presented in the grid maps.
-		vector<size_t> xs;
-		for (size_t t = 0; t < sf.n; ++t)
+		// Check if the current ligand has already been docked.
+		vector<double> affinities;
+		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
+		if (exists(output_ligand_path))
 		{
-			if (lig.xs[t] && rec.maps[t].empty())
+			affinities.reserve(max_conformations);
+			string line;
+			for (boost::filesystem::ifstream ifs(output_ligand_path); getline(ifs, line);)
 			{
-				rec.maps[t].resize(rec.num_probes_product);
-				xs.push_back(t);
+				if (line.substr(0, 6) == "MODEL ")
+				{
+					getline(ifs, line);
+					affinities.push_back(stod(line.substr(55, 8)));
+				}
 			}
 		}
-
-		// Create grid maps on the fly if necessary.
-		if (xs.size())
+		else
 		{
-			// Precalculate p_offset.
-			rec.precalculate(sf, xs);
+			// Parse the ligand.
+			ligand lig(input_ligand_path);
 
-			// Populate the grid map task container.
-			cnt.init(rec.num_probes[2]);
-			for (size_t z = 0; z < rec.num_probes[2]; ++z)
+			// Find atom types that are presented in the current ligand but not presented in the grid maps.
+			vector<size_t> xs;
+			for (size_t t = 0; t < sf.n; ++t)
 			{
-				io.post([&, z]()
+				if (lig.xs[t] && rec.maps[t].empty())
 				{
-					rec.populate(xs, z, sf);
+					rec.maps[t].resize(rec.num_probes_product);
+					xs.push_back(t);
+				}
+			}
+
+			// Create grid maps on the fly if necessary.
+			if (xs.size())
+			{
+				// Precalculate p_offset.
+				rec.precalculate(sf, xs);
+
+				// Populate the grid map task container.
+				cnt.init(rec.num_probes[2]);
+				for (size_t z = 0; z < rec.num_probes[2]; ++z)
+				{
+					io.post([&, z]()
+					{
+						rec.populate(xs, z, sf);
+						cnt.increment();
+					});
+				}
+				cnt.wait();
+			}
+
+			// Run the Monte Carlo tasks.
+			cnt.init(num_tasks);
+			for (size_t i = 0; i < num_tasks; ++i)
+			{
+				assert(result_containers[i].empty());
+				const size_t s = rng();
+				io.post([&, i, s]()
+				{
+					lig.monte_carlo(result_containers[i], s, sf, rec);
 					cnt.increment();
 				});
 			}
 			cnt.wait();
-		}
 
-		// Run the Monte Carlo tasks.
-		cnt.init(num_tasks);
-		for (size_t i = 0; i < num_tasks; ++i)
-		{
-			assert(result_containers[i].empty());
-			const size_t s = rng();
-			io.post([&, i, s]()
+			// Merge results from all tasks into one single result container.
+			assert(results.empty());
+			const double required_square_error = static_cast<double>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
+			for (auto& result_container : result_containers)
 			{
-				lig.monte_carlo(result_containers[i], s, sf, rec);
-				cnt.increment();
-			});
-		}
-		cnt.wait();
-
-		// Merge results from all tasks into one single result container.
-		assert(results.empty());
-		const double required_square_error = static_cast<double>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
-		for (auto& result_container : result_containers)
-		{
-			for (auto& result : result_container)
-			{
-				result::push(results, move(result), required_square_error);
+				for (auto& result : result_container)
+				{
+					result::push(results, move(result), required_square_error);
+				}
+				result_container.clear();
 			}
-			result_container.clear();
+
+			// If conformations are found, output them.
+			if (results.size())
+			{
+				// Adjust free energy relative to the best conformation and flexibility.
+				const size_t num_results = min<size_t>(results.size(), max_conformations);
+				const auto& best_result = results.front();
+				const double best_result_intra_e = best_result.e - best_result.f;
+				affinities.resize(num_results);
+				for (size_t i = 0; i < num_results; ++i)
+				{
+					results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
+					affinities[i] = results[i].e_nd;
+				}
+
+				// Write models to file.
+				lig.write_models(output_ligand_path, results, num_results, rec, f, sf);
+
+				// Clear the results of the current ligand.
+				results.clear();
+			}
 		}
 
-		// If no conformation can be found, skip the current ligand and proceed with the next one.
-		if (results.empty())
+		// If affinities are found, output them.
+		if (affinities.size())
 		{
-			cout << endl;
-			continue;
+			// Display the free energies of the top 9 conformations.
+			for_each(affinities.cbegin(), affinities.cbegin() + min<size_t>(affinities.size(), 9), [](const double a)
+			{
+				cout << setw(6) << a;
+			});
+
+			// Add a log record.
+			log.push_back(new log_record(move(stem), move(affinities)));
 		}
-
-		// Adjust free energy relative to the best conformation and flexibility.
-		const size_t num_results = min<size_t>(results.size(), max_conformations);
-		const auto& best_result = results.front();
-		const double best_result_intra_e = best_result.e - best_result.f;
-		for (size_t i = 0; i < num_results; ++i)
-		{
-			results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
-		}
-
-		// Write models to file.
-		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
-		lig.write_models(output_ligand_path, results, num_results, rec, f, sf);
-
-		// Display the free energies of the top 9 conformations.
-		for_each(results.cbegin(), results.cbegin() + min<size_t>(num_results, 9), [](const result& r)
-		{
-			cout << setw(6) << r.e_nd;
-		});
 		cout << endl;
-
-		// Add a log record.
-		vector<double> affinities(num_results);
-		for (size_t i = 0; i < num_results; ++i)
-		{
-			affinities[i] = results[i].e_nd;
-		}
-		log.push_back(new log_record(move(stem), move(affinities)));
-
-		// Clear the results of the current ligand.
-		results.clear();
 	}
 	io.wait();
 
