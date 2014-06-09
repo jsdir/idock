@@ -235,6 +235,10 @@ int main(int argc, char* argv[])
 		const path input_ligand_path = dir_iter->path();
 		if (input_ligand_path.extension() != ".pdbqt") continue;
 
+		// Output the ligand file stem.
+		string stem = input_ligand_path.stem().string();
+		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
+
 		// Parse the ligand.
 		ligand lig(input_ligand_path);
 
@@ -267,10 +271,6 @@ int main(int argc, char* argv[])
 			}
 			cnt.wait();
 		}
-
-		// Output the ligand file stem.
-		string stem = input_ligand_path.stem().string();
-		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
 
 		// Run the Monte Carlo tasks.
 		cnt.init(num_tasks);
