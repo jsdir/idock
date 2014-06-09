@@ -247,9 +247,8 @@ int main(int argc, char* argv[])
 			string line;
 			for (boost::filesystem::ifstream ifs(output_ligand_path); getline(ifs, line);)
 			{
-				if (line.substr(0, 6) == "MODEL ")
+				if (line.substr(0, 10) == "REMARK 921")
 				{
-					getline(ifs, line);
 					affinities.push_back(stod(line.substr(55, 8)));
 				}
 			}
