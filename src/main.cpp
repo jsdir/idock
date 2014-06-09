@@ -235,14 +235,17 @@ int main(int argc, char* argv[])
 		if (input_ligand_path.extension() != ".pdbqt") continue;
 
 		// Output the ligand file stem.
-		string stem = input_ligand_path.stem().string();
-		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
-		// Check if the current ligand has already been docked.
+		string stem = input_ligand_path.stem().string();		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
+
+		// Reserve space for affinity output.
 		vector<double> affinities;
+		affinities.reserve(max_conformations);
+
+		// Check if the current ligand has already been docked.
 		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
 		if (exists(output_ligand_path))
 		{
-			affinities.reserve(max_conformations);
+			// Extract affinities from output file.
 			string line;
 			for (boost::filesystem::ifstream ifs(output_ligand_path); getline(ifs, line);)
 			{
@@ -324,7 +327,6 @@ int main(int argc, char* argv[])
 				for (size_t i = 0; i < num_results; ++i)
 				{
 					affinities[i] = results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
-//					affinities[i] = results[i].e_nd;
 				}
 
 				// Write models to file.
