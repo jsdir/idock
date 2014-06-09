@@ -199,15 +199,14 @@ int main(int argc, char* argv[])
 	receptor rec(receptor_path, center, size, granularity);
 
 	// Reserve storage for result containers.
-	const size_t max_results = 20; // Maximum number of results obtained from a single Monte Carlo task.
 	ptr_vector<ptr_vector<result>> result_containers; // ptr_vector<T> is used for fast sorting.
 	result_containers.resize(num_tasks);
 	for (auto& rc : result_containers)
 	{
-		rc.reserve(max_results);
+		rc.reserve(20);	// Maximum number of results obtained from a single Monte Carlo task.
 	}
 	ptr_vector<result> results;
-	results.reserve(max_results * num_tasks);
+	results.reserve(max_conformations);
 
 	// Train RF-Score on the fly.
 	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
@@ -318,18 +317,18 @@ int main(int argc, char* argv[])
 			if (results.size())
 			{
 				// Adjust free energy relative to the best conformation and flexibility.
-				const size_t num_results = min<size_t>(results.size(), max_conformations);
 				const auto& best_result = results.front();
 				const double best_result_intra_e = best_result.e - best_result.f;
+				const size_t num_results = results.size();
 				affinities.resize(num_results);
 				for (size_t i = 0; i < num_results; ++i)
 				{
-					results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
-					affinities[i] = results[i].e_nd;
+					affinities[i] = results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
+//					affinities[i] = results[i].e_nd;
 				}
 
 				// Write models to file.
-				lig.write_models(output_ligand_path, results, num_results, rec, f, sf);
+				lig.write_models(output_ligand_path, results, rec, f, sf);
 
 				// Clear the results of the current ligand.
 				results.clear();

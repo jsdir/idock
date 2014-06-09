@@ -509,17 +509,17 @@ result ligand::compose_result(const double e, const double f, const conformation
 	return result(e, f, static_cast<vector<array<double, 3>>&&>(heavy_atoms), static_cast<vector<array<double, 3>>&&>(hydrogens));
 }
 
-void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const size_t num_conformations, const receptor& rec, const forest& f, const scoring_function& sf)
+void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const receptor& rec, const forest& f, const scoring_function& sf)
 {
-	assert(num_conformations > 0);
-	assert(num_conformations <= results.size());
+	const size_t num_results = results.size();
+	assert(num_results);
 
 	const size_t num_lines = lines.size();
 
 	// Dump binding conformations to the output ligand file.
 	boost::filesystem::ofstream ofs(output_ligand_path); // Dumping starts. Open the file stream as late as possible.
 	ofs.setf(ios::fixed, ios::floatfield);
-	for (size_t k = 0; k < num_conformations; ++k)
+	for (size_t k = 0; k < num_results; ++k)
 	{
 		const result& r = results[k];
 
