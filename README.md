@@ -87,6 +87,13 @@ The generated PDF will be `refman.pdf`.
 Change Log
 ----------
 
+### 2.1.3 (2014-06-09)
+
+* Bypassed already docked ligands by detecting file existence in output folder.
+* Numbered REMARK records of output PDBQT files.
+* Shortened the decimal digits from 3 to 2 in the REMARK records of output PDBQT files.
+* Flushed ligand file stem before parsing.
+
 ### 2.1.2 (2014-04-06)
 
 * Fixed a data race bug.
