@@ -514,10 +514,8 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 	const size_t num_results = results.size();
 	assert(num_results);
 
-	const size_t num_lines = lines.size();
-
 	// Dump binding conformations to the output ligand file.
-	boost::filesystem::ofstream ofs(output_ligand_path); // Dumping starts. Open the file stream as late as possible.
+	boost::filesystem::ofstream ofs(output_ligand_path);
 	ofs.setf(ios::fixed, ios::floatfield);
 	for (size_t k = 0; k < num_results; ++k)
 	{
@@ -551,11 +549,12 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 			<< "REMARK 922        TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
 			<< "REMARK 923 INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
 			<< "REMARK 924 INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL\n"
-			<< "REMARK 925RF-SCORE BINDING AFFINITY PREDICTED BY IDOCK:" << setw(8) << rf        << " PKD\n" << setprecision(3);
+			<< "REMARK 927RF-SCORE BINDING AFFINITY PREDICTED BY IDOCK:" << setw(8) << rf        << " PKD\n" << setprecision(3);
 
-		for (size_t j = 0, heavy_atom = 0, hydrogen = 0; j < num_lines; ++j)
+		size_t heavy_atom = 0;
+		size_t hydrogen = 0;
+		for (const auto& line : lines)
 		{
-			const string& line = lines[j];
 			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
 			{
 				const double free_energy = line[77] == 'H' ? 0 : rec.maps[heavy_atoms[heavy_atom].xs][rec.index(rec.index(r.heavy_atoms[heavy_atom]))];
