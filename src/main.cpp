@@ -351,6 +351,8 @@ int main(int argc, char* argv[])
 		}
 		cout << endl;
 	}
+
+	// Wait until the io service pool has finished all its tasks.
 	io.wait();
 
 	// Sort and write ligand log records to the log file.
