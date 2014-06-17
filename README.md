@@ -91,6 +91,24 @@ Change Log
 
 * Supported multithreading in idock_cp, CUDA implementation in idock_cu, and OpenCL implementation in idock_cl.
 
+### 2.1.3 (2014-06-17)
+
+* Bypassed already docked ligands by detecting file existence in output folder.
+* Numbered REMARK records of output PDBQT files.
+* Shortened the decimal digits from 3 to 2 in the REMARK records of output PDBQT files.
+* Flushed ligand file stem before parsing.
+
+### 2.1.2 (2014-04-06)
+
+* Fixed a data race bug.
+
+### 2.1.1 (2014-04-04)
+
+* Fixed a segmentation fault in the precompiled executable for Linux.
+* Enlarged the default number of Monte Carlo tasks from 32 to 64.
+* Refined the default grid map granularity from 0.15625 to 0.1.
+* Added 3 new examples: 1AQ1, 1PKD and 4MBS.
+
 ### 2.1.0 (2014-03-18)
 
 * Conformed to [semantic versioning] using major.minor.patch.
