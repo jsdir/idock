@@ -1,0 +1,71 @@
+REMARK  10 active torsions:
+REMARK  status: ('A' for Active; 'I' for Inactive)
+REMARK    1  A    between atoms: PG_1  and  C3B_8 
+REMARK    2  A    between atoms: PB_5  and  C3B_8 
+REMARK    3  A    between atoms: PB_5  and  O3A_12 
+REMARK    4  A    between atoms: PA_9  and  O5'_13 
+REMARK    5  A    between atoms: PA_9  and  O3A_12 
+REMARK    6  A    between atoms: O5'_13  and  C5'_14 
+REMARK    7  A    between atoms: C5'_14  and  C4'_15 
+REMARK    8  A    between atoms: C3'_17  and  O3'_18 
+REMARK    9  A    between atoms: C2'_20  and  O2'_21 
+REMARK   10  A    between atoms: C1'_23  and  N9_24 
+ROOT
+HETATM    1  C4' ACP A 801      28.629   1.762  34.775  1.00 31.56     0.180 C 
+HETATM    2  O4' ACP A 801      29.606   2.225  35.783  1.00 33.24    -0.353 OA
+HETATM    3  C3' ACP A 801      27.818   0.785  35.482  1.00 34.95     0.182 C 
+HETATM    4  C2' ACP A 801      28.726   0.125  36.370  1.00 40.16     0.198 C 
+HETATM    5  C1' ACP A 801      29.606   1.179  36.845  1.00 31.79     0.262 C 
+ENDROOT
+BRANCH   1   6
+HETATM    6  C5' ACP A 801      27.813   2.896  34.294  1.00 32.79     0.216 C 
+BRANCH   6   7
+HETATM    7  O5' ACP A 801      27.140   3.485  35.390  1.00 37.12    -0.287 OA
+BRANCH   7   8
+HETATM    8  PA  ACP A 801      25.914   4.517  35.119  1.00 30.48     0.416 P 
+HETATM    9  O2A ACP A 801      24.670   3.785  34.589  1.00 25.83    -0.624 OA
+HETATM   10  O1A ACP A 801      25.593   5.225  36.418  1.00 29.29    -0.624 OA
+BRANCH   8  11
+HETATM   11  O3A ACP A 801      26.391   5.593  34.069  1.00 31.96    -0.203 OA
+BRANCH  11  12
+HETATM   12  PB  ACP A 801      25.560   5.897  32.757  1.00 33.18     0.272 P 
+HETATM   13  O2B ACP A 801      24.726   4.638  32.318  1.00 23.72    -0.646 OA
+HETATM   14  O1B ACP A 801      24.637   7.058  32.959  1.00 30.05    -0.646 OA
+BRANCH  12  15
+HETATM   15  C3B ACP A 801      26.868   6.324  31.539  1.00 34.40     0.281 C 
+BRANCH  15  16
+HETATM   16  PG  ACP A 801      26.188   7.162  30.055  1.00 39.33     0.271 P 
+HETATM   17  O3G ACP A 801      27.345   7.963  29.355  1.00 50.21    -0.639 OA
+HETATM   18  O2G ACP A 801      25.015   8.134  30.434  1.00 26.26    -0.639 OA
+HETATM   19  O1G ACP A 801      25.696   6.102  29.096  1.00 39.24    -0.639 OA
+ENDBRANCH  15  16
+ENDBRANCH  12  15
+ENDBRANCH  11  12
+ENDBRANCH   8  11
+ENDBRANCH   7   8
+ENDBRANCH   6   7
+ENDBRANCH   1   6
+BRANCH   3  20
+HETATM   20  O3' ACP A 801      27.178  -0.133  34.602  1.00 34.50    -0.390 OA
+ATOM     21  H3' ACP A 801      26.648  -0.772  35.064  1.00  0.00     0.210 HD
+ENDBRANCH   3  20
+BRANCH   4  22
+HETATM   22  O2' ACP A 801      29.476  -0.894  35.657  1.00 43.80    -0.388 OA
+ATOM     23  H2' ACP A 801      30.079  -1.332  36.246  1.00  0.00     0.210 HD
+ENDBRANCH   4  22
+BRANCH   5  24
+HETATM   24  N9  ACP A 801      29.121   1.728  38.030  1.00 32.59    -0.297 N 
+HETATM   25  C4  ACP A 801      29.472   1.341  39.319  1.00 34.92     0.142 A 
+HETATM   26  N3  ACP A 801      30.312   0.405  39.837  1.00 36.12    -0.336 N 
+HETATM   27  C5  ACP A 801      28.749   2.172  40.206  1.00 32.41     0.119 A 
+HETATM   28  C2  ACP A 801      30.455   0.259  41.192  1.00 38.06     0.183 A 
+ATOM     29  H3  ACP A 801      30.843  -0.197  39.208  1.00  0.00     0.168 HD
+HETATM   30  N1  ACP A 801      29.758   1.048  42.048  1.00 36.72    -0.339 N 
+HETATM   31  C6  ACP A 801      28.919   1.988  41.585  1.00 31.55     0.148 A 
+ATOM     32  H1  ACP A 801      29.873   0.926  43.054  1.00  0.00     0.167 HD
+HETATM   33  N6  ACP A 801      28.193   2.798  42.546  1.00 30.69    -0.080 NA
+HETATM   34  N7  ACP A 801      28.009   2.987  39.450  1.00 34.18    -0.346 N 
+HETATM   35  C8  ACP A 801      28.230   2.729  38.156  1.00 33.69     0.188 A 
+ATOM     36  H7  ACP A 801      27.371   3.699  39.806  1.00  0.00     0.167 HD
+ENDBRANCH   5  24
+TORSDOF 10
