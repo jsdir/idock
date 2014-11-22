@@ -16,7 +16,7 @@ public:
 	vector<array<double, 3>> hydrogens; //!< Hydrogen atom coordinates.
 
 	//! Constructs a result from free energy e, force f, heavy atom coordinates and hydrogen atom coordinates.
-	explicit result(const double e, const double f, vector<array<double, 3>>&& heavy_atoms_, vector<array<double, 3>>&& hydrogens_) : e(e), f(f), heavy_atoms(static_cast<vector<array<double, 3>>&&>(heavy_atoms_)), hydrogens(static_cast<vector<array<double, 3>>&&>(hydrogens_)) {}
+	explicit result(const double e, const double f, vector<array<double, 3>>&& heavy_atoms_, vector<array<double, 3>>&& hydrogens_) : e(e), f(f), heavy_atoms(move(heavy_atoms_)), hydrogens(move(hydrogens_)) {}
 
 	//! For sorting ptr_vector<result>.
 	bool operator<(const result& r) const

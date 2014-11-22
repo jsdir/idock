@@ -506,7 +506,7 @@ result ligand::compose_result(const double e, const double f, const conformation
 		}
 	}
 
-	return result(e, f, static_cast<vector<array<double, 3>>&&>(heavy_atoms), static_cast<vector<array<double, 3>>&&>(hydrogens));
+	return result(e, f, move(heavy_atoms), move(hydrogens));
 }
 
 void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const receptor& rec, const forest& f, const scoring_function& sf)
@@ -580,7 +580,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const
 {
 	// Define constants.
-	static const double pi = static_cast<double>(3.1415926535897932); //!< Pi.
+	static const double pi = 3.1415926535897932; //!< Pi.
 	static const size_t num_alphas = 5; //!< Number of alpha values for determining step size in BFGS
 	const size_t num_mc_iterations = 100 * num_heavy_atoms; //!< The number of iterations correlates to the complexity of ligand.
 	const size_t num_entities = 2 + num_active_torsions; // Number of entities to mutate.
@@ -662,7 +662,7 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 			}
 			else // Mutate orientation.
 			{
-				c1.orientation = vec3_to_qtn4(static_cast<double>(0.01) * array<double, 3>{u11(rng), u11(rng), u11(rng)}) * c1.orientation;
+				c1.orientation = vec3_to_qtn4(0.01 * array<double, 3>{u11(rng), u11(rng), u11(rng)}) * c1.orientation;
 				assert(normalized(c1.orientation));
 			}
 		} while (!evaluate(c1, sf, rec, e_upper_bound, e1, f1, g1));
