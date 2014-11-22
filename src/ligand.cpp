@@ -38,8 +38,8 @@ ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 			// Parse the line.
 			atom a(line);
 
-			// Skip unsupported atom types.
-			if (a.ad_unsupported()) continue;
+			// Harmonize a unsupported atom type to carbon.
+			if (a.ad_unsupported()) a.ad = 2;
 
 			if (a.is_hydrogen()) // Current atom is a hydrogen.
 			{
