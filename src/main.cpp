@@ -235,7 +235,8 @@ int main(int argc, char* argv[])
 		if (input_ligand_path.extension() != ".pdbqt") continue;
 
 		// Output the ligand file stem.
-		string stem = input_ligand_path.stem().string();		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
+		string stem = input_ligand_path.stem().string();
+		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
 
 		// Reserve space for affinity output.
 		vector<double> affinities;
