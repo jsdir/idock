@@ -4,8 +4,8 @@
 #include "scoring_function.hpp"
 
 const double scoring_function::cutoff_sqr = cutoff * cutoff;
-const array<double, scoring_function::n> scoring_function::vdw =
-{
+const array<double, scoring_function::n> scoring_function::vdw
+{{
 	1.9, //   C_H
 	1.9, //   C_P
 	1.8, //   N_P
@@ -21,7 +21,7 @@ const array<double, scoring_function::n> scoring_function::vdw =
 	2.0, //  Br_H
 	2.2, //   I_H
 	1.2, // Met_D
-};
+}};
 
 //! Returns true if the XScore atom type is hydrophobic.
 inline bool is_hydrophobic(const size_t t)

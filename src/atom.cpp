@@ -4,8 +4,8 @@
 #include "atom.hpp"
 
 //! AutoDock4 atom type strings, e.g. H, HD, C, A.
-const array<string, atom::n> atom::ad_strings =
-{
+const array<string, atom::n> atom::ad_strings
+{{
 	"H" , //  0
 	"HD", //  1
 	"C" , //  2
@@ -37,12 +37,12 @@ const array<string, atom::n> atom::ad_strings =
 	"Sr", // 28
 	"U" , // 29
 	"Cs", // 30
-};
+}};
 
 //! Covalent radii of AutoDock4 atom types, factorized by 1.1 for extra allowance.
 //! http://en.wikipedia.org/wiki/Atomic_radii_of_the_elements_(data_page)
-const array<double, atom::n> atom::ad_covalent_radii =
-{
+const array<double, atom::n> atom::ad_covalent_radii
+{{
 	0.407, //  0 = H , 0.407 = 1.1 * 0.37
 	0.407, //  1 = HD, 0.407 = 1.1 * 0.37
 	0.847, //  2 = C , 0.847 = 1.1 * 0.77
@@ -74,11 +74,11 @@ const array<double, atom::n> atom::ad_covalent_radii =
 	2.112, // 28 = Sr, 2.112 = 1.1 * 1.92
 	2.156, // 29 = U , 2.156 = 1.1 * 1.96
 	2.475, // 30 = Cs, 2.475 = 1.1 * 2.25
-};
+}};
 
 //! Mapping from AutoDock4 atom types to XScore atom types.
-const array<size_t, atom::n> atom::ad_to_xs =
-{
+const array<size_t, atom::n> atom::ad_to_xs
+{{
 	 n, //  0 = H  -> dummy
 	 n, //  1 = HD -> dummy
 	 0, //  2 = C  -> C_H   =  0, Carbon, hydrophobic, not bonded to a hetero atom.
@@ -110,11 +110,11 @@ const array<size_t, atom::n> atom::ad_to_xs =
 	14, // 28 = Sr -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 29 = U  -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 30 = Cs -> Met_D = 14, Metal, hydrogen bond donor.
-};
+}};
 
 //! Mapping from AutoDock4 atom types to RF-Score atom types.
-const array<size_t, atom::n> atom::ad_to_rf =
-{
+const array<size_t, atom::n> atom::ad_to_rf
+{{
 	n, //  0 = H  -> dummy
 	n, //  1 = HD -> dummy
 	0, //  2 = C  -> C  = 0
@@ -146,13 +146,13 @@ const array<size_t, atom::n> atom::ad_to_rf =
 	n, // 28 = Sr -> dummy
 	n, // 29 = U  -> dummy
 	n, // 30 = Cs -> dummy
-};
+}};
 
 //! Constructs an atom from an ATOM/HETATM line in PDBQT format.
 atom::atom(const string& line) :
 	serial(stoul(line.substr(6, 5))),
 	name(line.substr(12, 4)),
-	coord{stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))},
+	coord{{stod(line.substr(30, 8)), stod(line.substr(38, 8)), stod(line.substr(46, 8))}},
 	ad(find(ad_strings.cbegin(), ad_strings.cend(), line.substr(77, isspace(line[78]) ? 1 : 2)) - ad_strings.cbegin()),
 	xs(ad_to_xs[ad]),
 	rf(ad_to_rf[ad])

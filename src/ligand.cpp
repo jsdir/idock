@@ -379,12 +379,12 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		const size_t x0 = index[0];
 		const size_t y0 = index[1];
 		const size_t z0 = index[2];
-		const double e000 = map[rec.index(array<size_t, 3>{x0, y0, z0})];
+		const double e000 = map[rec.index(array<size_t, 3>{{x0, y0, z0}})];
 
 		// The derivative of probe atoms can be precalculated at the cost of massive memory storage.
-		const double e100 = map[rec.index(array<size_t, 3>{x0 + 1, y0    , z0    })];
-		const double e010 = map[rec.index(array<size_t, 3>{x0    , y0 + 1, z0    })];
-		const double e001 = map[rec.index(array<size_t, 3>{x0    , y0    , z0 + 1})];
+		const double e100 = map[rec.index(array<size_t, 3>{{x0 + 1, y0    , z0    }})];
+		const double e010 = map[rec.index(array<size_t, 3>{{x0    , y0 + 1, z0    }})];
+		const double e001 = map[rec.index(array<size_t, 3>{{x0    , y0    , z0 + 1}})];
 		deri[i][0] = (e100 - e000) * rec.granularity_inverse;
 		deri[i][1] = (e010 - e000) * rec.granularity_inverse;
 		deri[i][2] = (e001 - e000) * rec.granularity_inverse;
@@ -606,8 +606,8 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 	for (size_t i = 0; (i < 1000) && (!valid_conformation); ++i)
 	{
 		// Randomize conformation c0.
-		c0.position = array<double, 3>{ub0(rng), ub1(rng), ub2(rng)};
-		c0.orientation = normalize(array<double, 4>{n01(rng), n01(rng), n01(rng), n01(rng)});
+		c0.position = array<double, 3>{{ub0(rng), ub1(rng), ub2(rng)}};
+		c0.orientation = normalize(array<double, 4>{{n01(rng), n01(rng), n01(rng), n01(rng)}});
 		for (size_t i = 0; i < num_active_torsions; ++i)
 		{
 			c0.torsions[i] = upi(rng);
@@ -658,11 +658,11 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 			}
 			else if (mutation_entity == num_active_torsions) // Mutate position.
 			{
-				c1.position += array<double, 3>{u11(rng), u11(rng), u11(rng)};
+				c1.position += array<double, 3>{{u11(rng), u11(rng), u11(rng)}};
 			}
 			else // Mutate orientation.
 			{
-				c1.orientation = vec3_to_qtn4(0.01 * array<double, 3>{u11(rng), u11(rng), u11(rng)}) * c1.orientation;
+				c1.orientation = vec3_to_qtn4(0.01 * array<double, 3>{{u11(rng), u11(rng), u11(rng)}}) * c1.orientation;
 				assert(normalized(c1.orientation));
 			}
 		} while (!evaluate(c1, sf, rec, e_upper_bound, e1, f1, g1));
@@ -701,9 +701,9 @@ void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const s
 				alpha *= 0.1;
 
 				// Calculate c2 = c1 + ap.
-				c2.position = c1.position + alpha * array<double, 3>{p[0], p[1], p[2]};
+				c2.position = c1.position + alpha * array<double, 3>{{p[0], p[1], p[2]}};
 				assert(normalized(c1.orientation));
-				c2.orientation = vec3_to_qtn4(alpha * array<double, 3>{p[3], p[4], p[5]}) * c1.orientation;
+				c2.orientation = vec3_to_qtn4(alpha * array<double, 3>{{p[3], p[4], p[5]}}) * c1.orientation;
 				assert(normalized(c2.orientation));
 				for (size_t i = 0; i < num_active_torsions; ++i)
 				{

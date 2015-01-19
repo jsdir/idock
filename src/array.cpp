@@ -67,12 +67,12 @@ array<double, 4> normalize(const array<double, 4>& a)
 {
 	const auto norm_inv = 1 / norm(a);
 	return
-	{
+	{{
 		norm_inv * a[0],
 		norm_inv * a[1],
 		norm_inv * a[2],
 		norm_inv * a[3],
-	};
+	}};
 }
 
 //! Returns the dot product of two vectors.
@@ -85,55 +85,55 @@ double operator*(const array<double, 3>& a, const array<double, 3>& b)
 array<double, 3> cross(const array<double, 3>& a, const array<double, 3>& b)
 {
 	return
-	{
+	{{
 		a[1] * b[2] - a[2] * b[1],
 		a[2] * b[0] - a[0] * b[2],
 		a[0] * b[1] - a[1] * b[0],
-	};
+	}};
 }
 
 //! Returns the resulting vector of elementwise multiplication of a scalar and a vector.
 array<double, 3> operator*(const double f, const array<double, 3>& a)
 {
 	return
-	{
+	{{
 		f * a[0],
 		f * a[1],
 		f * a[2],
-	};
+	}};
 }
 
 //! Returns the resulting vector of elementwise multiplication of two vectors.
 array<double, 3> operator*(const array<double, 3>& a, const array<size_t, 3>& b)
 {
 	return
-	{
+	{{
 		a[0] * b[0],
 		a[1] * b[1],
 		a[2] * b[2],
-	};
+	}};
 }
 
 //! Returns the resulting vector of elementwise addition of two vectors.
 array<double, 3> operator+(const array<double, 3>& a, const array<double, 3>& b)
 {
 	return
-	{
+	{{
 		a[0] + b[0],
 		a[1] + b[1],
 		a[2] + b[2],
-	};
+	}};
 }
 
 //! Returns the resulting vector of elementwise subtraction of two vectors.
 array<double, 3> operator-(const array<double, 3>& a, const array<double, 3>& b)
 {
 	return
-	{
+	{{
 		a[0] - b[0],
 		a[1] - b[1],
 		a[2] - b[2],
-	};
+	}};
 }
 
 //! Adds the second vector to the first vector.
@@ -180,12 +180,12 @@ array<double, 4> vec4_to_qtn4(const array<double, 3>& axis, const double angle)
 	const double s = sin(h);
 	const double c = cos(h);
 	return
-	{
+	{{
 		c,
 		s * axis[0],
 		s * axis[1],
 		s * axis[2],
-	};
+	}};
 }
 
 //! Converts a vector of size 3 to a quaternion.
@@ -193,7 +193,7 @@ array<double, 4> vec3_to_qtn4(const array<double, 3>& rotation)
 {
 	if (zero(rotation))
 	{
-		return {1, 0, 0, 0};
+		return {{1, 0, 0, 0}};
 	}
 	else
 	{
@@ -220,32 +220,32 @@ array<double, 9> qtn4_to_mat3(const array<double, 4>& a)
 	const auto yz = a[2]*a[3];
 	const auto zz = a[3]*a[3];
 	return
-	{
+	{{
 		ww+xx-yy-zz, 2*(-wz+xy), 2*(wy+xz),
 		2*(wz+xy), ww-xx+yy-zz, 2*(-wx+yz),
 		2*(-wy+xz), 2*(wx+yz), ww-xx-yy+zz,
-	};
+	}};
 }
 
 //! Transforms a vector by a 3x3 matrix.
 array<double, 3> operator*(const array<double, 9>& m, const array<double, 3>& v)
 {
 	return
-	{
+	{{
 		m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
 		m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
 		m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
-	};
+	}};
 }
 
 //! Returns the product of two quaternions.
 array<double, 4> operator*(const array<double, 4>& a, const array<double, 4>& b)
 {
 	return
-	{
+	{{
 		a[0] * b[0] - a[1] * b[1] - a[2] * b[2] - a[3] * b[3],
 		a[0] * b[1] + a[1] * b[0] + a[2] * b[3] - a[3] * b[2],
 		a[0] * b[2] - a[1] * b[3] + a[2] * b[0] + a[3] * b[1],
 		a[0] * b[3] + a[1] * b[2] - a[2] * b[1] + a[3] * b[0],
-	};
+	}};
 }

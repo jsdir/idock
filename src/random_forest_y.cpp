@@ -1,7 +1,7 @@
 #include "random_forest.hpp"
 
-const array<double, tree::ns> tree::y =
-{
+const array<double, tree::ns> tree::y
+{{
 	2.00,
 	2.00,
 	2.00,
@@ -3446,4 +3446,4 @@ const array<double, tree::ns> tree::y =
 	11.82,
 	11.85,
 	11.92,
-};
+}};
