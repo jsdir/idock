@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
 		const size_t default_num_trees = 500;
 		const size_t default_num_tasks = 64;
 		const size_t default_max_conformations = 9;
-		const double default_granularity = 0.1;
+		const double default_granularity = 0.125;
 
 		// Set up options description.
 		using namespace boost::program_options;
