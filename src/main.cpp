@@ -51,14 +51,14 @@ int main(int argc, char* argv[])
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
-			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
-			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
-			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
-			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
+			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "worker threads to use")
+			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "trees in random forest")
+			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "Monte Carlo tasks for global search")
+			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum binding conformations to write")
 			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
 			("help", "help information")
 			("version", "version information")
-			("config", value<path>(), "options can be loaded from a configuration file")
+			("config", value<path>(), "configuration file to load options from")
 			;
 		options_description all_options;
 		all_options.add(input_options).add(output_options).add(miscellaneous_options);
