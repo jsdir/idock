@@ -9,7 +9,6 @@
 #include "random_forest.hpp"
 #include "receptor.hpp"
 #include "ligand.hpp"
-#include "log.hpp"
 
 int main(int argc, char* argv[])
 {
@@ -36,7 +35,7 @@ int main(int argc, char* argv[])
 		options_description input_options("input (required)");
 		input_options.add_options()
 			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
-			("input_folder", value<path>(&input_folder_path)->required(), "folder of ligands in PDBQT format")
+			("input_folder", value<path>(&input_folder_path)->required(), "folder of input ligands in PDBQT format")
 			("center_x", value<double>(&center[0])->required(), "x coordinate of the search space center")
 			("center_y", value<double>(&center[1])->required(), "y coordinate of the search space center")
 			("center_z", value<double>(&center[2])->required(), "z coordinate of the search space center")
@@ -47,7 +46,7 @@ int main(int argc, char* argv[])
 		options_description output_options("output (optional)");
 		output_options.add_options()
 			("output_folder", value<path>(&output_folder_path)->default_value(default_output_folder_path), "folder of output models in PDBQT format")
-			("log", value<path>(&log_path)->default_value(default_log_path), "log file")
+			("log", value<path>(&log_path)->default_value(default_log_path), "log file in csv format")
 			;
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
@@ -223,11 +222,21 @@ int main(int argc, char* argv[])
 	cnt.wait();
 	f.clear();
 
-	// Perform docking for each file in the input folder.
+	// Output headers to the standard output and the log file.
 	cout << "Running " << num_tasks << " Monte Carlo tasks per ligand" << endl
 	     << "   Index        Ligand Energy 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
-	log_engine log;
+	boost::filesystem::ofstream log(log_path);
+	log.setf(ios::fixed, ios::floatfield);
+	log << "Ligand";
+	for (size_t i = 1; i <= max_conformations; ++i)
+	{
+		log << ",Energy" << i;
+	}
+	log << '\n' << setprecision(2);
+
+	// Perform docking for each file in the input folder.
+	size_t index = 0;
 	for (directory_iterator dir_iter(input_folder_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
 	{
 		// Filter files with .pdbqt extension name.
@@ -236,7 +245,7 @@ int main(int argc, char* argv[])
 
 		// Output the ligand file stem.
 		string stem = input_ligand_path.stem().string();
-		cout << setw(8) << log.size() + 1 << setw(14) << stem << "   " << flush;
+		cout << setw(8) << ++index << setw(14) << stem << flush;
 
 		// Reserve space for affinity output.
 		vector<double> affinities;
@@ -341,24 +350,28 @@ int main(int argc, char* argv[])
 		// If affinities are found, output them.
 		if (affinities.size())
 		{
+			cout << "   ";
 			// Display the free energies of the top 9 conformations.
 			for_each(affinities.cbegin(), affinities.cbegin() + min<size_t>(affinities.size(), 9), [](const double a)
 			{
 				cout << setw(6) << a;
 			});
-
-			// Add a log record.
-			log.push_back(new log_record(move(stem), move(affinities)));
 		}
 		cout << endl;
+
+		// Output to the log file in csv format. The log file can be sorted using head -1 log.csv && tail -n +2 log.csv | awk -F, '{ printf "%s,%s\n", $2||0, $0 }' | sort -t, -k1nr -k3n | cut -d, -f2-
+		log << stem;
+		for (const auto a : affinities)
+		{
+			log << ',' << a;
+		}
+		for (size_t i = affinities.size(); i < max_conformations; ++i)
+		{
+			log << ',';
+		}
+		log << '\n';
 	}
 
 	// Wait until the io service pool has finished all its tasks.
 	io.wait();
-
-	// Sort and write ligand log records to the log file.
-	if (log.empty()) return 0;
-	cout << "Writing log records of " << log.size() << " ligands to " << log_path << endl;
-	log.sort();
-	log.write(log_path);
 }
