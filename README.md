@@ -17,18 +17,19 @@ Features
 Supported operating systems and compilers
 -----------------------------------------
 
-* Arch Linux x86_64 and CLANG 3.4
+* Arch Linux x86_64 and clang 3.5.1
+* Mac OS X x86_64 and clang 3.5.0
 * Windows 7 SP1 x64 and Visual Studio 2013
 
 
 Compilation
 -----------
 
-idock depends on [Boost C++ Libraries]. Boost 1.55.0 is tested. The Boost libraries required by idock are `System`, `Filesystem` and `Program Options`.
+idock depends on [Boost C++ Libraries]. Boost 1.57.0 is tested. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`.
 
 ### Compilation on Linux
 
-The Makefile uses CLANG as the default compiler. To compile, simply run
+The Makefile uses clang as the default compiler. To compile, simply run
 
     make
 
@@ -86,6 +87,15 @@ The generated PDF will be `refman.pdf`.
 
 Change Log
 ----------
+
+### 2.1.4 (2015-02-01)
+
+* Treated non-supported atom types as carbons.
+* Wrote unsorted predicted free energy of both successfully and unsuccessfully docked ligands to log output.
+* Changed default value of granularity from 0.1 to 0.125.
+* Provided precompiled executable for 64-bit Mac OS X.
+* Cleared all compilation warnings.
+* Upgraded RF-Score trained on PDBbind v2014 refined set.
 
 ### 2.1.3 (2014-06-17)
 
