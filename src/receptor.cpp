@@ -6,7 +6,7 @@
 #include "array.hpp"
 #include "receptor.hpp"
 
-receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity) : center(center), size(size), corner0(center - 0.5 * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1 / granularity), num_probes{{static_cast<size_t>(size[0] * granularity_inverse) + 2, static_cast<size_t>(size[1] * granularity_inverse) + 2, static_cast<size_t>(size[2] * granularity_inverse) + 2}}, num_probes_product(num_probes[0] * num_probes[1] * num_probes[2]), p_offset(scoring_function::n), maps(scoring_function::n)
+receptor::receptor(const path& p, const array<double, 3>& center, const array<double, 3>& size, const double granularity) : center(center), size(size), corner0(center - 0.5 * size), corner1(corner0 + size), granularity(granularity), granularity_inverse(1 / granularity), num_probes({{static_cast<size_t>(size[0] * granularity_inverse) + 2, static_cast<size_t>(size[1] * granularity_inverse) + 2, static_cast<size_t>(size[2] * granularity_inverse) + 2}}), num_probes_product(num_probes[0] * num_probes[1] * num_probes[2]), p_offset(scoring_function::n), maps(scoring_function::n)
 {
 	// Initialize necessary variables for constructing a receptor.
 	atoms.reserve(5000); // A receptor typically consists of <= 5,000 atoms.
