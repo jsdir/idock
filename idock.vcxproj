@@ -19,7 +19,6 @@
     <ClInclude Include="src\conformation.hpp" />
     <ClInclude Include="src\io_service_pool.hpp" />
     <ClInclude Include="src\ligand.hpp" />
-    <ClInclude Include="src\log.hpp" />
     <ClInclude Include="src\matrix.hpp" />
     <ClInclude Include="src\random_forest.hpp" />
     <ClInclude Include="src\result.hpp" />
@@ -32,7 +31,6 @@
     <ClCompile Include="src\atom.cpp" />
     <ClCompile Include="src\io_service_pool.cpp" />
     <ClCompile Include="src\ligand.cpp" />
-    <ClCompile Include="src\log.cpp" />
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\random_forest.cpp" />
     <ClCompile Include="src\random_forest_x.cpp" />
