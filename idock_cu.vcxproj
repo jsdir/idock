@@ -46,23 +46,23 @@
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="src\kernel.cu">
-      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_11,code=compute_11 -fatbin -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(ProjectDir)\src\kernel.fatbin $(ProjectDir)\src\kernel.cu</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_35,code=compute_35 -fatbin -ccbin "%VS120COMNTOOLS%\..\..\VC\bin\amd64" -o $(ProjectDir)\src\kernel.fatbin $(ProjectDir)\src\kernel.cu</Command>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">kernel.fatbin</Outputs>
       <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">kernel.fatbin</Outputs>
-      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_11,code=compute_11 -fatbin -G -ccbin "%VS110COMNTOOLS%\..\..\VC\bin\amd64" -o $(ProjectDir)\src\kernel.fatbin $(ProjectDir)\src\kernel.cu</Command>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">"%CUDA_PATH%\bin\nvcc" -gencode arch=compute_35,code=compute_35 -fatbin -G -ccbin "%VS120COMNTOOLS%\..\..\VC\bin\amd64" -o $(ProjectDir)\src\kernel.fatbin $(ProjectDir)\src\kernel.cu</Command>
     </CustomBuild>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>CTP_Nov2013</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>CTP_Nov2013</PlatformToolset>
+    <PlatformToolset>v120</PlatformToolset>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
