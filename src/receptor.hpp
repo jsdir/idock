@@ -36,7 +36,7 @@ public:
 	size_t index(const array<size_t, 3>& idx) const;
 
 	//! Precalculates auxiliary constants to accelerate grid map creation.
-	void precalculate(const scoring_function& sf, const vector<size_t>& xs);
+	void precalculate(const vector<size_t>& xs);
 
 	//! Populates grid maps for certain atom types along X and Y dimensions for a given Z dimension value.
 	void populate(const vector<size_t>& xs, const size_t z, const scoring_function& sf);

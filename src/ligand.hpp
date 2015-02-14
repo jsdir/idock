@@ -59,7 +59,7 @@ public:
 	result compose_result(const double e, const double f, const conformation& conf) const;
 
 	//! Writes a given number of conformations from a result container into a output ligand file in PDBQT format.
-	void write_models(const path& output_ligand_path, const ptr_vector<result>& results, const receptor& rec, const forest& f, const scoring_function& sf);
+	void write_models(const path& output_ligand_path, const ptr_vector<result>& results, const receptor& rec, const forest& f);
 
 	void monte_carlo(ptr_vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const;
 

@@ -285,7 +285,7 @@ int main(int argc, char* argv[])
 			if (xs.size())
 			{
 				// Precalculate p_offset.
-				rec.precalculate(sf, xs);
+				rec.precalculate(xs);
 
 				// Populate the grid map task container.
 				cnt.init(rec.num_probes[2]);
@@ -340,7 +340,7 @@ int main(int argc, char* argv[])
 				}
 
 				// Write models to file.
-				lig.write_models(output_ligand_path, results, rec, f, sf);
+				lig.write_models(output_ligand_path, results, rec, f);
 
 				// Clear the results of the current ligand.
 				results.clear();

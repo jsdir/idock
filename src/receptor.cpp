@@ -131,10 +131,10 @@ size_t receptor::index(const array<size_t, 3>& idx) const
 	return num_probes[0] * (num_probes[1] * idx[2] + idx[1]) + idx[0];
 }
 
-void receptor::precalculate(const scoring_function& sf, const vector<size_t>& xs)
+void receptor::precalculate(const vector<size_t>& xs)
 {
 	const size_t nxs = xs.size();
-	for (size_t t0 = 0; t0 < sf.n; ++t0)
+	for (size_t t0 = 0; t0 < scoring_function::n; ++t0)
 	{
 		vector<size_t>& p = p_offset[t0];
 		p.resize(nxs);

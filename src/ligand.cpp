@@ -509,7 +509,7 @@ result ligand::compose_result(const double e, const double f, const conformation
 	return result(e, f, move(heavy_atoms), move(hydrogens));
 }
 
-void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const receptor& rec, const forest& f, const scoring_function& sf)
+void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const receptor& rec, const forest& f)
 {
 	const size_t num_results = results.size();
 	assert(num_results);
@@ -537,7 +537,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 				if (ds >= 64) continue; // Vina score cutoff 8A
 				if (!la.xs_unsupported() && !ra.xs_unsupported())
 				{
-					sf.score(x.data() + 36, la.xs, ra.xs, ds);
+					scoring_function::score(x.data() + 36, la.xs, ra.xs, ds);
 				}
 			}
 		}
