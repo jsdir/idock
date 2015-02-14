@@ -42,7 +42,8 @@ template <typename T>
 class safe_vector : public vector<T>
 {
 public:
-	using vector<T>::vector;
+//	using vector<T>::vector;
+	safe_vector(const int n) : vector<T>(n) {}
 
 	//! Pushes back a new element in a thread safe manner, and wakes up the calling thread waiting on new elements to come.
 	void safe_push_back(const T x);
