@@ -38,7 +38,7 @@ int main(int argc, char* argv[])
 		options_description input_options("input (required)");
 		input_options.add_options()
 			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
-			("input_folder", value<path>(&input_folder_path)->required(), "folder of ligands in PDBQT format")
+			("input_folder", value<path>(&input_folder_path)->required(), "folder of input ligands in PDBQT format")
 			("center_x", value<float>(&center[0])->required(), "x coordinate of the search space center")
 			("center_y", value<float>(&center[1])->required(), "y coordinate of the search space center")
 			("center_z", value<float>(&center[2])->required(), "z coordinate of the search space center")
@@ -48,21 +48,21 @@ int main(int argc, char* argv[])
 			;
 		options_description output_options("output (optional)");
 		output_options.add_options()
-			("output_folder", value<path>(&output_folder_path)->default_value(default_output_folder_path), "folder of output models in PDBQT format")
-			("log", value<path>(&log_path)->default_value(default_log_path), "log file")
+			("output_folder", value<path>(&output_folder_path)->default_value(default_output_folder_path), "folder of output ligands in PDBQT format")
+			("log", value<path>(&log_path)->default_value(default_log_path), "log file in csv format")
 			;
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
-			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
-			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of trees in random forest")
-			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
-			("generations", value<size_t>(&num_bfgs_iterations)->default_value(default_num_bfgs_iterations), "number of generations in BFGS")
-			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "number of binding conformations to write")
+			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "worker threads to use")
+			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "trees in random forest")
+			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "Monte Carlo tasks for global search")
+			("generations", value<size_t>(&num_bfgs_iterations)->default_value(default_num_bfgs_iterations), "generations in BFGS")
+			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum binding conformations to write")
 			("granularity", value<float>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
 			("help", "help information")
 			("version", "version information")
-			("config", value<path>(), "options can be loaded from a configuration file")
+			("config", value<path>(), "configuration file to load options from")
 			;
 		options_description all_options;
 		all_options.add(input_options).add(output_options).add(miscellaneous_options);
@@ -144,11 +144,11 @@ int main(int argc, char* argv[])
 
 	cout << "Precalculating a scoring function of " << scoring_function::n << " atom types in parallel" << endl;
 	scoring_function sf;
-	cnt.init(sf.n * (sf.n + 1) >> 1);
+	cnt.init((sf.n + 1) * sf.n >> 1);
 	for (size_t t1 = 0; t1 < sf.n; ++t1)
 	for (size_t t0 = 0; t0 <=  t1; ++t0)
 	{
-		io.post([&,t0,t1]()
+		io.post([&, t0, t1]()
 		{
 			sf.precalculate(t0, t1);
 			cnt.increment();
@@ -168,9 +168,9 @@ int main(int argc, char* argv[])
 	cnt.init(num_trees);
 	for (size_t i = 0; i < num_trees; ++i)
 	{
-		io.post([&,i]()
+		io.post([&, i]()
 		{
-			f[i].train(5, f.u01_s);
+			f[i].train(4, f.u01_s);
 			cnt.increment();
 		});
 	}
@@ -185,11 +185,11 @@ int main(int argc, char* argv[])
 	for (directory_iterator dir_iter(input_folder_path), const_dir_iter; dir_iter != const_dir_iter; ++dir_iter)
 	{
 		// Filter files with .pdbqt extension name.
-		const path& p = dir_iter->path();
-		if (p.extension() != ".pdbqt") continue;
+		const path& input_ligand_path = dir_iter->path();
+		if (input_ligand_path.extension() != ".pdbqt") continue;
 
 		// Parse the ligand. Don't declare it const as it will be moved to the callback data wrapper.
-		ligand lig(p);
+		ligand lig(input_ligand_path);
 
 		// Find atom types that are presented in the current ligand but not presented in the grid maps.
 		vector<size_t> xs;
