@@ -22,7 +22,7 @@ obj/%.o: src/%.cpp
 	${CC} -o $@ $< -c -I${BOOST_ROOT}
 
 src/%.fatbin: src/%.cu
-	${NVCC} -o $@ $< -fatbin -gencode arch=compute_11,code=compute_11
+	${NVCC} -o $@ $< -fatbin -gencode arch=compute_35,code=compute_35
 
 clean:
 	rm -f bin/idock_cp bin/idock_cu bin/idock_cl src/kernel.fatbin obj/*.o
