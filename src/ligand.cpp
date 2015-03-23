@@ -130,38 +130,44 @@ ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 		}
 		else if (record == "ENDBRA")
 		{
-			// This line will be dumped to the output ligand file.
-			lines.push_back(line);
-
 			// A frame may be empty, e.g. "BRANCH   4   9" is immediately followed by "ENDBRANCH   4   9".
 			// This emptiness is likely to be caused by invalid input structure, especially when all the atoms are located in the same plane.
-			if (f->habegin == heavy_atoms.size()) throw std::domain_error("Error parsing " + p.filename().string() + ": an empty BRANCH has been detected, indicating the input ligand structure is probably invalid.");
-
-			// If the current frame consists of rotor Y and a few hydrogens only, e.g. -OH and -NH2,
-			// the torsion of this frame will have no effect on scoring and is thus redundant.
-			if (current + 1 == frames.size() && f->habegin + 1 == heavy_atoms.size())
+			if (f->habegin == heavy_atoms.size())
 			{
-				f->active = false;
+				frames.pop_back();
+				lines.pop_back();
 			}
 			else
 			{
-				++num_active_torsions;
+				// This line will be dumped to the output ligand file.
+				lines.push_back(line);
+
+				// If the current frame consists of rotor Y and a few hydrogens only, e.g. -OH and -NH2,
+				// the torsion of this frame will have no effect on scoring and is thus redundant.
+				if (current + 1 == frames.size() && f->habegin + 1 == heavy_atoms.size())
+				{
+					f->active = false;
+				}
+				else
+				{
+					++num_active_torsions;
+				}
+
+				// Set up bonds between rotorX and rotorY.
+				bonds[f->rotorYidx].push_back(f->rotorXidx);
+				bonds[f->rotorXidx].push_back(f->rotorYidx);
+
+				// Dehydrophobicize rotorX and rotorY if necessary.
+				atom& rotorY = heavy_atoms[f->rotorYidx];
+				atom& rotorX = heavy_atoms[f->rotorXidx];
+				if (rotorY.is_hetero() && !rotorX.is_hetero()) rotorX.dehydrophobicize();
+				if (rotorX.is_hetero() && !rotorY.is_hetero()) rotorY.dehydrophobicize();
+
+				// Calculate parent_rotorY_to_current_rotorY and parent_rotorX_to_current_rotorY.
+				const frame& p = frames[f->parent];
+				f->parent_rotorY_to_current_rotorY = rotorY.coord - heavy_atoms[p.rotorYidx].coord;
+				f->parent_rotorX_to_current_rotorY = normalize(rotorY.coord - rotorX.coord);
 			}
-
-			// Set up bonds between rotorX and rotorY.
-			bonds[f->rotorYidx].push_back(f->rotorXidx);
-			bonds[f->rotorXidx].push_back(f->rotorYidx);
-
-			// Dehydrophobicize rotorX and rotorY if necessary.
-			atom& rotorY = heavy_atoms[f->rotorYidx];
-			atom& rotorX = heavy_atoms[f->rotorXidx];
-			if (rotorY.is_hetero() && !rotorX.is_hetero()) rotorX.dehydrophobicize();
-			if (rotorX.is_hetero() && !rotorY.is_hetero()) rotorY.dehydrophobicize();
-
-			// Calculate parent_rotorY_to_current_rotorY and parent_rotorX_to_current_rotorY.
-			const frame& p = frames[f->parent];
-			f->parent_rotorY_to_current_rotorY = rotorY.coord - heavy_atoms[p.rotorYidx].coord;
-			f->parent_rotorX_to_current_rotorY = normalize(rotorY.coord - rotorX.coord);
 
 			// Now the parent of the following frame is the parent of current frame.
 			current = f->parent;
@@ -555,7 +561,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 		size_t hydrogen = 0;
 		for (const auto& line : lines)
 		{
-			if (line.size() >= 79) // This line starts with "ATOM" or "HETATM"
+			if (line.size() >= 78) // This line starts with "ATOM" or "HETATM".
 			{
 				const double free_energy = line[77] == 'H' ? 0 : rec.maps[heavy_atoms[heavy_atom].xs][rec.index(rec.index(r.heavy_atoms[heavy_atom]))];
 				const array<double, 3>& coordinate = line[77] == 'H' ? r.hydrogens[hydrogen++] : r.heavy_atoms[heavy_atom++];
