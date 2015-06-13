@@ -11,7 +11,8 @@ class result
 public:
 	double e; //!< Free energy.
 	double f; //!< Inter-molecular free energy.
-	double e_nd; //!< Normalized free energy, only for output purpose.
+	double e_nd; //!< Normalized free energy.
+	double rf; //!< RF-Score binding affinity.
 	vector<array<double, 3>> heavy_atoms; //!< Heavy atom coordinates.
 	vector<array<double, 3>> hydrogens; //!< Hydrogen atom coordinates.
 

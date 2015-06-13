@@ -12,7 +12,7 @@
 
 int main(int argc, char* argv[])
 {
-	path receptor_path, input_folder_path, output_folder_path, log_path;
+	path receptor_path, ligand_path, out_path, log_path;
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
 	double granularity;
@@ -21,9 +21,9 @@ int main(int argc, char* argv[])
 	try
 	{
 		// Initialize the default values of optional arguments.
-		const path default_output_folder_path = "output";
+		const path default_out_path = "output";
 		const path default_log_path = "log.csv";
-		const size_t default_seed = chrono::system_clock::now().time_since_epoch().count();
+		const size_t default_seed = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
 		const size_t default_num_threads = boost::thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
 		const size_t default_num_tasks = 64;
@@ -35,7 +35,7 @@ int main(int argc, char* argv[])
 		options_description input_options("input (required)");
 		input_options.add_options()
 			("receptor", value<path>(&receptor_path)->required(), "receptor in PDBQT format")
-			("input_folder", value<path>(&input_folder_path)->required(), "folder of input ligands in PDBQT format")
+			("ligand", value<path>(&ligand_path)->required(), "ligand or folder of ligands in PDBQT format")
 			("center_x", value<double>(&center[0])->required(), "x coordinate of the search space center")
 			("center_y", value<double>(&center[1])->required(), "y coordinate of the search space center")
 			("center_z", value<double>(&center[2])->required(), "z coordinate of the search space center")
@@ -45,7 +45,7 @@ int main(int argc, char* argv[])
 			;
 		options_description output_options("output (optional)");
 		output_options.add_options()
-			("output_folder", value<path>(&output_folder_path)->default_value(default_output_folder_path), "folder of output models in PDBQT format")
+			("out", value<path>(&out_path)->default_value(default_out_path), "folder of models in PDBQT format")
 			("log", value<path>(&log_path)->default_value(default_log_path), "log file in csv format")
 			;
 		options_description miscellaneous_options("options (optional)");
@@ -77,11 +77,11 @@ int main(int argc, char* argv[])
 		// If version is requested, print the version and exit.
 		if (vm.count("version"))
 		{
-			cout << "2.1.4" << endl;
+			cout << "2.2.0" << endl;
 			return 0;
 		}
 
-		// If a configuration file is presented, parse it.
+		// If a configuration file is present, parse it.
 		if (vm.count("config"))
 		{
 			boost::filesystem::ifstream config_file(vm["config"].as<path>());
@@ -91,52 +91,47 @@ int main(int argc, char* argv[])
 		// Notify the user of parsing errors, if any.
 		vm.notify();
 
-		// Validate receptor.
+		// Validate receptor_path.
 		if (!exists(receptor_path))
 		{
-			cerr << "Receptor " << receptor_path << " does not exist" << endl;
+			cerr << "Option receptor " << receptor_path << " does not exist" << endl;
 			return 1;
 		}
 		if (!is_regular_file(receptor_path))
 		{
-			cerr << "Receptor " << receptor_path << " is not a regular file" << endl;
+			cerr << "Option receptor " << receptor_path << " is not a regular file" << endl;
 			return 1;
 		}
 
-		// Validate input_folder_path.
-		if (!exists(input_folder_path))
+		// Validate ligand_path.
+		if (!exists(ligand_path))
 		{
-			cerr << "Input folder " << input_folder_path << " does not exist" << endl;
-			return 1;
-		}
-		if (!is_directory(input_folder_path))
-		{
-			cerr << "Input folder " << input_folder_path << " is not a directory" << endl;
+			cerr << "Option ligand " << ligand_path << " does not exist" << endl;
 			return 1;
 		}
 
-		// Validate output_folder.
-		if (exists(output_folder_path))
+		// Validate out_path.
+		if (exists(out_path))
 		{
-			if (!is_directory(output_folder_path))
+			if (!is_directory(out_path))
 			{
-				cerr << "Output folder " << output_folder_path << " is not a directory" << endl;
+				cerr << "Option out " << out_path << " is not a directory" << endl;
 				return 1;
 			}
 		}
 		else
 		{
-			if (!create_directories(output_folder_path))
+			if (!create_directories(out_path))
 			{
-				cerr << "Failed to create output folder " << output_folder_path << endl;
+				cerr << "Failed to create output folder " << out_path << endl;
 				return 1;
 			}
 		}
 
 		// Validate log_path.
-		if (is_directory(log_path))
+		if (exists(out_path) && !is_regular_file(log_path))
 		{
-			cerr << "Option log " << log_path << " is a directory" << endl;
+			cerr << "Option log " << log_path << " is not a regular file" << endl;
 			return 1;
 		}
 
@@ -169,7 +164,7 @@ int main(int argc, char* argv[])
 	}
 
 	// Initialize a Mersenne Twister random number generator.
-	cout << "Using random seed " << seed << endl;
+	cout << "Seeding a random number generator with " << seed << endl;
 	mt19937_64 rng(seed);
 
 	// Initialize an io service pool and create worker threads for later use.
@@ -222,55 +217,72 @@ int main(int argc, char* argv[])
 	cnt.wait();
 	f.clear();
 
+	// Enumerate and sort input ligands.
+	cout << "Enumerating input ligands in " << ligand_path << endl;
+	vector<path> input_ligand_paths;
+	if (is_regular_file(ligand_path))
+	{
+		input_ligand_paths.push_back(ligand_path);
+	}
+	else
+	{
+		for (directory_iterator dir_iter(ligand_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
+		{
+			// Filter files with .pdbqt extension name.
+			const path input_ligand_path = dir_iter->path();
+			if (input_ligand_path.extension() != ".pdbqt") continue;
+			input_ligand_paths.push_back(input_ligand_path);
+		}
+	}
+	const size_t num_input_ligands = input_ligand_paths.size();
+	cout << "Sorting " << num_input_ligands << " input ligands in alphabetical order" << endl;
+	sort(input_ligand_paths.begin(), input_ligand_paths.end());
+
 	// Output headers to the standard output and the log file.
 	cout << "Running " << num_tasks << " Monte Carlo tasks per ligand" << endl
-	     << "   Index        Ligand Energy 1     2     3     4     5     6     7     8     9" << endl << setprecision(2);
+	     << "   Index         Ligand   idock score   RF-Score" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
 	boost::filesystem::ofstream log(log_path);
 	log.setf(ios::fixed, ios::floatfield);
-	log << "Ligand";
-	for (size_t i = 1; i <= max_conformations; ++i)
-	{
-		log << ",Energy" << i;
-	}
-	log << '\n' << setprecision(2);
+	log << "Ligand,idock score (kcal/mol),RF-Score (pKd)" << endl << setprecision(2);
 
-	// Perform docking for each file in the input folder.
+	// Start to dock each input ligand.
 	size_t index = 0;
-	for (directory_iterator dir_iter(input_folder_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
+	for (const auto& input_ligand_path : input_ligand_paths)
 	{
-		// Filter files with .pdbqt extension name.
-		const path input_ligand_path = dir_iter->path();
-		if (input_ligand_path.extension() != ".pdbqt") continue;
-
 		// Output the ligand file stem.
 		string stem = input_ligand_path.stem().string();
-		cout << setw(8) << ++index << setw(14) << stem << flush;
+		cout << setw(8) << ++index << "   " << setw(12) << stem << flush;
 
-		// Reserve space for affinity output.
-		vector<double> affinities;
-		affinities.reserve(max_conformations);
+		double idock_score = 0;
+		double rf_score = 0;
 
 		// Check if the current ligand has already been docked.
-		const path output_ligand_path = output_folder_path / input_ligand_path.filename();
+		const path output_ligand_path = out_path / input_ligand_path.filename();
 		if (exists(output_ligand_path))
 		{
-			// Extract affinities from output file.
+			// Extract idock score and RF-Score from output file.
 			string line;
 			for (boost::filesystem::ifstream ifs(output_ligand_path); getline(ifs, line);)
 			{
-				if (line.substr(0, 10) == "REMARK 921")
+				const string record = line.substr(0, 10);
+				if (record == "REMARK 921")
 				{
-					affinities.push_back(stod(line.substr(55, 8)));
+					idock_score = stod(line.substr(55, 8));
+				}
+				else if (record == "REMARK 927")
+				{
+					rf_score = stod(line.substr(55, 8));
+					break;
 				}
 			}
 		}
 		else
 		{
 			// Parse the ligand.
-			ligand lig(input_ligand_path);
+			const ligand lig(input_ligand_path);
 
-			// Find atom types that are presented in the current ligand but not presented in the grid maps.
+			// Find atom types that are present in the current ligand but not present in the grid maps.
 			vector<size_t> xs;
 			for (size_t t = 0; t < sf.n; ++t)
 			{
@@ -332,44 +344,31 @@ int main(int argc, char* argv[])
 				// Adjust free energy relative to the best conformation and flexibility.
 				const auto& best_result = results.front();
 				const double best_result_intra_e = best_result.e - best_result.f;
-				const size_t num_results = results.size();
-				affinities.resize(num_results);
-				for (size_t i = 0; i < num_results; ++i)
+				for (auto& result : results)
 				{
-					affinities[i] = results[i].e_nd = (results[i].e - best_result_intra_e) * lig.flexibility_penalty_factor;
+					result.e_nd = (result.e - best_result_intra_e) * lig.flexibility_penalty_factor;
+					result.rf = lig.calculate_rf_score(result, rec, f);
 				}
+				idock_score = best_result.e_nd;
+				rf_score = best_result.rf;
 
 				// Write models to file.
-				lig.write_models(output_ligand_path, results, rec, f);
+				lig.write_models(output_ligand_path, results, rec);
 
 				// Clear the results of the current ligand.
 				results.clear();
 			}
 		}
 
-		// If affinities are found, output them.
-		if (affinities.size())
+		// If output file or conformations are found, output the idock score and RF-Score.
+		if (rf_score > 0)
 		{
-			cout << "   ";
-			// Display the free energies of the top 9 conformations.
-			for_each(affinities.cbegin(), affinities.cbegin() + min<size_t>(affinities.size(), 9), [](const double a)
-			{
-				cout << setw(6) << a;
-			});
+			cout << "   " << setw(11) << idock_score << "   " << setw(8) << rf_score;
 		}
 		cout << endl;
 
-		// Output to the log file in csv format. The log file can be sorted using head -1 log.csv && tail -n +2 log.csv | awk -F, '{ printf "%s,%s\n", $2||0, $0 }' | sort -t, -k1nr -k3n | cut -d, -f2-
-		log << stem;
-		for (const auto a : affinities)
-		{
-			log << ',' << a;
-		}
-		for (size_t i = affinities.size(); i < max_conformations; ++i)
-		{
-			log << ',';
-		}
-		log << '\n';
+		// Output to the log file in csv format. The log file can be sorted using: head -1 log.csv && tail -n +2 log.csv | awk -F, '{ printf "%s,%s\n", $2||0, $0 }' | sort -t, -k1nr -k3n | cut -d, -f2-
+		log << stem << ',' << idock_score << ',' << rf_score << '\n';
 	}
 
 	// Wait until the io service pool has finished all its tasks.

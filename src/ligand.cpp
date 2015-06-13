@@ -515,7 +515,32 @@ result ligand::compose_result(const double e, const double f, const conformation
 	return result(e, f, move(heavy_atoms), move(hydrogens));
 }
 
-void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const receptor& rec, const forest& f)
+double ligand::calculate_rf_score(const result& r, const receptor& rec, const forest& f) const
+{
+	array<double, tree::nv> x{};
+	for (size_t i = 0; i < num_heavy_atoms; ++i)
+	{
+		const atom& la = heavy_atoms[i];
+		for (const atom& ra : rec.atoms)
+		{
+			const auto ds = distance_sqr(r.heavy_atoms[i], ra.coord);
+			if (ds >= 144) continue; // RF-Score cutoff 12A
+			if (!la.rf_unsupported() && !ra.rf_unsupported())
+			{
+				++x[(la.rf << 2) + ra.rf];
+			}
+			if (ds >= 64) continue; // Vina score cutoff 8A
+			if (!la.xs_unsupported() && !ra.xs_unsupported())
+			{
+				scoring_function::score(x.data() + 36, la.xs, ra.xs, ds);
+			}
+		}
+	}
+	x.back() = flexibility_penalty_factor;
+	return f(x);
+}
+
+void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const receptor& rec) const
 {
 	const size_t num_results = results.size();
 	assert(num_results);
@@ -526,36 +551,12 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 	for (size_t k = 0; k < num_results; ++k)
 	{
 		const result& r = results[k];
-
-		// Rescore conformations with random forest.
-		array<double, tree::nv> x{};
-		for (size_t i = 0; i < num_heavy_atoms; ++i)
-		{
-			const atom& la = heavy_atoms[i];
-			for (const atom& ra : rec.atoms)
-			{
-				const auto ds = distance_sqr(r.heavy_atoms[i], ra.coord);
-				if (ds >= 144) continue; // RF-Score cutoff 12A
-				if (!la.rf_unsupported() && !ra.rf_unsupported())
-				{
-					++x[(la.rf << 2) + ra.rf];
-				}
-				if (ds >= 64) continue; // Vina score cutoff 8A
-				if (!la.xs_unsupported() && !ra.xs_unsupported())
-				{
-					scoring_function::score(x.data() + 36, la.xs, ra.xs, ds);
-				}
-			}
-		}
-		x.back() = flexibility_penalty_factor;
-		const double rf = f(x);
-
 		ofs << "MODEL     " << setw(4) << (k + 1) << '\n' << setprecision(2)
 			<< "REMARK 921   NORMALIZED FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e_nd    << " KCAL/MOL\n"
 			<< "REMARK 922        TOTAL FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.e       << " KCAL/MOL\n"
 			<< "REMARK 923 INTER-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << r.f       << " KCAL/MOL\n"
 			<< "REMARK 924 INTRA-LIGAND FREE ENERGY PREDICTED BY IDOCK:" << setw(8) << (r.e - r.f) << " KCAL/MOL\n"
-			<< "REMARK 927RF-SCORE BINDING AFFINITY PREDICTED BY IDOCK:" << setw(8) << rf        << " PKD\n" << setprecision(3);
+			<< "REMARK 927      BINDING AFFINITY PREDICTED BY RF-SCORE:" << setw(8) << r.rf      << " PKD\n" << setprecision(3);
 
 		size_t heavy_atom = 0;
 		size_t hydrogen = 0;
