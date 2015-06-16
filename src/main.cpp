@@ -16,6 +16,7 @@ int main(int argc, char* argv[])
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
 	double granularity;
+	bool score_only;
 
 	// Process program options.
 	try
@@ -56,6 +57,7 @@ int main(int argc, char* argv[])
 			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "Monte Carlo tasks for global search")
 			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum binding conformations to write")
 			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
+			("score_only", bool_switch(&score_only), "scoring without docking")
 			("help", "help information")
 			("version", "version information")
 			("config", value<path>(), "configuration file to load options from")
@@ -129,7 +131,7 @@ int main(int argc, char* argv[])
 		}
 
 		// Validate log_path.
-		if (exists(out_path) && !is_regular_file(log_path))
+		if (exists(log_path) && !is_regular_file(log_path))
 		{
 			cerr << "Option log " << log_path << " is not a regular file" << endl;
 			return 1;
@@ -280,7 +282,8 @@ int main(int argc, char* argv[])
 		else
 		{
 			// Parse the ligand.
-			const ligand lig(input_ligand_path);
+			array<double, 3> origin;
+			const ligand lig(input_ligand_path, origin);
 
 			// Find atom types that are present in the current ligand but not present in the grid maps.
 			vector<size_t> xs;
@@ -312,51 +315,70 @@ int main(int argc, char* argv[])
 				cnt.wait();
 			}
 
-			// Run the Monte Carlo tasks.
-			cnt.init(num_tasks);
-			for (size_t i = 0; i < num_tasks; ++i)
+			if (score_only)
 			{
-				assert(result_containers[i].empty());
-				const size_t s = rng();
-				io.post([&, i, s]()
-				{
-					lig.monte_carlo(result_containers[i], s, sf, rec);
-					cnt.increment();
-				});
-			}
-			cnt.wait();
-
-			// Merge results from all tasks into one single result container.
-			assert(results.empty());
-			const double required_square_error = static_cast<double>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
-			for (auto& result_container : result_containers)
-			{
-				for (auto& result : result_container)
-				{
-					result::push(results, move(result), required_square_error);
-				}
-				result_container.clear();
-			}
-
-			// If conformations are found, output them.
-			if (results.size())
-			{
-				// Adjust free energy relative to the best conformation and flexibility.
-				const auto& best_result = results.front();
-				const double best_result_intra_e = best_result.e - best_result.f;
-				for (auto& result : results)
-				{
-					result.e_nd = (result.e - best_result_intra_e) * lig.flexibility_penalty_factor;
-					result.rf = lig.calculate_rf_score(result, rec, f);
-				}
-				idock_score = best_result.e_nd;
-				rf_score = best_result.rf;
-
-				// Write models to file.
+				conformation c0(lig.num_active_torsions);
+				c0.position = origin;
+				double e0, f0;
+				change g0(0);
+				lig.evaluate(c0, sf, rec, -99, e0, f0, g0);
+				auto r0 = lig.compose_result(e0, f0, c0);
+				r0.e_nd = r0.f * lig.flexibility_penalty_factor;
+				r0.rf = lig.calculate_rf_score(r0, rec, f);
+				idock_score = r0.e_nd;
+				rf_score = r0.rf;
+				ptr_vector<result> results(1);
+				results.push_back(new result(move(r0)));
 				lig.write_models(output_ligand_path, results, rec);
+			}
+			else
+			{
+				// Run the Monte Carlo tasks.
+				cnt.init(num_tasks);
+				for (size_t i = 0; i < num_tasks; ++i)
+				{
+					assert(result_containers[i].empty());
+					const size_t s = rng();
+					io.post([&, i, s]()
+					{
+						lig.monte_carlo(result_containers[i], s, sf, rec);
+						cnt.increment();
+					});
+				}
+				cnt.wait();
 
-				// Clear the results of the current ligand.
-				results.clear();
+				// Merge results from all tasks into one single result container.
+				assert(results.empty());
+				const double required_square_error = static_cast<double>(4 * lig.num_heavy_atoms); // Ligands with RMSD < 2.0 will be clustered into the same cluster.
+				for (auto& result_container : result_containers)
+				{
+					for (auto& result : result_container)
+					{
+						result::push(results, move(result), required_square_error);
+					}
+					result_container.clear();
+				}
+
+				// If conformations are found, output them.
+				if (results.size())
+				{
+					// Adjust free energy relative to the best conformation and flexibility.
+					const auto& best_result = results.front();
+					const double best_result_intra_e = best_result.e - best_result.f;
+					for (auto& result : results)
+					{
+						result.e_nd = (result.e - best_result_intra_e) * lig.flexibility_penalty_factor;
+						result.rf = lig.calculate_rf_score(result, rec, f);
+					}
+					idock_score = best_result.e_nd;
+					rf_score = best_result.rf;
+
+					// Write models to file.
+					lig.write_models(output_ligand_path, results, rec);
+
+					// Clear the results of the current ligand.
+					results.clear();
+				}
 			}
 		}
 

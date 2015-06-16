@@ -5,7 +5,7 @@
 #include "array.hpp"
 #include "ligand.hpp"
 
-ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
+ligand::ligand(const path& p, array<double, 3>& origin) : xs{}, num_active_torsions(0)
 {
 	// Initialize necessary variables for constructing a ligand.
 	lines.reserve(200); // A ligand typically consists of <= 200 lines.
@@ -205,6 +205,9 @@ ligand::ligand(const path& p) : xs{}, num_active_torsions(0)
 	{
 		xs[a.xs] = true;
 	}
+
+	// Save the coordinate of the first heavy atom to origin.
+	origin = heavy_atoms[frames.front().rotorYidx].coord;
 
 	// Update heavy_atoms[].coord and hydrogens[].coord relative to frame origin.
 	for (size_t k = 0; k < num_frames; ++k)
