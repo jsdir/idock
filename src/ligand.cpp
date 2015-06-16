@@ -543,7 +543,7 @@ double ligand::calculate_rf_score(const result& r, const receptor& rec, const fo
 	return f(x);
 }
 
-void ligand::write_models(const path& output_ligand_path, const ptr_vector<result>& results, const receptor& rec) const
+void ligand::write_models(const path& output_ligand_path, const vector<result>& results, const receptor& rec) const
 {
 	const size_t num_results = results.size();
 	assert(num_results);
@@ -587,7 +587,7 @@ void ligand::write_models(const path& output_ligand_path, const ptr_vector<resul
 	}
 }
 
-void ligand::monte_carlo(ptr_vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const
+void ligand::monte_carlo(vector<result>& results, const size_t seed, const scoring_function& sf, const receptor& rec) const
 {
 	// Define constants.
 	static const double pi = 3.1415926535897932; //!< Pi.

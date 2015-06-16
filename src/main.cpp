@@ -195,13 +195,12 @@ int main(int argc, char* argv[])
 	receptor rec(receptor_path, center, size, granularity);
 
 	// Reserve storage for result containers.
-	ptr_vector<ptr_vector<result>> result_containers; // ptr_vector<T> is used for fast sorting.
-	result_containers.resize(num_tasks);
+	vector<vector<result>> result_containers(num_tasks);
 	for (auto& rc : result_containers)
 	{
 		rc.reserve(20);	// Maximum number of results obtained from a single Monte Carlo task.
 	}
-	ptr_vector<result> results;
+	vector<result> results;
 	results.reserve(max_conformations);
 
 	// Train RF-Score on the fly.
@@ -327,9 +326,7 @@ int main(int argc, char* argv[])
 				r0.rf = lig.calculate_rf_score(r0, rec, f);
 				idock_score = r0.e_nd;
 				rf_score = r0.rf;
-				ptr_vector<result> results(1);
-				results.push_back(new result(move(r0)));
-				lig.write_models(output_ligand_path, results, rec);
+				lig.write_models(output_ligand_path, {{ move(r0) }}, rec);
 			}
 			else
 			{
