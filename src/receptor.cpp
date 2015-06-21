@@ -36,7 +36,12 @@ receptor::receptor(const path& p, const array<double, 3>& center, const array<do
 			atom a(line);
 
 			// Harmonize a unsupported atom type to carbon.
-			if (a.ad_unsupported()) a.ad = 2;
+			if (a.ad_unsupported())
+			{
+				a.ad = 2;
+				a.xs = 0;
+				a.rf = 0;
+			}
 
 			// Skip non-polar hydrogens.
 			if (a.is_nonpolar_hydrogen()) continue;
