@@ -1,15 +1,12 @@
 CC=clang++ -std=c++11 -O2
 
-all: combinelog combinelog2 divide extractelitists extractmodel findbox parsetime pdbqt2csv rmsd statligand
+all: combinelog combinelog2 extractelitists extractmodel findbox parsetime pdbqt2csv rmsd statligand
 
 combinelog: combinelog.cpp
 	$(CC) -o $@ $< -lboost_system -lboost_filesystem
 
 combinelog2: combinelog2.cpp
 	$(CC) -o $@ $< -lboost_system -lboost_filesystem
-
-divide: divide.cpp
-	$(CC) -o $@ $<
 
 extractelitists: extractelitists.cpp
 	$(CC) -o $@ $< -lboost_system -lboost_filesystem
