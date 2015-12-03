@@ -52,13 +52,13 @@ int main(int argc, char* argv[])
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
 			("seed", value<size_t>(&seed)->default_value(default_seed), "explicit non-negative random seed")
-			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "worker threads to use")
-			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "trees in random forest")
-			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "Monte Carlo tasks for global search")
-			("max_conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum binding conformations to write")
+			("threads", value<size_t>(&num_threads)->default_value(default_num_threads), "number of worker threads to use")
+			("trees", value<size_t>(&num_trees)->default_value(default_num_trees), "number of decision trees in random forest")
+			("tasks", value<size_t>(&num_tasks)->default_value(default_num_tasks), "number of Monte Carlo tasks for global search")
+			("conformations", value<size_t>(&max_conformations)->default_value(default_max_conformations), "maximum number of binding conformations to write")
 			("granularity", value<double>(&granularity)->default_value(default_granularity), "density of probe atoms of grid maps")
 			("score_only", bool_switch(&score_only), "scoring without docking")
-			("help", "help information")
+			("help", "this help information")
 			("version", "version information")
 			("config", value<path>(), "configuration file to load options from")
 			;
@@ -150,7 +150,7 @@ int main(int argc, char* argv[])
 		}
 		if (!max_conformations)
 		{
-			cerr << "Option max_conformations must be 1 or greater" << endl;
+			cerr << "Option conformations must be 1 or greater" << endl;
 			return 1;
 		}
 		if (granularity <= 0)
@@ -175,7 +175,7 @@ int main(int argc, char* argv[])
 	safe_counter<size_t> cnt;
 
 	// Precalculate the scoring function in parallel.
-	cout << "Precalculating scoring function in parallel" << endl;
+	cout << "Precalculating the scoring function in parallel" << endl;
 	scoring_function sf;
 	cnt.init((sf.n + 1) * sf.n >> 1);
 	for (size_t t1 = 0; t1 < sf.n; ++t1)
@@ -204,7 +204,7 @@ int main(int argc, char* argv[])
 	results.reserve(max_conformations);
 
 	// Train RF-Score on the fly.
-	cout << "Training a random forest of " << num_trees << " trees in parallel" << endl;
+	cout << "Training a random forest of " << num_trees << " decision trees in parallel" << endl;
 	forest f(num_trees, seed);
 	cnt.init(num_trees);
 	for (size_t i = 0; i < num_trees; ++i)
@@ -229,9 +229,10 @@ int main(int argc, char* argv[])
 	{
 		for (directory_iterator dir_iter(ligand_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
 		{
-			// Filter files with .pdbqt extension name.
+			// Filter files with .pdbqt and .PDBQT extensions.
 			const path input_ligand_path = dir_iter->path();
-			if (input_ligand_path.extension() != ".pdbqt") continue;
+			const auto ext = input_ligand_path.extension();
+			if (ext != ".pdbqt" && ext != ".PDBQT") continue;
 			input_ligand_paths.push_back(input_ligand_path);
 		}
 	}
@@ -240,8 +241,8 @@ int main(int argc, char* argv[])
 	sort(input_ligand_paths.begin(), input_ligand_paths.end());
 
 	// Output headers to the standard output and the log file.
-	cout << "Running " << num_tasks << " Monte Carlo tasks per ligand" << endl
-	     << "   Index         Ligand   idock score   RF-Score" << endl << setprecision(2);
+	cout << "Creating grid maps of " << granularity << " Å and running " << num_tasks << " Monte Carlo tasks per ligand" << endl
+	     << "   Index         Ligand   idock score (kcal/mol)   RF-Score (pKd)" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
 	boost::filesystem::ofstream log(log_path);
 	log.setf(ios::fixed, ios::floatfield);
@@ -252,13 +253,12 @@ int main(int argc, char* argv[])
 	for (const auto& input_ligand_path : input_ligand_paths)
 	{
 		// Output the ligand file stem.
-		string stem = input_ligand_path.stem().string();
-		cout << setw(8) << ++index << "   " << setw(12) << stem << flush;
-
-		double idock_score = 0;
-		double rf_score = 0;
+		const string stem = input_ligand_path.stem().string();
+		cout << setw(8) << ++index << "   " << setw(12) << stem << "   " << flush;
 
 		// Check if the current ligand has already been docked.
+		double id_score = 0;
+		double rf_score = 0;
 		const path output_ligand_path = out_path / input_ligand_path.filename();
 		if (exists(output_ligand_path))
 		{
@@ -269,7 +269,7 @@ int main(int argc, char* argv[])
 				const string record = line.substr(0, 10);
 				if (record == "REMARK 921")
 				{
-					idock_score = stod(line.substr(55, 8));
+					id_score = stod(line.substr(55, 8));
 				}
 				else if (record == "REMARK 927")
 				{
@@ -324,7 +324,7 @@ int main(int argc, char* argv[])
 				auto r0 = lig.compose_result(e0, f0, c0);
 				r0.e_nd = r0.f * lig.flexibility_penalty_factor;
 				r0.rf = lig.calculate_rf_score(r0, rec, f);
-				idock_score = r0.e_nd;
+				id_score = r0.e_nd;
 				rf_score = r0.rf;
 				lig.write_models(output_ligand_path, {{ move(r0) }}, rec);
 			}
@@ -367,7 +367,7 @@ int main(int argc, char* argv[])
 						result.e_nd = (result.e - best_result_intra_e) * lig.flexibility_penalty_factor;
 						result.rf = lig.calculate_rf_score(result, rec, f);
 					}
-					idock_score = best_result.e_nd;
+					id_score = best_result.e_nd;
 					rf_score = best_result.rf;
 
 					// Write models to file.
@@ -382,12 +382,12 @@ int main(int argc, char* argv[])
 		// If output file or conformations are found, output the idock score and RF-Score.
 		if (rf_score > 0)
 		{
-			cout << "   " << setw(11) << idock_score << "   " << setw(8) << rf_score;
+			cout << setw(22) << id_score << "   " << setw(14) << rf_score;
 		}
 		cout << endl;
 
 		// Output to the log file in csv format. The log file can be sorted using: head -1 log.csv && tail -n +2 log.csv | awk -F, '{ printf "%s,%s\n", $2||0, $0 }' | sort -t, -k1nr -k3n | cut -d, -f2-
-		log << stem << ',' << idock_score << ',' << rf_score << '\n';
+		log << stem << ',' << id_score << ',' << rf_score << '\n';
 	}
 
 	// Wait until the io service pool has finished all its tasks.
