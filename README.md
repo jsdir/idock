@@ -1,31 +1,31 @@
 idock
 =====
 
-idock is a multithreaded [virtual screening] tool for flexible ligand [docking] for computational drug discovery. It is inspired by [AutoDock Vina], and is hosted by GitHub at https://GitHub.com/HongjianLi/idock under [Apache License 2.0]. idock is now available as a service at [istar].
+idock is a standalone tool for structure-based [virtual screening] powered by fast and flexible ligand docking. It is inspired by [AutoDock Vina], and is hosted on GitHub at https://GitHub.com/HongjianLi/idock under [Apache License 2.0]. idock is also available as a web server at [istar].
 
 
 Features
 --------
 
-* idock develops its own io service pool to reuse threads and maintain a high CPU utilization throughout the entire docking procedure. The io service pool parallelizes the precalculation of scoring function, the creation of grid maps, and the execution of Monte Carlo tasks.
-* idock supports as many as 27 chemical elements, i.e. H, C, N, O, S, Se, P, F, Cl, Br, I, Zn, Fe, Mg, Ca, Mn, Cu, Na, K, Hg, Ni, Co, Cd, As, Sr, U and Cs.
-* idock outputs per-atom free energy for protein-ligand interaction hotspot detection.
-* idock outputs summary for each predicted conformation into a CSV file for subsequent analysis.
-* idock provides precompiled 64bit executables for Linux and Windows.
+* idock invents a lightweight and efficient io service pool to reuse threads and maintain a high CPU utilization throughout the entire docking procedure.
+* idock recognizes as many as 28 chemical elements, i.e. H, C, N, O, S, Se, P, F, Cl, Br, I, Zn, Fe, Mg, Ca, Mn, Cu, Na, K, Hg, Ni, Co, Cd, As, Sr, U, Cs, Mo.
+* idock outputs atomwise free energy values for subsequent identification of intermolecular interaction hotspots.
+* idock writes the scores of each predicted conformation into a CSV file for subsequent sorting and analysis.
+* idock provides precompiled 64-bit executables for Linux and Windows.
 
 
 Supported operating systems and compilers
 -----------------------------------------
 
-* Arch Linux x86_64 and clang 3.5.1
-* Mac OS X x86_64 and clang 3.5.0
-* Windows 7 SP1 x64 and Visual Studio 2013
+* Arch Linux x86_64 and clang 3.7.0
+* Mac OS X x86_64 and clang 3.6.1
+* Windows 8.1 x64 and Visual Studio 2015 Update 1
 
 
 Compilation
 -----------
 
-idock depends on [Boost C++ Libraries]. Boost 1.57.0 is tested. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`.
+idock depends on the [Boost C++ Libraries]. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`. Boost 1.59.0 was tested.
 
 ### Compilation on Linux
 
@@ -39,11 +39,11 @@ The generated objects will be placed in the `obj` folder, and the generated exec
 
 ### Compilation on Windows
 
-Visual Studio 2013 solution and project files are provided. To compile, simply run
+Visual Studio 2015 solution and project files are provided. To compile, simply run
 
     msbuild /t:Build /p:Configuration=Release
 
-Or one may open `idock.sln` in Visual Studio 2013 and do a full rebuild.
+Or one may open `idock.sln` in Visual Studio 2015 and do a full rebuild.
 
 The generated objects will be placed in the `obj` folder, and the generated executable will be placed in the `bin` folder.
 
@@ -87,6 +87,15 @@ The generated PDF will be `refman.pdf`.
 
 Change Log
 ----------
+
+### 2.2.0 (2015-12-03)
+
+* Used program options `ligand` and `out` to specify input ligand(s) and output folder.
+* Added the `score_only` option to allow scoring without docking.
+* Filtered input ligand filenames with either .pdbqt or .PDBQT extension.
+* Sorted input ligands alphabetically by their filename before docking.
+* Added support for two new atom types Mo and Si.
+* Ignored empty branches silently instead of throwing an exception.
 
 ### 2.1.4 (2015-02-01)
 
@@ -214,8 +223,8 @@ Change Log
 * Initial release at [CodePlex].
 
 
-Citation
---------
+Reference
+---------
 
 Hongjian Li, Kwong-Sak Leung, and Man-Hon Wong. idock: A Multithreaded Virtual Screening Tool for Flexible Ligand Docking. 2012 IEEE Symposium on Computational Intelligence in Bioinformatics and Computational Biology (CIBCB), pp.77-84, San Diego, United States, 9-12 May 2012. [DOI: 10.1109/CIBCB.2012.6217214]
 
