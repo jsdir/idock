@@ -38,6 +38,7 @@ const array<string, atom::n> atom::ad_strings
 	"U" , // 29
 	"Cs", // 30
 	"Mo", // 31
+	"Si", // 32
 }};
 
 //! Covalent radii of AutoDock4 atom types, factorized by 1.1 for extra allowance.
@@ -76,6 +77,7 @@ const array<double, atom::n> atom::ad_covalent_radii
 	2.156, // 29 = U , 2.156 = 1.1 * 1.96
 	2.475, // 30 = Cs, 2.475 = 1.1 * 2.25
 	1.595, // 31 = Mo, 1.595 = 1.1 * 1.45
+	1.221, // 32 = Si, 1.221 = 1.1 * 1.11
 }};
 
 //! Mapping from AutoDock4 atom types to XScore atom types.
@@ -113,6 +115,7 @@ const array<size_t, atom::n> atom::ad_to_xs
 	14, // 29 = U  -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 30 = Cs -> Met_D = 14, Metal, hydrogen bond donor.
 	14, // 31 = Mo -> Met_D = 14, Metal, hydrogen bond donor.
+	14, // 32 = Si -> Met_D = 14, Metal, hydrogen bond donor.
 }};
 
 //! Mapping from AutoDock4 atom types to RF-Score atom types.
@@ -150,6 +153,7 @@ const array<size_t, atom::n> atom::ad_to_rf
 	n, // 29 = U  -> dummy
 	n, // 30 = Cs -> dummy
 	n, // 31 = Mo -> dummy
+	n, // 32 = Si -> dummy
 }};
 
 //! Constructs an atom from an ATOM/HETATM line in PDBQT format.
