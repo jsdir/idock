@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
 	sort(input_ligand_paths.begin(), input_ligand_paths.end());
 
 	// Output headers to the standard output and the log file.
-	cout << "Creating grid maps of " << granularity << " Å and running " << num_tasks << " Monte Carlo tasks per ligand" << endl
+	cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl
 		<< "   Index             Ligand   nConfs   idock score (kcal/mol)   RF-Score (pKd)" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
 	boost::filesystem::ofstream log(log_path);
