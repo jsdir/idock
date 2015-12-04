@@ -18,7 +18,7 @@ Supported operating systems and compilers
 -----------------------------------------
 
 * Arch Linux x86_64 and clang 3.7.0
-* Mac OS X x86_64 and clang 3.6.1
+* Mac OS X x86_64 and clang 3.7.0
 * Windows 8.1 x64 and Visual Studio 2015 Update 1
 
 
