@@ -242,11 +242,11 @@ int main(int argc, char* argv[])
 
 	// Output headers to the standard output and the log file.
 	cout << "Creating grid maps of " << granularity << " Å and running " << num_tasks << " Monte Carlo tasks per ligand" << endl
-	     << "   Index         Ligand   idock score (kcal/mol)   RF-Score (pKd)" << endl << setprecision(2);
+		<< "   Index             Ligand   nConfs   idock score (kcal/mol)   RF-Score (pKd)" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
 	boost::filesystem::ofstream log(log_path);
 	log.setf(ios::fixed, ios::floatfield);
-	log << "Ligand,idock score (kcal/mol),RF-Score (pKd)" << endl << setprecision(2);
+	log << "Ligand,nConfs,idock score (kcal/mol),RF-Score (pKd)" << endl << setprecision(2);
 
 	// Start to dock each input ligand.
 	size_t index = 0;
@@ -254,9 +254,10 @@ int main(int argc, char* argv[])
 	{
 		// Output the ligand file stem.
 		const string stem = input_ligand_path.stem().string();
-		cout << setw(8) << ++index << "   " << setw(12) << stem << "   " << flush;
+		cout << setw(8) << ++index << "   " << setw(16) << stem << "   " << flush;
 
 		// Check if the current ligand has already been docked.
+		size_t num_confs = 0;
 		double id_score = 0;
 		double rf_score = 0;
 		const path output_ligand_path = out_path / input_ligand_path.filename();
@@ -267,14 +268,17 @@ int main(int argc, char* argv[])
 			for (boost::filesystem::ifstream ifs(output_ligand_path); getline(ifs, line);)
 			{
 				const string record = line.substr(0, 10);
-				if (record == "REMARK 921")
+				if (record == "MODEL     ")
+				{
+					++num_confs;
+				}
+				else if (num_confs == 1 && record == "REMARK 921")
 				{
 					id_score = stod(line.substr(55, 8));
 				}
-				else if (record == "REMARK 927")
+				else if (num_confs == 1 && record == "REMARK 927")
 				{
 					rf_score = stod(line.substr(55, 8));
-					break;
 				}
 			}
 		}
@@ -316,6 +320,7 @@ int main(int argc, char* argv[])
 
 			if (score_only)
 			{
+				num_confs = 1;
 				conformation c0(lig.num_active_torsions);
 				c0.position = origin;
 				double e0, f0;
@@ -357,7 +362,8 @@ int main(int argc, char* argv[])
 				}
 
 				// If conformations are found, output them.
-				if (results.size())
+				num_confs = results.size();
+				if (num_confs)
 				{
 					// Adjust free energy relative to the best conformation and flexibility.
 					const auto& best_result = results.front();
@@ -380,14 +386,17 @@ int main(int argc, char* argv[])
 		}
 
 		// If output file or conformations are found, output the idock score and RF-Score.
-		if (rf_score > 0)
+		cout << setw(6) << num_confs;
+		log << stem << ',' << num_confs;
+		if (num_confs)
 		{
-			cout << setw(22) << id_score << "   " << setw(14) << rf_score;
+			cout << "   " << setw(22) << id_score << "   " << setw(14) << rf_score;
+			log << ',' << id_score << ',' << rf_score;
 		}
 		cout << endl;
+		log << '\n';
 
 		// Output to the log file in csv format. The log file can be sorted using: head -1 log.csv && tail -n +2 log.csv | awk -F, '{ printf "%s,%s\n", $2||0, $0 }' | sort -t, -k1nr -k3n | cut -d, -f2-
-		log << stem << ',' << id_score << ',' << rf_score << '\n';
 	}
 
 	// Wait until the io service pool has finished all its tasks.
