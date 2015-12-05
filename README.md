@@ -88,7 +88,7 @@ The generated PDF will be `refman.pdf`.
 Change Log
 ----------
 
-### 2.2.0 (2015-12-03)
+### 2.2.0 (2015-12-05)
 
 * Used program options `ligand` and `out` to specify input ligand(s) and output folder.
 * Added the `score_only` option to allow scoring without docking.
