@@ -11,7 +11,7 @@ Features
 * idock recognizes as many as 28 chemical elements, i.e. H, C, N, O, S, Se, P, F, Cl, Br, I, Zn, Fe, Mg, Ca, Mn, Cu, Na, K, Hg, Ni, Co, Cd, As, Sr, U, Cs, Mo.
 * idock outputs atomwise free energy values for subsequent identification of intermolecular interaction hotspots.
 * idock writes the scores of each predicted conformation into a CSV file for subsequent sorting and analysis.
-* idock provides precompiled 64-bit executables for Linux and Windows.
+* idock provides precompiled 64-bit executables for Linux, Mac and Windows.
 
 
 Supported operating systems and compilers
@@ -63,7 +63,7 @@ The `examples` folder contains several use cases. For example, to dock the ligan
 
 One can supply the options from command line arguments
 
-    idock --receptor ../../../receptors/2ZD1.pdbqt --input_folder ../../../ligands/T27 --output_folder output --center_x 49.712 --center_y -28.923 --center_z 36.824 --size_x 18 --size_y 18 --size_z 20
+    idock --receptor ../../../receptors/2ZD1.pdbqt --ligand ../../../ligands/T27 --center_x 49.712 --center_y -28.923 --center_z 36.824 --size_x 18 --size_y 18 --size_z 20
 
 Or one can instruct idock to load the options from a configuration file
 
