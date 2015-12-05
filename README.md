@@ -1,3 +1,9 @@
+Important
+=========
+
+This master branch is under development and not ready for production release. Please use the v2.x stable releases at [https://github.com/HongjianLi/idock/releases].
+
+
 idock
 =====
 
