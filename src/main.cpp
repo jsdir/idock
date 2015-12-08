@@ -12,7 +12,7 @@
 
 int main(int argc, char* argv[])
 {
-	path receptor_path, ligand_path, out_path, log_path;
+	path receptor_path, ligand_path, out_path;
 	array<double, 3> center, size;
 	size_t seed, num_threads, num_trees, num_tasks, max_conformations;
 	double granularity;
@@ -22,8 +22,7 @@ int main(int argc, char* argv[])
 	try
 	{
 		// Initialize the default values of optional arguments.
-		const path default_out_path = "output";
-		const path default_log_path = "log.csv";
+		const path default_out_path = ".";
 		const size_t default_seed = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
 		const size_t default_num_threads = boost::thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
@@ -46,8 +45,7 @@ int main(int argc, char* argv[])
 			;
 		options_description output_options("output (optional)");
 		output_options.add_options()
-			("out", value<path>(&out_path)->default_value(default_out_path), "folder of models in PDBQT format")
-			("log", value<path>(&log_path)->default_value(default_log_path), "log file in csv format")
+			("out", value<path>(&out_path)->default_value(default_out_path), "folder of predicted conformations in PDBQT format")
 			;
 		options_description miscellaneous_options("options (optional)");
 		miscellaneous_options.add_options()
@@ -128,13 +126,6 @@ int main(int argc, char* argv[])
 				cerr << "Failed to create output folder " << out_path << endl;
 				return 1;
 			}
-		}
-
-		// Validate log_path.
-		if (exists(log_path) && !is_regular_file(log_path))
-		{
-			cerr << "Option log " << log_path << " is not a regular file" << endl;
-			return 1;
 		}
 
 		// Validate miscellaneous options.
@@ -244,7 +235,7 @@ int main(int argc, char* argv[])
 	cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl
 		<< "   Index             Ligand   nConfs   idock score (kcal/mol)   RF-Score (pKd)" << endl << setprecision(2);
 	cout.setf(ios::fixed, ios::floatfield);
-	boost::filesystem::ofstream log(log_path);
+	boost::filesystem::ofstream log(out_path / "log.csv");
 	log.setf(ios::fixed, ios::floatfield);
 	log << "Ligand,nConfs,idock score (kcal/mol),RF-Score (pKd)" << endl << setprecision(2);
 
