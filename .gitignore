@@ -4,7 +4,7 @@
 *.opensdf
 *.opendb
 *.csv
-output
+*.pdbqt
 doc
 bin
 dev
