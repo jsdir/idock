@@ -21,9 +21,11 @@ Supported operating systems and compilers
 * Mac OS X x86_64 and clang 3.7.0
 * Windows 8.1 x64 and Visual Studio 2015 Update 1
 
+Statically compiled 64-bit executables can be found in the `bin` directory.
 
-Compilation
------------
+
+Compilation from source code
+----------------------------
 
 idock depends on the [Boost C++ Libraries]. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`. Boost 1.59.0 was tested.
 
