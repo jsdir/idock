@@ -1,7 +1,7 @@
 idock
 =====
 
-idock is a standalone tool for structure-based [virtual screening] powered by fast and flexible ligand docking. It is inspired by [AutoDock Vina], and is hosted on GitHub at https://GitHub.com/HongjianLi/idock under [Apache License 2.0]. idock is also available as a web server at [istar].
+idock is a standalone tool for structure-based [virtual screening] powered by fast and flexible ligand docking. It was inspired by [AutoDock Vina], and is hosted on GitHub at https://GitHub.com/HongjianLi/idock under [Apache License 2.0]. idock is also available as a web server at [istar].
 
 
 Features
@@ -17,11 +17,11 @@ Features
 Supported operating systems and compilers
 -----------------------------------------
 
-* Arch Linux x86_64 and clang 3.7.0
+* Linux x86_64 and clang 3.7.0
 * Mac OS X x86_64 and clang 3.7.0
-* Windows 8.1 x64 and Visual Studio 2015 Update 1
+* Windows x64 and Visual Studio 2015 Update 1
 
-Statically compiled 64-bit executables can be found in the `bin` directory.
+Pre-built 64-bit executables can be found in the `bin` directory. The executable was statically compiled for Linux and Windows, and dynamically compiled for Mac OS X.
 
 
 Compilation from source code
