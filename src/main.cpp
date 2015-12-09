@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
 		double id_score = 0;
 		double rf_score = 0;
 		const path output_ligand_path = out_path / input_ligand_path.filename();
-		if (exists(output_ligand_path))
+		if (exists(output_ligand_path) && !equivalent(ligand_path, out_path))
 		{
 			// Extract idock score and RF-Score from output file.
 			string line;
