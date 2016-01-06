@@ -15,7 +15,6 @@ public:
 	static const size_t ns = 1024; //!< Number of samples in a unit distance.
 	static const size_t cutoff = 8; //!< Atom type pair distance cutoff.
 	static const size_t nr = ns*cutoff*cutoff+1; //!< Number of samples within the entire cutoff.
-	static const size_t ne = nr*np; //!< Number of values to precalculate.
 	static const double cutoff_sqr; //!< Cutoff square.
 
 	//! Constructs an empty scoring function.
