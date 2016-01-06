@@ -156,6 +156,41 @@ int main(int argc, char* argv[])
 		return 1;
 	}
 
+	// Parse the receptor.
+	cout << "Parsing the receptor " << receptor_path << endl;
+	receptor rec(receptor_path, center, size, granularity);
+
+	// Reserve storage for result containers.
+	vector<vector<result>> result_containers(num_tasks);
+	for (auto& rc : result_containers)
+	{
+		rc.reserve(20);	// Maximum number of results obtained from a single Monte Carlo task.
+	}
+	vector<result> results;
+	results.reserve(max_conformations);
+
+	// Enumerate and sort input ligands.
+	cout << "Enumerating input ligands in " << ligand_path << endl;
+	vector<path> input_ligand_paths;
+	if (is_regular_file(ligand_path))
+	{
+		input_ligand_paths.push_back(ligand_path);
+	}
+	else
+	{
+		for (directory_iterator dir_iter(ligand_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
+		{
+			// Filter files with .pdbqt and .PDBQT extensions.
+			const path input_ligand_path = dir_iter->path();
+			const auto ext = input_ligand_path.extension();
+			if (ext != ".pdbqt" && ext != ".PDBQT") continue;
+			input_ligand_paths.push_back(input_ligand_path);
+		}
+	}
+	const size_t num_input_ligands = input_ligand_paths.size();
+	cout << "Sorting " << num_input_ligands << " input ligands in alphabetical order" << endl;
+	sort(input_ligand_paths.begin(), input_ligand_paths.end());
+
 	// Initialize a Mersenne Twister random number generator.
 	cout << "Seeding a random number generator with " << seed << endl;
 	mt19937_64 rng(seed);
@@ -181,19 +216,6 @@ int main(int argc, char* argv[])
 	cnt.wait();
 	sf.clear();
 
-	// Parse the receptor.
-	cout << "Parsing receptor " << receptor_path << endl;
-	receptor rec(receptor_path, center, size, granularity);
-
-	// Reserve storage for result containers.
-	vector<vector<result>> result_containers(num_tasks);
-	for (auto& rc : result_containers)
-	{
-		rc.reserve(20);	// Maximum number of results obtained from a single Monte Carlo task.
-	}
-	vector<result> results;
-	results.reserve(max_conformations);
-
 	// Train RF-Score on the fly.
 	cout << "Training a random forest of " << num_trees << " trees with " << tree::nv << " variables and " << tree::ns << " samples" << endl;
 	forest f(num_trees, seed);
@@ -208,28 +230,6 @@ int main(int argc, char* argv[])
 	}
 	cnt.wait();
 	f.clear();
-
-	// Enumerate and sort input ligands.
-	cout << "Enumerating input ligands in " << ligand_path << endl;
-	vector<path> input_ligand_paths;
-	if (is_regular_file(ligand_path))
-	{
-		input_ligand_paths.push_back(ligand_path);
-	}
-	else
-	{
-		for (directory_iterator dir_iter(ligand_path), end_dir_iter; dir_iter != end_dir_iter; ++dir_iter)
-		{
-			// Filter files with .pdbqt and .PDBQT extensions.
-			const path input_ligand_path = dir_iter->path();
-			const auto ext = input_ligand_path.extension();
-			if (ext != ".pdbqt" && ext != ".PDBQT") continue;
-			input_ligand_paths.push_back(input_ligand_path);
-		}
-	}
-	const size_t num_input_ligands = input_ligand_paths.size();
-	cout << "Sorting " << num_input_ligands << " input ligands in alphabetical order" << endl;
-	sort(input_ligand_paths.begin(), input_ligand_paths.end());
 
 	// Output headers to the standard output and the log file.
 	cout << "Creating grid maps of " << granularity << " A and running " << num_tasks << " Monte Carlo searches per ligand" << endl
