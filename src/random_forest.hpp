@@ -38,7 +38,7 @@ public:
 	//! Clears node samples to save memory.
 	void clear();
 private:
-	static const size_t ns = 3444; //!< Number of training samples.
+	static const size_t ns = 3704; //!< Number of training samples.
 	static const array<array<double, nv>, ns> x; //!< Variables of training samples.
 	static const array<double, ns> y; //!< Measured binding affinities of training samples.
 };
