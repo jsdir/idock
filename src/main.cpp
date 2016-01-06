@@ -166,7 +166,7 @@ int main(int argc, char* argv[])
 	safe_counter<size_t> cnt;
 
 	// Precalculate the scoring function in parallel.
-	cout << "Precalculating the scoring function in parallel" << endl;
+	cout << "Calculating a scoring function of " << scoring_function::n << " atom types" << endl;
 	scoring_function sf;
 	cnt.init((sf.n + 1) * sf.n >> 1);
 	for (size_t t1 = 0; t1 < sf.n; ++t1)
@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
 	results.reserve(max_conformations);
 
 	// Train RF-Score on the fly.
-	cout << "Training a random forest of " << num_trees << " decision trees in parallel" << endl;
+	cout << "Training a random forest of " << num_trees << " trees with " << tree::nv << " variables and " << tree::ns << " samples" << endl;
 	forest f(num_trees, seed);
 	cnt.init(num_trees);
 	for (size_t i = 0; i < num_trees; ++i)

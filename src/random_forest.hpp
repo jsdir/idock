@@ -28,6 +28,7 @@ class tree : public vector<node>
 {
 public:
 	static const size_t nv = 42; //!< Number of variables.
+	static const size_t ns = 3704; //!< Number of training samples.
 
 	//! Trains an empty tree from bootstrap samples.
 	void train(const size_t mtry, const function<double()> u01);
@@ -38,7 +39,6 @@ public:
 	//! Clears node samples to save memory.
 	void clear();
 private:
-	static const size_t ns = 3704; //!< Number of training samples.
 	static const array<array<double, nv>, ns> x; //!< Variables of training samples.
 	static const array<double, ns> y; //!< Measured binding affinities of training samples.
 };
