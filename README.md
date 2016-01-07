@@ -27,7 +27,7 @@ Pre-built 64-bit executables can be found in the `bin` directory. The executable
 Compilation from source code
 ----------------------------
 
-idock depends on the [Boost C++ Libraries]. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`. Boost 1.59.0 was tested.
+idock depends on the [Boost C++ Libraries]. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`. Boost 1.60.0 was tested.
 
 ### Compilation on Linux
 
@@ -89,6 +89,13 @@ The generated PDF will be `refman.pdf`.
 
 Change Log
 ----------
+
+### 2.2.1 (2016-01-07)
+
+* Used the working directory as the default output directory.
+* Forced docking if the two program options `ligand` and `out` are equivalent.
+* Upgraded boost from 1.59.0 to 1.60.0.
+* Upgraded RF-Score trained on PDBbind v2015 refined set.
 
 ### 2.2.0 (2015-12-05)
 
