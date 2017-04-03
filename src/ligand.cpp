@@ -335,7 +335,8 @@ bool ligand::evaluate(const conformation& conf, const scoring_function& sf, cons
 		}
 
 		// Update orientation.
-		assert(normalized(f.parent_rotorX_to_current_rotorY));
+    if (!normalized(f.parent_rotorX_to_current_rotorY)) { return false; }
+		// assert(normalized(f.parent_rotorX_to_current_rotorY));
 		axes[k] = orim[f.parent] * f.parent_rotorX_to_current_rotorY;
 		assert(normalized(axes[k]));
 		oriq[k] = vec4_to_qtn4(axes[k], conf.torsions[t++]) * oriq[f.parent];
