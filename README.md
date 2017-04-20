@@ -17,8 +17,8 @@ Features
 Supported operating systems and compilers
 -----------------------------------------
 
-* Linux x86_64 and clang 3.7.0
-* Mac OS X x86_64 and clang 3.7.0
+* Linux x86_64 and clang 3.9.1
+* Mac OS X x86_64 and darwin 4.2.1
 * Windows x64 and Visual Studio 2015 Update 1
 
 Pre-built 64-bit executables can be found in the `bin` directory. The executable was statically compiled for Linux and Windows, and dynamically compiled for Mac OS X.
@@ -89,6 +89,12 @@ The generated PDF will be `refman.pdf`.
 
 Change Log
 ----------
+
+### 2.2.2 (2017-04-20)
+
+* Fixed a bug of hydrogen recognition in writing pdbqt output.
+* Upgraded boost from 1.60.0 to 1.64.0.
+* Upgraded RF-Score trained on PDBbind v2016 refined set.
 
 ### 2.2.1 (2016-01-07)
 
