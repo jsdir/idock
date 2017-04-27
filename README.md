@@ -19,7 +19,7 @@ Supported operating systems and compilers
 
 * Linux x86_64 and clang 3.9.1
 * Mac OS X x86_64 and darwin 4.2.1
-* Windows x64 and Visual Studio 2015 Update 1
+* Windows x64 and Visual Studio 2017
 
 Pre-built 64-bit executables can be found in the `bin` directory. The executable was statically compiled for Linux and Windows, and dynamically compiled for Mac OS X.
 
@@ -27,7 +27,7 @@ Pre-built 64-bit executables can be found in the `bin` directory. The executable
 Compilation from source code
 ----------------------------
 
-idock depends on the [Boost C++ Libraries]. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`. Boost 1.60.0 was tested.
+idock depends on the [Boost C++ Libraries]. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`. Boost 1.64.0 was tested.
 
 ### Compilation on Linux
 
@@ -41,11 +41,11 @@ The generated objects will be placed in the `obj` folder, and the generated exec
 
 ### Compilation on Windows
 
-Visual Studio 2015 solution and project files are provided. To compile, simply run
+Visual Studio 2017 solution and project files are provided. To compile, simply run
 
     msbuild /t:Build /p:Configuration=Release
 
-Or one may open `idock.sln` in Visual Studio 2015 and do a full rebuild.
+Or one may open `idock.sln` in Visual Studio 2017 and do a full rebuild.
 
 The generated objects will be placed in the `obj` folder, and the generated executable will be placed in the `bin` folder.
 
