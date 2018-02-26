@@ -27,6 +27,8 @@ Pre-built 64-bit executables can be found in the `bin` directory. The executable
 Compilation from source code
 ----------------------------
 
+Precompiled executables are already provided in the `bin` folder. Should you need to compile from source code, below are some guidelines.
+
 idock depends on the [Boost C++ Libraries]. The Boost libraries required by idock are `System`, `Filesystem`, `Program Options` and `Thread`. Boost 1.64.0 was tested.
 
 ### Compilation on Linux
