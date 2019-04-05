@@ -23,7 +23,7 @@ int main(int argc, char* argv[])
 	{
 		// Initialize the default values of optional arguments.
 		const path default_out_path = ".";
-		const size_t default_seed = chrono::duration_cast<chrono::seconds>(chrono::system_clock::now().time_since_epoch()).count();
+		const size_t default_seed = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 		const size_t default_num_threads = boost::thread::hardware_concurrency();
 		const size_t default_num_trees = 500;
 		const size_t default_num_tasks = 64;
